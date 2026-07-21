@@ -24,7 +24,7 @@ export default function Billing() {
                 <p className="font-display text-2xl font-bold text-white">{state.org.plan}</p>
                 <StatusBadge status="active" />
               </div>
-              <p className="mt-2 text-sm text-slate-400">{formatNaira(1000)}/month · first month {formatNaira(500)} (50% off)</p>
+              <p className="mt-2 text-sm text-slate-400">{formatNaira(100000)}/month · first month {formatNaira(50000)} (50% off)</p>
               <ul className="mt-4 space-y-2">
                 {["All 11 product engines", "Unlimited campaigns & scans (one active each)", "Verified-only reporting (PDF/DOCX)", "Dual-control + audit exports"].map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
