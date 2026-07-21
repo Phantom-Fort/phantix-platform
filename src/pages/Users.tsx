@@ -174,7 +174,6 @@ function BootstrapWizard() {
               <PersonForm
                 key={phase}
                 slot={phase === "initiator" ? "Initiator" : "Authorizer"}
-                suggestion={phase === "initiator" ? { name: "Ada Okonkwo", title: "IT Admin" } : { name: "Chidi Eze", title: "CISO" }}
                 excludeEmail={phase === "authorizer" ? initiator?.email : undefined}
                 busy={busy}
                 onBack={() => setPhase(phase === "initiator" ? "welcome" : "initiator")}
@@ -249,18 +248,17 @@ function BootstrapWizard() {
 }
 
 function PersonForm({
-  slot, suggestion, excludeEmail, busy, onBack, onSubmit,
+  slot, excludeEmail, busy, onBack, onSubmit,
 }: {
   slot: string;
-  suggestion: { name: string; title: string };
   excludeEmail?: string;
   busy: boolean;
   onBack: () => void;
   onSubmit: (form: { full_name: string; email: string; title: string; role: string }) => Promise<void>;
 }) {
-  const [fullName, setFullName] = useState(suggestion.name);
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [title, setTitle] = useState(suggestion.title);
+  const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -282,15 +280,15 @@ function PersonForm({
       >
         <div>
           <label className="label">Full name</label>
-          <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" required autoComplete="name" />
         </div>
         <div>
           <label className="label">Title (shows on audit trail)</label>
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={slot === "Initiator" ? "e.g. IT Admin" : "e.g. CISO"} required />
         </div>
         <div className="sm:col-span-2">
           <label className="label">Work email</label>
-          <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={slot === "Initiator" ? "user@yourcompany.com" : "user@yourcompany.com"} required />
+          <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required autoComplete="email" />
           <p className="mt-1.5 text-[11px] text-slate-500">
             OTP-only (no password) — recommended. Free-mail is rejected unless it matches a registration contact.
           </p>

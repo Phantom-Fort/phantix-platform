@@ -1,11 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import fs from "fs";
+
+const localPublic = path.resolve(__dirname, "public");
+const monorepoPublic = path.resolve(__dirname, "../public");
 
 export default defineConfig({
   plugins: [react()],
-  // Share the brand assets (logo, favicons, manifest) from the repo-level /public
-  publicDir: path.resolve(__dirname, "../public"),
+  // Prefer local public/ for Vercel (app root); fall back to monorepo ../public
+  publicDir: fs.existsSync(localPublic) ? localPublic : monorepoPublic,
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
