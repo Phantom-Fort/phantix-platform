@@ -14,6 +14,7 @@ import Users from "@/pages/Users";
 import Connections from "@/pages/Connections";
 import Tools from "@/pages/Tools";
 import Billing from "@/pages/Billing";
+import AiSettings from "@/pages/AiSettings";
 import Support from "@/pages/Support";
 import Audit from "@/pages/Audit";
 
@@ -51,8 +52,10 @@ export default function App() {
             <Route path="/connections" element={<RequireManagement><Connections /></RequireManagement>} />
             <Route path="/tools" element={<RequireManagement><Tools /></RequireManagement>} />
             <Route path="/billing" element={<RequireManagement><Billing /></RequireManagement>} />
+            <Route path="/ai" element={<RequireManagement><AiSettings /></RequireManagement>} />
             <Route path="/support" element={<RequireManagement><Support /></RequireManagement>} />
             <Route path="/audit" element={<RequireManagement><Audit /></RequireManagement>} />
+            <Route path="/settings" element={<Navigate to="/identity" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>

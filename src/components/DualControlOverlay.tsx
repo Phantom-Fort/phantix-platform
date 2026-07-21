@@ -19,8 +19,8 @@ export default function DualControlOverlay() {
     state,
   } = useStore();
 
-  const open = dualControlPrompt.open;
-  const reason = dualControlPrompt.reason;
+  const open = !!dualControlPrompt?.open;
+  const reason = dualControlPrompt?.reason || "";
   const initiator = state.users.find((u) => u.id === state.dualControl.initiator_user_id);
   const authorizer = state.users.find((u) => u.id === state.dualControl.authorizer_user_id);
 

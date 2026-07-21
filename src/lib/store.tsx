@@ -2,6 +2,14 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
 import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken } from "./api";
+import {
+  emptyOrg,
+  isSecurityDbReady,
+  mapConnectionsFromApi,
+  mapConnectionFromApi,
+  mapOrgFromApi,
+  orgToUpdateBody,
+} from "./org";
 import type {
   AuditEvent,
   ChildCompany,
@@ -17,23 +25,6 @@ import type {
   SupportTicket,
   ToolItem,
 } from "./types";
-
-// ── Empty live shell (never seed fake tenant data when API is configured) ─────
-
-const emptyOrg = (): Organization => ({
-  id: 0,
-  name: "",
-  slug: "",
-  creator_user_id: null,
-  legal_name: null,
-  website: null,
-  company_phone: null,
-  country: "NG",
-  industry: "",
-  primary_email: "",
-  plan: "",
-  created_at: "",
-});
 
 const emptySetup = (): SetupState => ({
   privacy_accepted: false,
@@ -68,18 +59,20 @@ const demoPayments: Payment[] = [
 ];
 
 const demoOrg = (): Organization => ({
+  ...emptyOrg(),
   id: 11,
   name: "Demo Financial Group",
   slug: "demo-financial",
   creator_user_id: 1,
   legal_name: "Demo Financial Group Ltd",
   website: "https://example.com",
-  company_phone: null,
+  phone: null,
   country: "NG",
   industry: "fintech",
-  primary_email: "admin@example.com",
+  email: "admin@example.com",
   plan: "Scale",
   created_at: "2026-07-21T08:00:00Z",
+  setup_completed: false,
 });
 
 const demoAudit = (): AuditEvent[] => [
@@ -301,6 +294,7 @@ type Store = {
   // setup wizard
   acceptPrivacy: (version?: string) => Promise<void>;
   saveIdentity: (fields: { website: string; legal_name: string; company_phone: string }) => Promise<void>;
+  updateOrgProfile: (fields: Partial<Organization>) => Promise<void>;
   sendOtp: () => Promise<{ devOtp: string }>;
   verifyOtp: (code: string) => Promise<void>;
   startDomainVerification: (domain: string) => Promise<string>;
@@ -324,7 +318,15 @@ type Store = {
   issueLoginLink: (userId: number) => Promise<string>;
   clearDevice: (userId: number) => Promise<void>;
   // connections
-  createConnection: (c: Omit<DbConnection, "id" | "bootstrap_status" | "schema_version" | "last_test_at" | "last_test_ok" | "created_at">) => Promise<void>;
+  refreshConnections: () => Promise<void>;
+  createConnection: (
+    c: Omit<DbConnection, "id" | "bootstrap_status" | "schema_version" | "last_test_at" | "last_test_ok" | "created_at"> & {
+      username?: string;
+      password?: string;
+      ssl_mode?: string;
+      environment?: string;
+    },
+  ) => Promise<void>;
   testConnection: (id: number) => Promise<void>;
   bootstrapConnection: (id: number) => Promise<void>;
   deleteConnection: (id: number) => Promise<void>;
@@ -332,6 +334,7 @@ type Store = {
   createCompany: (c: { name: string; industry: string; country: string }) => Promise<void>;
   rotateServiceKey: (companyId?: number) => Promise<string>;
   revokeServiceKey: () => Promise<void>;
+  savePreferredServices: (services: string[]) => Promise<void>;
   // misc
   toggleTool: (id: number) => Promise<void>;
   createTicket: (subject: string, priority: string, body: string) => Promise<void>;
@@ -389,29 +392,115 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       const resolvedEmail = email || emailFromToken() || tokens.email || "";
       if (resolvedEmail) tokens.email = resolvedEmail;
-      const setupRes = await api.get<SetupApi>("/organizations/me/setup");
-      const mapped = mapSetupFromApi(setupRes, resolvedEmail);
-      const masked = typeof setupRes.primary_email_masked === "string" ? setupRes.primary_email_masked : "";
-      const displayEmail = resolvedEmail || masked || "";
+
+      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes] = await Promise.all([
+        api.get<unknown>("/organizations/me").catch(() => null),
+        api.get<SetupApi>("/organizations/me/setup").catch(() => null),
+        api.get<unknown>("/db-connections").catch(() => null),
+        api.get<unknown>("/db-connections/primary-security-storage").catch(() => null),
+        api.get<unknown>("/organizations/me/service-key").catch(() =>
+          api.get<unknown>("/organizations/me/service-keys").catch(() => null),
+        ),
+        api.get<unknown>("/org-users").catch(() => null),
+        api.get<unknown>("/org-users/dual-control").catch(() => null),
+      ]);
+
+      const org = meRes
+        ? mapOrgFromApi(meRes, resolvedEmail)
+        : mapOrgFromApi({ email: resolvedEmail }, resolvedEmail);
+      const mappedSetup = setupRes ? mapSetupFromApi(setupRes, resolvedEmail || org.email) : null;
+      const connections = mapConnectionsFromApi(connsRes);
+      // If list empty but primary endpoint returns a row, include it
+      if (!connections.length && primaryRes) {
+        const p = mapConnectionFromApi(primaryRes);
+        if (p) connections.push(p);
+      }
+
+      let serviceKey: ServiceKeyMeta | null = null;
+      if (keyRes) {
+        const keyObj = Array.isArray(keyRes) ? keyRes[0] : keyRes;
+        if (keyObj && typeof keyObj === "object") {
+          const k = keyObj as Record<string, unknown>;
+          serviceKey = {
+            id: Number(k.id ?? 0),
+            prefix: String(k.prefix ?? k.key_prefix ?? "pk_live_…"),
+            active: k.active !== false,
+            created_at: String(k.created_at ?? ""),
+            last_used_at: (k.last_used_at as string) ?? null,
+          };
+        }
+      }
+
+      const usersRaw = Array.isArray(usersRes)
+        ? usersRes
+        : ((usersRes as { items?: unknown[] })?.items ?? []);
+      const users: OrgUser[] = (usersRaw as Record<string, unknown>[]).map((u) => ({
+        id: Number(u.id ?? 0),
+        full_name: String(u.full_name ?? u.name ?? ""),
+        email: String(u.email ?? ""),
+        title: String(u.title ?? ""),
+        role: String(u.role ?? "viewer"),
+        otp_only: u.otp_only !== false,
+        is_active: u.is_active !== false,
+        last_login_at: (u.last_login_at as string) ?? null,
+      }));
+
+      let dualControl: DualControlAssignment = {
+        configured: false,
+        require_dual_control: false,
+        initiator_user_id: null,
+        authorizer_user_id: null,
+      };
+      if (dcRes && typeof dcRes === "object") {
+        const d = dcRes as Record<string, unknown>;
+        const initId = Number(d.initiator_user_id ?? (d.initiator as { id?: number })?.id ?? 0) || null;
+        const authId = Number(d.authorizer_user_id ?? (d.authorizer as { id?: number })?.id ?? 0) || null;
+        dualControl = {
+          configured: Boolean(d.configured ?? (initId && authId)),
+          require_dual_control: Boolean(d.require_dual_control ?? true),
+          initiator_user_id: initId,
+          authorizer_user_id: authId,
+        };
+      }
+
+      const displayEmail = resolvedEmail || org.email || "";
       persist((s) => ({
         ...s,
         org: {
-          ...s.org,
-          ...mapped.org,
-          primary_email: displayEmail || s.org.primary_email || "",
+          ...org,
+          ...(mappedSetup?.org ?? {}),
+          email: displayEmail || org.email,
+          primary_email: displayEmail || org.email,
+          setup_completed: mappedSetup?.setup.setup_complete ?? org.setup_completed,
+          identity_verified: mappedSetup?.setup.identity_verified ?? org.identity_verified,
+          privacy_notice_accepted: mappedSetup?.setup.privacy_accepted ?? org.privacy_notice_accepted,
         },
-        setup: {
-          ...mapped.setup,
-          email_otp_destination: mapped.setup.email_otp_destination || displayEmail || null,
-        },
+        setup: mappedSetup
+          ? {
+              ...mappedSetup.setup,
+              email_otp_destination: mappedSetup.setup.email_otp_destination || displayEmail || null,
+              setup_complete: mappedSetup.setup.setup_complete || org.setup_completed,
+              identity_verified: mappedSetup.setup.identity_verified || org.identity_verified || org.email_verified,
+              privacy_accepted: mappedSetup.setup.privacy_accepted || org.privacy_notice_accepted,
+            }
+          : {
+              ...s.setup,
+              setup_complete: org.setup_completed,
+              identity_verified: org.identity_verified || org.email_verified,
+              privacy_accepted: org.privacy_notice_accepted,
+            },
+        connections,
+        serviceKey: serviceKey ?? s.serviceKey,
+        users: users.length ? users : s.users,
+        dualControl: dualControl.configured ? dualControl : s.dualControl,
       }));
-      setSession({ authenticated: true, email: resolvedEmail || displayEmail });
+      setSession({ authenticated: true, email: displayEmail });
     } catch {
       const fallback = email || emailFromToken() || tokens.email || "";
       if (fallback) {
         tokens.email = fallback;
         setSession({ authenticated: true, email: fallback });
-        persist((s) => ({ ...s, org: { ...s.org, primary_email: fallback } }));
+        persist((s) => ({ ...s, org: { ...s.org, email: fallback, primary_email: fallback } }));
       }
     } finally {
       hydrating.current = false;
@@ -447,7 +536,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await delay(700);
         persist((s) => ({
           ...s,
-          org: { ...s.org, name, primary_email: email, country, slug, industry },
+          org: { ...s.org, name, email, primary_email: email, country, slug, industry },
           setup: emptySetup(),
           audit: [{ id: s.nextId, event_key: "org.register", category: "auth", action: `Organization registered: ${name}`, initiator_name: email, initiator_title: "Primary email", authorizer_name: null, authorizer_title: null, created_at: new Date().toISOString() }, ...s.audit],
           nextId: s.nextId + 1,
@@ -515,6 +604,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           id: res.organization_id ?? 0,
           name: res.experience?.organization_name || "",
           slug: res.organization_slug || "",
+          email,
           primary_email: email,
         },
         setup: emptySetup(),
@@ -531,7 +621,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(700);
       if (code.length !== 6) throw new Error("Enter the 6-digit code");
       tokens.platform = "demo.company.jwt";
-      setSession({ authenticated: true, email: state.org.primary_email });
+      setSession({ authenticated: true, email: state.org.email || state.org.primary_email || "" });
       return;
     }
     const res = await api.post<{
@@ -597,7 +687,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await delay(400);
         persist((s) => ({
           ...s,
-          org: { ...s.org, website: fields.website || null, legal_name: fields.legal_name || null, company_phone: fields.company_phone || null },
+          org: {
+            ...s.org,
+            website: fields.website || null,
+            legal_name: fields.legal_name || null,
+            phone: fields.company_phone || null,
+            company_phone: fields.company_phone || null,
+          },
           setup: { ...s.setup, identity_saved: true },
         }));
         return;
@@ -605,9 +701,43 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await api.post("/organizations/me/setup/identity", fields);
       persist((s) => ({
         ...s,
-        org: { ...s.org, website: fields.website || null, legal_name: fields.legal_name || null, company_phone: fields.company_phone || null },
+        org: {
+          ...s.org,
+          website: fields.website || null,
+          legal_name: fields.legal_name || null,
+          phone: fields.company_phone || null,
+          company_phone: fields.company_phone || null,
+        },
         setup: { ...s.setup, identity_saved: true },
       }));
+    },
+    [persist],
+  );
+
+  const updateOrgProfile = useCallback(
+    async (fields: Partial<Organization>) => {
+      if (DEMO_MODE) {
+        await delay(500);
+        persist((s) => ({ ...s, org: { ...s.org, ...fields } }));
+        return;
+      }
+      const body = orgToUpdateBody({ ...state.org, ...fields });
+      const res = await api.put<unknown>("/organizations/me", body, { dualControl: true });
+      const mapped = res ? mapOrgFromApi(res, state.org.email) : mapOrgFromApi({ ...state.org, ...fields }, state.org.email);
+      persist((s) => ({ ...s, org: { ...s.org, ...mapped, ...fields } }));
+    },
+    [persist, state.org],
+  );
+
+  const savePreferredServices = useCallback(
+    async (services: string[]) => {
+      if (DEMO_MODE) {
+        await delay(400);
+        persist((s) => ({ ...s, org: { ...s.org, preferred_services: services } }));
+        return;
+      }
+      await api.put("/organizations/me/preferred-services", { preferred_services: services }, { dualControl: true });
+      persist((s) => ({ ...s, org: { ...s.org, preferred_services: services } }));
     },
     [persist],
   );
@@ -617,15 +747,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(600);
       const devOtp = String(Math.floor(100000 + Math.random() * 900000));
       sessionStorage.setItem("dev_otp", devOtp);
-      persist((s) => ({ ...s, setup: { ...s.setup, email_otp_sent: true, email_otp_destination: s.org.primary_email } }));
+      persist((s) => ({ ...s, setup: { ...s.setup, email_otp_sent: true, email_otp_destination: s.org.email || s.org.primary_email || null } }));
       return { devOtp };
     }
     const res = await api.post<{ dev_otp?: string }>("/organizations/me/setup/otp/send", { channel: "email" });
-    const dest = state.org.primary_email || session?.email || emailFromToken() || tokens.email || "";
+    const dest = state.org.email || state.org.primary_email || session?.email || emailFromToken() || tokens.email || "";
     if (dest) tokens.email = dest;
     persist((s) => ({
       ...s,
-      org: { ...s.org, primary_email: dest || s.org.primary_email },
+      org: { ...s.org, email: dest || s.org.email, primary_email: dest || s.org.primary_email },
       setup: { ...s.setup, email_otp_sent: true, email_otp_destination: dest || s.setup.email_otp_destination },
     }));
     return { devOtp: res?.dev_otp || "" };
@@ -1075,48 +1205,146 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ── Connections ──────────────────────────────────────────────────────────
+  const refreshConnections = useCallback(async () => {
+    if (DEMO_MODE) return;
+    try {
+      const [connsRes, primaryRes] = await Promise.all([
+        api.get<unknown>("/db-connections"),
+        api.get<unknown>("/db-connections/primary-security-storage").catch(() => null),
+      ]);
+      const connections = mapConnectionsFromApi(connsRes);
+      if (!connections.length && primaryRes) {
+        const p = mapConnectionFromApi(primaryRes);
+        if (p) connections.push(p);
+      }
+      persist((s) => ({ ...s, connections }));
+    } catch { /* keep existing */ }
+  }, [persist]);
+
   const createConnection = useCallback(
-    async (c: Omit<DbConnection, "id" | "bootstrap_status" | "schema_version" | "last_test_at" | "last_test_ok" | "created_at">) => {
-      await delay(600);
-      persist((s) => ({
-        ...s,
-        connections: [
-          ...s.connections.map((x) => (c.is_primary ? { ...x, is_primary: false } : x)),
-          { ...c, id: s.nextId, bootstrap_status: "not_bootstrapped", schema_version: null, last_test_at: null, last_test_ok: false, created_at: new Date().toISOString() },
-        ],
-        nextId: s.nextId + 1,
-      }));
+    async (
+      c: Omit<DbConnection, "id" | "bootstrap_status" | "schema_version" | "last_test_at" | "last_test_ok" | "created_at"> & {
+        username?: string;
+        password?: string;
+        ssl_mode?: string;
+        environment?: string;
+      },
+    ) => {
+      if (DEMO_MODE) {
+        await delay(600);
+        persist((s) => ({
+          ...s,
+          connections: [
+            ...s.connections.map((x) => (c.is_primary ? { ...x, is_primary: false } : x)),
+            {
+              name: c.name,
+              connection_purpose: c.connection_purpose,
+              db_type: c.db_type,
+              host: c.host,
+              port: c.port,
+              database_name: c.database_name,
+              target_schema: c.target_schema,
+              is_primary: c.is_primary,
+              id: s.nextId,
+              bootstrap_status: "not_bootstrapped",
+              schema_version: null,
+              last_test_at: null,
+              last_test_ok: false,
+              created_at: new Date().toISOString(),
+            },
+          ],
+          nextId: s.nextId + 1,
+        }));
+        logAudit("db_connection.create", "connections", `Created connection: ${c.name}`);
+        return;
+      }
+      const needsDc = !!tokens.dualControl;
+      await api.post<unknown>(
+        "/db-connections",
+        {
+          name: c.name,
+          connection_purpose: c.connection_purpose,
+          db_type: c.db_type,
+          host: c.host,
+          port: c.port,
+          database_name: c.database_name,
+          username: c.username || undefined,
+          password: c.password || undefined,
+          ssl_mode: c.ssl_mode || "prefer",
+          target_schema: c.target_schema || "phantix",
+          is_primary: c.is_primary,
+          environment: c.environment || "production",
+          auto_bootstrap: false,
+        },
+        needsDc ? { dualControl: true } : undefined,
+      );
+      await refreshConnections();
       logAudit("db_connection.create", "connections", `Created connection: ${c.name}`);
     },
-    [persist, logAudit],
+    [persist, logAudit, refreshConnections],
   );
 
   const testConnection = useCallback(
     async (id: number) => {
-      await delay(1200);
+      if (DEMO_MODE) {
+        await delay(1200);
+        persist((s) => ({
+          ...s,
+          connections: s.connections.map((c) => (c.id === id ? { ...c, last_test_at: new Date().toISOString(), last_test_ok: true } : c)),
+        }));
+        return;
+      }
+      const needsDc = !!tokens.dualControl;
+      await api.post(`/db-connections/${id}/test?auto_bootstrap=false`, undefined, needsDc ? { dualControl: true } : undefined);
       persist((s) => ({
         ...s,
         connections: s.connections.map((c) => (c.id === id ? { ...c, last_test_at: new Date().toISOString(), last_test_ok: true } : c)),
       }));
+      await refreshConnections();
     },
-    [persist],
+    [persist, refreshConnections],
   );
 
   const bootstrapConnection = useCallback(
     async (id: number) => {
-      await delay(1600);
+      if (DEMO_MODE) {
+        await delay(1600);
+        persist((s) => ({
+          ...s,
+          connections: s.connections.map((c) => (c.id === id ? { ...c, bootstrap_status: "ready" as const, schema_version: "1.4.2" } : c)),
+        }));
+        logAudit("db_connection.bootstrap", "connections", "Bootstrapped security schema v1.4.2");
+        return;
+      }
+      const needsDc = !!tokens.dualControl;
+      const res = await api.post<unknown>(`/db-connections/${id}/bootstrap`, undefined, needsDc ? { dualControl: true } : undefined);
+      const row = mapConnectionFromApi(res);
       persist((s) => ({
         ...s,
-        connections: s.connections.map((c) => (c.id === id ? { ...c, bootstrap_status: "ready" as const, schema_version: "1.4.2" } : c)),
+        connections: s.connections.map((c) =>
+          c.id === id
+            ? row
+              ? { ...c, ...row, bootstrap_status: row.bootstrap_status === "not_bootstrapped" ? "ready" : row.bootstrap_status }
+              : { ...c, bootstrap_status: "ready" as const, schema_version: c.schema_version || "1.4.2" }
+            : c,
+        ),
       }));
-      logAudit("db_connection.bootstrap", "connections", "Bootstrapped security schema v1.4.2");
+      await refreshConnections();
+      logAudit("db_connection.bootstrap", "connections", "Bootstrapped security schema");
     },
-    [persist, logAudit],
+    [persist, logAudit, refreshConnections],
   );
 
   const deleteConnection = useCallback(
     async (id: number) => {
-      await delay(350);
+      if (DEMO_MODE) {
+        await delay(350);
+        persist((s) => ({ ...s, connections: s.connections.filter((c) => c.id !== id) }));
+        logAudit("db_connection.delete", "connections", `Deleted connection #${id}`);
+        return;
+      }
+      const needsDc = !!tokens.dualControl;
+      await api.delete(`/db-connections/${id}`, needsDc ? { dualControl: true } : undefined);
       persist((s) => ({ ...s, connections: s.connections.filter((c) => c.id !== id) }));
       logAudit("db_connection.delete", "connections", `Deleted connection #${id}`);
     },
@@ -1206,30 +1434,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const securityDbReady = state.connections.some((c) => c.connection_purpose === "security_data_storage" && c.bootstrap_status === "ready");
+  const securityDbReady = isSecurityDbReady(state.connections);
 
   const value = useMemo<Store>(
     () => ({
       session, state, operate, securityDbReady,
       register, login, verifyMfa, logout, hydrateSession,
-      acceptPrivacy, saveIdentity, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup,
+      acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
       requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
       issueLoginLink, clearDevice,
-      createConnection, testConnection, bootstrapConnection, deleteConnection,
-      createCompany, rotateServiceKey, revokeServiceKey,
+      refreshConnections, createConnection, testConnection, bootstrapConnection, deleteConnection,
+      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices,
       toggleTool, createTicket, decidePending, resetDemo,
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
       register, login, verifyMfa, logout, hydrateSession, acceptPrivacy, saveIdentity, sendOtp, verifyOtp,
-      startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup,
+      startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, updateOrgProfile,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
       issueLoginLink, clearDevice,
-      createConnection, testConnection, bootstrapConnection, deleteConnection,
-      createCompany, rotateServiceKey, revokeServiceKey, toggleTool, createTicket, decidePending, resetDemo,
+      refreshConnections, createConnection, testConnection, bootstrapConnection, deleteConnection,
+      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, toggleTool, createTicket, decidePending, resetDemo,
       toast, dismissToast],
   );
 

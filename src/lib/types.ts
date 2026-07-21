@@ -1,18 +1,76 @@
 // ── Platform surface types (platform.phantix.site) ───────────────────────────
 
+export interface OrgContact {
+  title: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  whatsapp_username: string | null;
+  telegram_username: string | null;
+}
+
+/** Full company profile — mirrors GET/PUT /organizations/me */
 export interface Organization {
   id: number;
   name: string;
   slug: string;
   creator_user_id: number | null;
   legal_name: string | null;
-  website: string | null;
-  company_phone: string | null;
-  country: string;
+  registration_number: string | null;
+  tax_id: string | null;
+  company_type: string | null;
+  year_founded: number | null;
   industry: string;
-  primary_email: string;
+  sub_industry: string | null;
+  employee_count_range: string | null;
+  annual_revenue_range: string | null;
+  website: string | null;
+  phone: string | null;
+  description: string | null;
+  logo_url: string | null;
+  email: string;
+  secondary_email: string | null;
+  country: string;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state_province: string | null;
+  postal_code: string | null;
+  timezone: string | null;
+  notes: string | null;
+  primary_contact: OrgContact | null;
+  secondary_contact: OrgContact | null;
+  security_mailbox: string | null;
+  has_dedicated_security_team: boolean;
+  has_ciso: boolean;
+  security_team_size: string | null;
+  security_maturity: string | null;
+  compliance_frameworks: string[] | null;
+  data_types_handled: string[] | null;
+  infrastructure_types: string[] | null;
+  cloud_providers: string[] | null;
+  preferred_services: string[] | null;
+  critical_assets_summary: string | null;
+  previous_breach: boolean;
+  previous_breach_notes: string | null;
+  setup_completed: boolean;
+  email_verified: boolean;
+  identity_verified: boolean;
+  company_verified: boolean;
+  domain_verified: boolean;
+  privacy_notice_accepted: boolean;
+  cac_rc_number: string | null;
+  cac_details_provided: boolean;
+  cac_skipped: boolean;
+  manual_review_status: string;
+  is_active: boolean;
   plan: string;
   created_at: string;
+  updated_at: string | null;
+  /** @deprecated use phone */
+  company_phone?: string | null;
+  /** @deprecated use email */
+  primary_email?: string;
 }
 
 export interface OrgUser {
@@ -120,14 +178,13 @@ export interface SupportTicket {
   messages: { from: string; body: string; at: string }[];
 }
 
-// ── Setup wizard state (mirrors GET /organizations/me/setup) ─────────────────
 export interface SetupState {
   privacy_accepted: boolean;
   privacy_accepted_at: string | null;
   identity_saved: boolean;
   email_otp_sent: boolean;
   email_otp_destination: string | null;
-  identity_verified: boolean; // email OTP verified
+  identity_verified: boolean;
   domain: string | null;
   domain_token: string | null;
   domain_dns_ok: boolean;

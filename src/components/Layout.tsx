@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
-  RotateCcw, ShieldCheck,
+  RotateCcw, ShieldCheck, Sparkles,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { APP_URL } from "@/lib/links";
@@ -33,8 +33,11 @@ const navSections: { label: string; items: { to: string; label: string; icon: Re
     ],
   },
   {
-    label: "Compliance",
-    items: [{ to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> }],
+    label: "Governance",
+    items: [
+      { to: "/ai", label: "AI settings", icon: <Sparkles size={17} /> },
+      { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
+    ],
   },
 ];
 
@@ -64,6 +67,7 @@ export default function Layout() {
   const authorizer = state.users.find((u) => u.id === dc.authorizer_user_id);
 
   if (location.pathname.startsWith("/setup")) return <Outlet />;
+  if (!session?.authenticated) return <Outlet />;
 
   return (
     <div className="flex min-h-screen">
@@ -134,7 +138,7 @@ export default function Layout() {
                 {dc.configured ? (
                   <>
                     <p className="text-[11px] leading-4 text-slate-500">
-                      {initiator?.full_name.split(" ")[0]} + {authorizer?.full_name.split(" ")[0]} assigned
+                      {(initiator?.full_name || "Initiator").split(" ")[0]} + {(authorizer?.full_name || "Authorizer").split(" ")[0]} assigned
                     </p>
                     <button
                       onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}

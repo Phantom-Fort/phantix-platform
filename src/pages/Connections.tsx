@@ -6,15 +6,21 @@ import { useStore } from "@/lib/store";
 import { timeAgo, cx } from "@/lib/utils";
 
 export default function Connections() {
-  const { state, testConnection, bootstrapConnection, deleteConnection, operate, securityDbReady, toast, requireDualControl } = useStore();
+  const {
+    state, testConnection, bootstrapConnection, deleteConnection, operate, securityDbReady,
+    toast, requireDualControl, refreshConnections, hydrateSession,
+  } = useStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  React.useEffect(() => {
+    void refreshConnections();
+    void hydrateSession();
+  }, [refreshConnections, hydrateSession]);
+
+  /** Company JWT bootstrap until dual-control is assigned; then operate session required. */
   const guard = async () => {
-    if (!state.dualControl.configured) {
-      toast("warning", "Set up dual control first", "Mutations are blocked until initiator + authorizer are assigned (People & Control).");
-      return false;
-    }
+    if (!state.dualControl.configured) return true;
     if (operate.unlocked) return true;
     return requireDualControl("Manage security database connections requires a dual-control operate session.");
   };
@@ -90,10 +96,16 @@ export default function Connections() {
                       className="btn-secondary !py-2"
                       disabled={busyId === c.id}
                       onClick={async () => {
+                        if (!(await guard())) return;
                         setBusyId(c.id);
-                        await testConnection(c.id);
-                        setBusyId(null);
-                        toast("success", "Connectivity OK", "Live probe succeeded.");
+                        try {
+                          await testConnection(c.id);
+                          toast("success", "Connectivity OK", "Live probe succeeded.");
+                        } catch (err) {
+                          toast("error", "Test failed", err instanceof Error ? err.message : "Connection test failed");
+                        } finally {
+                          setBusyId(null);
+                        }
                       }}
                     >
                       {busyId === c.id ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />} Test
@@ -105,9 +117,14 @@ export default function Connections() {
                         onClick={async () => {
                           if (!(await guard())) return;
                           setBusyId(c.id);
-                          await bootstrapConnection(c.id);
-                          setBusyId(null);
-                          toast("success", "Schema bootstrapped", "phantix schema v1.4.2 — assets, scans, findings, risks, evidence. Idempotent.");
+                          try {
+                            await bootstrapConnection(c.id);
+                            toast("success", "Schema bootstrapped", "phantix schema ready — assets, scans, findings, risks, evidence.");
+                          } catch (err) {
+                            toast("error", "Bootstrap failed", err instanceof Error ? err.message : "Bootstrap failed");
+                          } finally {
+                            setBusyId(null);
+                          }
                         }}
                       >
                         {busyId === c.id ? <Loader2 size={14} className="animate-spin" /> : null}
@@ -118,8 +135,12 @@ export default function Connections() {
                       className="btn-ghost !p-2 text-slate-500 hover:text-severity-critical"
                       onClick={async () => {
                         if (!(await guard())) return;
-                        await deleteConnection(c.id);
-                        toast("info", "Connection deleted");
+                        try {
+                          await deleteConnection(c.id);
+                          toast("info", "Connection deleted");
+                        } catch (err) {
+                          toast("error", "Delete failed", err instanceof Error ? err.message : "Delete failed");
+                        }
                       }}
                     >
                       <Trash2 size={15} />
@@ -178,19 +199,28 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           e.preventDefault();
           const f = new FormData(e.currentTarget);
           setBusy(true);
-          await createConnection({
-            name: String(f.get("name")),
-            connection_purpose: purpose,
-            db_type: String(f.get("db_type")),
-            host: String(f.get("host")),
-            port: Number(f.get("port")),
-            database_name: String(f.get("database_name")),
-            target_schema: String(f.get("target_schema")) || "phantix",
-            is_primary: purpose === "security_data_storage",
-          });
-          setBusy(false);
-          onClose();
-          toast("success", "Connection saved", "Credentials Fernet-encrypted. Next: test, then bootstrap the security schema.");
+          try {
+            await createConnection({
+              name: String(f.get("name")),
+              connection_purpose: purpose,
+              db_type: String(f.get("db_type")),
+              host: String(f.get("host")),
+              port: Number(f.get("port")),
+              database_name: String(f.get("database_name")),
+              target_schema: String(f.get("target_schema")) || "phantix",
+              is_primary: purpose === "security_data_storage",
+              username: String(f.get("username") || ""),
+              password: String(f.get("password") || ""),
+              ssl_mode: String(f.get("ssl_mode") || "prefer"),
+              environment: String(f.get("environment") || "production"),
+            });
+            onClose();
+            toast("success", "Connection saved", "Credentials Fernet-encrypted. Next: test, then bootstrap the security schema.");
+          } catch (err) {
+            toast("error", "Could not save connection", err instanceof Error ? err.message : "Request failed");
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <div className="grid grid-cols-2 gap-3">
@@ -241,11 +271,27 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
           <div>
             <label className="label">Username</label>
-            <input name="username" className="input font-mono" placeholder="phantix_writer" />
+            <input name="username" className="input font-mono" placeholder="phantix_writer" required />
           </div>
           <div>
             <label className="label">Password</label>
-            <input name="password" type="password" className="input" placeholder="••••••••" />
+            <input name="password" type="password" className="input" placeholder="••••••••" required />
+          </div>
+          <div>
+            <label className="label">SSL mode</label>
+            <select name="ssl_mode" className="input">
+              <option value="prefer">prefer</option>
+              <option value="require">require</option>
+              <option value="disable">disable</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Environment</label>
+            <select name="environment" className="input">
+              <option value="production">production</option>
+              <option value="staging">staging</option>
+              <option value="development">development</option>
+            </select>
           </div>
         </div>
         <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">

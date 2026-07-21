@@ -247,7 +247,7 @@ function IdentityStep({ onSkip }: { onSkip: () => void }) {
   const { saveIdentity, state } = useStore();
   const [website, setWebsite] = useState(state.org.website ?? "");
   const [legalName, setLegalName] = useState(state.org.legal_name ?? state.org.name);
-  const [phone, setPhone] = useState(state.org.company_phone ?? "");
+  const [phone, setPhone] = useState(state.org.phone ?? state.org.company_phone ?? "");
   const [busy, setBusy] = useState(false);
 
   return (
