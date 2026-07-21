@@ -96,6 +96,35 @@ async function request<T>(
   return (await res.json()) as T;
 }
 
+/** Multipart upload — do not set Content-Type (browser sets boundary). */
+async function requestMultipart<T>(
+  method: string,
+  path: string,
+  formData: FormData,
+  opts: { dualControl?: boolean } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  const bearer = tokens.orgUser ?? tokens.platform;
+  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
+  if (opts.dualControl && tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
+
+  const res = await fetch(`${API_BASE}${path}`, { method, headers, body: formData });
+  if (!res.ok) {
+    let detail: unknown = res.statusText;
+    try {
+      detail = (await res.json()).detail;
+    } catch { /* non-JSON */ }
+    if (res.status === 401) {
+      tokens.platform = null;
+      tokens.orgUser = null;
+      tokens.email = null;
+    }
+    throw new ApiError(res.status, detail);
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
 export const api = {
   get: <T>(path: string, opts?: Parameters<typeof request>[2]) => request<T>("GET", path, opts),
   post: <T>(path: string, body?: unknown, opts?: Parameters<typeof request>[2]) => request<T>("POST", path, { ...opts, body }),
@@ -103,6 +132,9 @@ export const api = {
   patch: <T>(path: string, body?: unknown, opts?: Parameters<typeof request>[2]) => request<T>("PATCH", path, { ...opts, body }),
   delete: <T>(path: string, opts?: Parameters<typeof request>[2]) => request<T>("DELETE", path, opts),
   postForm: <T>(path: string, form: Record<string, string>) => request<T>("POST", path, { form }),
+  /** multipart/form-data (e.g. logo upload field name `file`) */
+  postMultipart: <T>(path: string, formData: FormData, opts?: { dualControl?: boolean }) =>
+    requestMultipart<T>("POST", path, formData, opts),
 };
 
 export const delay = (ms = 420) => new Promise((r) => setTimeout(r, ms));

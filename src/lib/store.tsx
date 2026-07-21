@@ -29,18 +29,26 @@ import type {
 const emptySetup = (): SetupState => ({
   privacy_accepted: false,
   privacy_accepted_at: null,
+  privacy_notice_version: null,
   identity_saved: false,
   email_otp_sent: false,
   email_otp_destination: null,
   identity_verified: false,
+  email_verified: false,
+  company_verified: false,
   domain: null,
   domain_token: null,
   domain_dns_ok: false,
   domain_http_ok: false,
+  domain_instructions: null,
   cac_submitted: false,
   cac_skipped: false,
   manual_review: "none",
   setup_complete: false,
+  can_complete_setup: false,
+  next_step: "privacy",
+  progress_percent: 0,
+  steps: [],
 });
 
 /** Demo-only seed catalog — never used when VITE_API_BASE is set. */
@@ -250,32 +258,62 @@ function mapSetupFromApi(api: SetupApi, emailFallback = ""): { org: Partial<Orga
     "none";
   const review = (["none", "pending", "approved", "rejected"].includes(reviewRaw) ? reviewRaw : "none") as SetupState["manual_review"];
 
+  const stepsRaw = Array.isArray(api.steps) ? api.steps : [];
+  const steps = stepsRaw
+    .map((raw) => {
+      const st = asRecord(raw);
+      if (!st) return null;
+      return {
+        id: String(st.id ?? ""),
+        title: String(st.title ?? st.id ?? ""),
+        required: pickBool(st.required),
+        completed: pickBool(st.completed, st.done),
+        description: String(st.description ?? ""),
+      };
+    })
+    .filter((x): x is SetupState["steps"][number] => !!x && !!x.id);
+
+  const emailVerified = pickBool(api.email_verified, api.identity_verified, identity.verified, identity.email_verified);
+  const privacyOk = pickBool(api.privacy_notice_accepted, privacy.accepted, privacy.privacy_notice_accepted);
+  const setupDone = pickBool(api.setup_completed, api.setup_complete);
+  const canComplete = pickBool(api.can_complete_setup) || (privacyOk && emailVerified && !setupDone);
+
   return {
     org: {
       id: typeof api.organization_id === "number" ? api.organization_id : 0,
       name: typeof api.organization_name === "string" ? api.organization_name : "",
       slug: typeof api.slug === "string" ? api.slug : "",
       primary_email: emailFallback,
+      email: emailFallback,
     },
     setup: {
-      privacy_accepted: pickBool(api.privacy_notice_accepted, privacy.accepted, privacy.privacy_notice_accepted),
+      privacy_accepted: privacyOk,
       privacy_accepted_at:
         (typeof api.privacy_notice_accepted_at === "string" && api.privacy_notice_accepted_at) ||
         (typeof privacy.accepted_at === "string" && privacy.accepted_at) ||
         null,
-      identity_saved: pickBool(identity.saved, api.identity_saved),
+      privacy_notice_version:
+        pickStr(api.privacy_notice_version, privacy.version, privacy.privacy_notice_version) || null,
+      identity_saved: pickBool(identity.saved, api.identity_saved, !!pickStr(identity.legal_name, api.legal_name)),
       email_otp_sent: false,
       email_otp_destination:
         pickStr(api.primary_email_masked, identity.primary_email_masked, emailFallback) || null,
-      identity_verified: pickBool(api.identity_verified, api.email_verified, identity.verified, identity.email_verified),
+      identity_verified: emailVerified,
+      email_verified: emailVerified,
+      company_verified: pickBool(api.company_verified, flags.dns || flags.http),
       domain: flags.domain,
       domain_token: flags.token,
       domain_dns_ok: flags.dns,
       domain_http_ok: flags.http,
-      cac_submitted: pickBool(cac.submitted, cac.cac_submitted, api.cac_submitted),
+      domain_instructions: null,
+      cac_submitted: pickBool(cac.submitted, cac.details_provided, cac.cac_submitted, api.cac_submitted, api.cac_details_provided),
       cac_skipped: pickBool(cac.skipped, cac.cac_skipped, api.cac_skipped),
       manual_review: review,
-      setup_complete: pickBool(api.setup_completed, api.setup_complete),
+      setup_complete: setupDone,
+      can_complete_setup: canComplete,
+      next_step: pickStr(api.next_step) || null,
+      progress_percent: typeof api.progress_percent === "number" ? api.progress_percent : privacyOk && emailVerified ? 66 : privacyOk ? 33 : 0,
+      steps,
     },
   };
 }
@@ -293,16 +331,34 @@ type Store = {
   hydrateSession: (email?: string) => Promise<void>;
   // setup wizard
   acceptPrivacy: (version?: string) => Promise<void>;
-  saveIdentity: (fields: { website: string; legal_name: string; company_phone: string }) => Promise<void>;
+  saveIdentity: (fields: {
+    website?: string;
+    legal_name?: string;
+    company_phone?: string;
+    registration_number?: string;
+  }) => Promise<void>;
   updateOrgProfile: (fields: Partial<Organization>) => Promise<void>;
-  sendOtp: () => Promise<{ devOtp: string }>;
+  sendOtp: () => Promise<{ devOtp: string; destinationMasked: string; resendAfter: number }>;
   verifyOtp: (code: string) => Promise<void>;
-  startDomainVerification: (domain: string) => Promise<string>;
-  checkDomain: (method: "auto" | "dns" | "http") => Promise<void>;
-  submitCac: (cac: string, rc: string) => Promise<void>;
+  startDomainVerification: (domain: string, website?: string) => Promise<{
+    token: string;
+    domain: string;
+    instructions: Record<string, unknown> | null;
+  }>;
+  checkDomain: (method: "auto" | "dns" | "http") => Promise<{ dns: boolean; http: boolean; message: string }>;
+  submitCac: (fields: {
+    rc_number?: string;
+    company_type?: string;
+    registration_date?: string;
+    status?: string;
+    registered_address?: string;
+    tin?: string;
+  }) => Promise<void>;
   skipCac: () => Promise<void>;
-  requestManualReview: () => Promise<void>;
+  requestManualReview: (notes?: string) => Promise<void>;
   completeSetup: () => Promise<void>;
+  /** Fresh GET /organizations/me/setup only (lighter than full hydrate). */
+  refreshSetup: () => Promise<void>;
   // users & dual control
   createUser: (u: { full_name: string; email: string; title: string; role: string }) => Promise<OrgUser>;
   assignDualControl: (initiatorId: number, authorizerId: number) => Promise<void>;
@@ -335,6 +391,10 @@ type Store = {
   rotateServiceKey: (companyId?: number) => Promise<string>;
   revokeServiceKey: () => Promise<void>;
   savePreferredServices: (services: string[]) => Promise<void>;
+  /** POST /organizations/me/logo multipart field `file` (PNG/JPEG/WebP/SVG, max 2MB) */
+  uploadLogo: (file: File) => Promise<string | null>;
+  /** DELETE /organizations/me/logo */
+  deleteLogo: () => Promise<void>;
   // misc
   toggleTool: (id: number) => Promise<void>;
   createTicket: (subject: string, priority: string, body: string) => Promise<void>;
@@ -681,37 +741,73 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     await hydrateSession(session?.email || state.org.primary_email);
   }, [persist, logAudit, hydrateSession, session?.email, state.org.primary_email]);
 
+  const refreshSetup = useCallback(async () => {
+    if (DEMO_MODE || !tokens.platform) return;
+    try {
+      const setupRes = await api.get<SetupApi>("/organizations/me/setup");
+      const mapped = mapSetupFromApi(setupRes, emailFromToken() || tokens.email || "");
+      persist((s) => ({
+        ...s,
+        org: {
+          ...s.org,
+          ...mapped.org,
+          email: s.org.email || mapped.org.email || mapped.org.primary_email || "",
+        },
+        setup: {
+          ...mapped.setup,
+          domain_instructions: s.setup.domain_instructions,
+          domain_token: mapped.setup.domain_token || s.setup.domain_token,
+          email_otp_destination: mapped.setup.email_otp_destination || s.setup.email_otp_destination,
+        },
+      }));
+    } catch { /* keep */ }
+  }, [persist]);
+
   const saveIdentity = useCallback(
-    async (fields: { website: string; legal_name: string; company_phone: string }) => {
+    async (fields: {
+      website?: string;
+      legal_name?: string;
+      company_phone?: string;
+      registration_number?: string;
+    }) => {
+      const body = {
+        website: fields.website || undefined,
+        legal_name: fields.legal_name || undefined,
+        company_phone: fields.company_phone || undefined,
+        registration_number: fields.registration_number || undefined,
+      };
       if (DEMO_MODE) {
         await delay(400);
         persist((s) => ({
           ...s,
           org: {
             ...s.org,
-            website: fields.website || null,
-            legal_name: fields.legal_name || null,
-            phone: fields.company_phone || null,
-            company_phone: fields.company_phone || null,
+            website: fields.website || s.org.website,
+            legal_name: fields.legal_name || s.org.legal_name,
+            phone: fields.company_phone || s.org.phone,
+            company_phone: fields.company_phone || s.org.company_phone,
+            registration_number: fields.registration_number || s.org.registration_number,
           },
           setup: { ...s.setup, identity_saved: true },
         }));
         return;
       }
-      await api.post("/organizations/me/setup/identity", fields);
+      await api.post("/organizations/me/setup/identity", body);
       persist((s) => ({
         ...s,
         org: {
           ...s.org,
-          website: fields.website || null,
-          legal_name: fields.legal_name || null,
-          phone: fields.company_phone || null,
-          company_phone: fields.company_phone || null,
+          website: fields.website ?? s.org.website,
+          legal_name: fields.legal_name ?? s.org.legal_name,
+          phone: fields.company_phone ?? s.org.phone,
+          company_phone: fields.company_phone ?? s.org.company_phone,
+          registration_number: fields.registration_number ?? s.org.registration_number,
         },
         setup: { ...s.setup, identity_saved: true },
       }));
+      await refreshSetup();
     },
-    [persist],
+    [persist, refreshSetup],
   );
 
   const updateOrgProfile = useCallback(
@@ -731,13 +827,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const savePreferredServices = useCallback(
     async (services: string[]) => {
+      const allowed = new Set([
+        "penetration_testing",
+        "vulnerability_management",
+        "red_team",
+        "blue_team",
+        "purple_team",
+        "mssp",
+        "soc_as_a_service",
+        "incident_response",
+        "threat_intelligence",
+        "security_awareness",
+        "compliance_audit",
+        "cloud_security",
+        "application_security",
+        "ot_security",
+        "other",
+      ]);
+      const preferred_services = services.filter((s) => allowed.has(s));
       if (DEMO_MODE) {
         await delay(400);
-        persist((s) => ({ ...s, org: { ...s.org, preferred_services: services } }));
+        persist((s) => ({ ...s, org: { ...s.org, preferred_services } }));
         return;
       }
-      await api.put("/organizations/me/preferred-services", { preferred_services: services }, { dualControl: true });
-      persist((s) => ({ ...s, org: { ...s.org, preferred_services: services } }));
+      await api.put("/organizations/me/preferred-services", { preferred_services }, { dualControl: true });
+      persist((s) => ({ ...s, org: { ...s.org, preferred_services } }));
     },
     [persist],
   );
@@ -747,19 +861,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(600);
       const devOtp = String(Math.floor(100000 + Math.random() * 900000));
       sessionStorage.setItem("dev_otp", devOtp);
-      persist((s) => ({ ...s, setup: { ...s.setup, email_otp_sent: true, email_otp_destination: s.org.email || s.org.primary_email || null } }));
-      return { devOtp };
+      const dest = state.org.email || state.org.primary_email || null;
+      persist((s) => ({ ...s, setup: { ...s.setup, email_otp_sent: true, email_otp_destination: dest } }));
+      return { devOtp, destinationMasked: dest ? dest.replace(/(.{2}).+(@.+)/, "$1***$2") : "", resendAfter: 45 };
     }
-    const res = await api.post<{ dev_otp?: string }>("/organizations/me/setup/otp/send", { channel: "email" });
-    const dest = state.org.email || state.org.primary_email || session?.email || emailFromToken() || tokens.email || "";
-    if (dest) tokens.email = dest;
+    const res = await api.post<{
+      dev_otp?: string;
+      destination_masked?: string;
+      resend_after_seconds?: number;
+    }>("/organizations/me/setup/otp/send", { channel: "email" });
+    const dest =
+      res?.destination_masked ||
+      state.org.email ||
+      state.org.primary_email ||
+      session?.email ||
+      emailFromToken() ||
+      tokens.email ||
+      "";
+    if (dest && !dest.includes("*")) tokens.email = dest;
     persist((s) => ({
       ...s,
-      org: { ...s.org, email: dest || s.org.email, primary_email: dest || s.org.primary_email },
-      setup: { ...s.setup, email_otp_sent: true, email_otp_destination: dest || s.setup.email_otp_destination },
+      setup: {
+        ...s.setup,
+        email_otp_sent: true,
+        email_otp_destination: res?.destination_masked || dest || s.setup.email_otp_destination,
+      },
     }));
-    return { devOtp: res?.dev_otp || "" };
-  }, [persist, state.org.primary_email, session?.email]);
+    return {
+      devOtp: import.meta.env.DEV ? res?.dev_otp || "" : "",
+      destinationMasked: res?.destination_masked || dest,
+      resendAfter: res?.resend_after_seconds ?? 45,
+    };
+  }, [persist, state.org.email, state.org.primary_email, session?.email]);
 
   const verifyOtp = useCallback(
     async (code: string) => {
@@ -767,39 +900,89 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await delay(650);
         const expected = sessionStorage.getItem("dev_otp");
         if (expected && code !== expected) throw new Error("That code isn't right — check the email and try again");
-        persist((s) => ({ ...s, setup: { ...s.setup, identity_verified: true } }));
+        persist((s) => ({
+          ...s,
+          setup: {
+            ...s.setup,
+            identity_verified: true,
+            email_verified: true,
+            can_complete_setup: s.setup.privacy_accepted,
+          },
+        }));
         logAudit("setup.email_otp", "setup", "Verified company email via OTP");
         return;
       }
-      await api.post("/organizations/me/setup/otp/verify", { channel: "email", code });
-      persist((s) => ({ ...s, setup: { ...s.setup, identity_verified: true } }));
-      await hydrateSession(session?.email || state.org.primary_email);
-    },
-    [persist, logAudit, hydrateSession, session?.email, state.org.primary_email],
-  );
-
-  const startDomainVerification = useCallback(
-    async (domain: string) => {
-      if (DEMO_MODE) {
-        await delay(600);
-        const token = `phx_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
-        persist((s) => ({ ...s, setup: { ...s.setup, domain, domain_token: token, domain_dns_ok: false, domain_http_ok: false } }));
-        return token;
-      }
-      const res = await api.post<Record<string, unknown>>("/organizations/me/setup/verify/domain/start", { domain });
-      const flags = parseDomainFlags(res);
-      const token = flags.token || "";
+      const res = await api.post<{
+        verified?: boolean;
+        email_verified?: boolean;
+        identity_verified?: boolean;
+        message?: string;
+      }>("/organizations/me/setup/otp/verify", { channel: "email", code });
+      if (res && res.verified === false) throw new Error(res.message || "Verification failed");
       persist((s) => ({
         ...s,
         setup: {
           ...s.setup,
-          domain: flags.domain || domain,
+          identity_verified: true,
+          email_verified: true,
+          can_complete_setup: s.setup.privacy_accepted,
+        },
+        org: { ...s.org, email_verified: true, identity_verified: true },
+      }));
+      await refreshSetup();
+    },
+    [persist, logAudit, refreshSetup],
+  );
+
+  const startDomainVerification = useCallback(
+    async (domain: string, website?: string) => {
+      if (DEMO_MODE) {
+        await delay(600);
+        const token = `phx_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
+        const instructions = {
+          dns_txt: `phantix-verify=${token}`,
+          http_url: `https://${domain}/.well-known/phantix-verify.txt`,
+          http_body: token,
+        };
+        persist((s) => ({
+          ...s,
+          setup: {
+            ...s.setup,
+            domain,
+            domain_token: token,
+            domain_dns_ok: false,
+            domain_http_ok: false,
+            domain_instructions: instructions,
+          },
+        }));
+        return { token, domain, instructions };
+      }
+      const res = await api.post<Record<string, unknown>>("/organizations/me/setup/verify/domain/start", {
+        domain: domain || undefined,
+        website: website || undefined,
+      });
+      const flags = parseDomainFlags(res);
+      const token = flags.token || pickStr(res.token, res.verification_token) || "";
+      const verifiedDomain = flags.domain || pickStr(res.verification_domain, res.domain) || domain;
+      const instructions =
+        (asRecord(res.instructions) as Record<string, unknown> | null) ||
+        ({
+          dns_txt: token ? `phantix-verify=${token}` : null,
+          http_url: verifiedDomain ? `https://${verifiedDomain}/.well-known/phantix-verify.txt` : null,
+          http_body: token || null,
+        } as Record<string, unknown>);
+      persist((s) => ({
+        ...s,
+        setup: {
+          ...s.setup,
+          domain: verifiedDomain,
           domain_token: token,
           domain_dns_ok: false,
           domain_http_ok: false,
+          domain_instructions: instructions,
         },
       }));
-      return token;
+      return { token, domain: verifiedDomain, instructions };
     },
     [persist],
   );
@@ -811,54 +994,78 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         persist((s) => {
           const dnsOk = s.setup.domain_dns_ok || method !== "http";
           const httpOk = s.setup.domain_http_ok || method !== "dns";
-          return { ...s, setup: { ...s.setup, domain_dns_ok: dnsOk, domain_http_ok: httpOk } };
+          return {
+            ...s,
+            setup: {
+              ...s.setup,
+              domain_dns_ok: dnsOk,
+              domain_http_ok: httpOk,
+              company_verified: dnsOk || httpOk,
+            },
+          };
         });
         logAudit("setup.domain_verify", "setup", "Domain verification check passed");
-        return;
+        return { dns: method !== "http", http: method !== "dns", message: "Demo check passed" };
       }
       const res = await api.post<Record<string, unknown>>("/organizations/me/setup/verify/domain/check", { method });
       const flags = parseDomainFlags(res);
-      // Prefer check response, then rehydrate from GET /me/setup (source of truth)
+      const verified = pickBool(res.verified, res.company_verified);
+      const dns = flags.dns || (verified && method !== "http");
+      const http = flags.http || (verified && method !== "dns");
+      const message = pickStr(res.message) || (dns || http ? "Domain verified" : "Not verified yet — check DNS/HTTP and try again");
       persist((s) => ({
         ...s,
         setup: {
           ...s.setup,
           domain: flags.domain || s.setup.domain,
           domain_token: flags.token || s.setup.domain_token,
-          domain_dns_ok: flags.dns || s.setup.domain_dns_ok,
-          domain_http_ok: flags.http || s.setup.domain_http_ok,
+          domain_dns_ok: dns || s.setup.domain_dns_ok,
+          domain_http_ok: http || s.setup.domain_http_ok,
+          company_verified: verified || dns || http || s.setup.company_verified,
+        },
+        org: {
+          ...s.org,
+          domain_verified: verified || dns || http || s.org.domain_verified,
+          company_verified: verified || s.org.company_verified,
         },
       }));
-      await hydrateSession(session?.email || state.org.primary_email || emailFromToken());
-      // If hydrate wiped flags (unknown shape), re-apply successful check flags
-      if (flags.dns || flags.http) {
-        persist((s) => ({
-          ...s,
-          setup: {
-            ...s.setup,
-            domain_dns_ok: s.setup.domain_dns_ok || flags.dns,
-            domain_http_ok: s.setup.domain_http_ok || flags.http,
-            domain: s.setup.domain || flags.domain,
-            domain_token: s.setup.domain_token || flags.token,
-          },
-        }));
+      await refreshSetup();
+      if (!dns && !http && !verified) {
+        // soft fail — still return so UI can show message
       }
+      return { dns: dns || false, http: http || false, message };
     },
-    [persist, logAudit, hydrateSession, session?.email, state.org.primary_email],
+    [persist, logAudit, refreshSetup],
   );
 
   const submitCac = useCallback(
-    async (cac: string, rc: string) => {
+    async (fields: {
+      rc_number?: string;
+      company_type?: string;
+      registration_date?: string;
+      status?: string;
+      registered_address?: string;
+      tin?: string;
+    }) => {
       if (DEMO_MODE) {
         await delay(500);
-        persist((s) => ({ ...s, setup: { ...s.setup, cac_submitted: true } }));
+        persist((s) => ({ ...s, setup: { ...s.setup, cac_submitted: true, company_verified: true } }));
         logAudit("setup.cac", "setup", "Submitted CAC / RC details");
         return;
       }
-      await api.post("/organizations/me/setup/cac", { cac_number: cac, rc_number: rc || undefined });
+      // API accepts rc_number (and related CAC fields) or skip
+      await api.post("/organizations/me/setup/cac", {
+        rc_number: fields.rc_number || undefined,
+        company_type: fields.company_type || undefined,
+        registration_date: fields.registration_date || undefined,
+        status: fields.status || undefined,
+        registered_address: fields.registered_address || undefined,
+        tin: fields.tin || undefined,
+      });
       persist((s) => ({ ...s, setup: { ...s.setup, cac_submitted: true } }));
+      await refreshSetup();
     },
-    [persist, logAudit],
+    [persist, logAudit, refreshSetup],
   );
 
   const skipCac = useCallback(async () => {
@@ -869,33 +1076,39 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     await api.post("/organizations/me/setup/cac", { skip: true });
     persist((s) => ({ ...s, setup: { ...s.setup, cac_skipped: true } }));
-  }, [persist]);
+    await refreshSetup();
+  }, [persist, refreshSetup]);
 
-  const requestManualReview = useCallback(async () => {
+  const requestManualReview = useCallback(async (notes?: string) => {
     if (DEMO_MODE) {
       await delay(500);
       persist((s) => ({ ...s, setup: { ...s.setup, manual_review: "pending" } }));
       logAudit("setup.manual_review", "setup", "Requested manual company review");
       return;
     }
-    await api.post("/organizations/me/setup/verify/manual-review", {});
+    await api.post("/organizations/me/setup/verify/manual-review", { notes: notes || undefined });
     persist((s) => ({ ...s, setup: { ...s.setup, manual_review: "pending" } }));
-  }, [persist, logAudit]);
+    await refreshSetup();
+  }, [persist, logAudit, refreshSetup]);
 
   const completeSetup = useCallback(async () => {
     if (DEMO_MODE) {
       await delay(600);
       persist((s) => {
         if (!s.setup.privacy_accepted || !s.setup.identity_verified) return s;
-        return { ...s, setup: { ...s.setup, setup_complete: true } };
+        return { ...s, setup: { ...s.setup, setup_complete: true, can_complete_setup: false }, org: { ...s.org, setup_completed: true } };
       });
       logAudit("setup.complete", "setup", "Completed organization setup");
       return;
     }
     await api.post("/organizations/me/setup/complete", {});
-    persist((s) => ({ ...s, setup: { ...s.setup, setup_complete: true } }));
-    await hydrateSession(session?.email || state.org.primary_email);
-  }, [persist, logAudit, hydrateSession, session?.email, state.org.primary_email]);
+    persist((s) => ({
+      ...s,
+      setup: { ...s.setup, setup_complete: true, can_complete_setup: false, progress_percent: 100 },
+      org: { ...s.org, setup_completed: true },
+    }));
+    await hydrateSession(session?.email || state.org.email || state.org.primary_email);
+  }, [persist, logAudit, hydrateSession, session?.email, state.org.email, state.org.primary_email]);
 
   // ── Users & dual control ─────────────────────────────────────────────────
   const createUser = useCallback(
@@ -1390,6 +1603,46 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     logAudit("service_key.revoke", "tenancy", "Revoked service key");
   }, [persist, logAudit]);
 
+  const uploadLogo = useCallback(
+    async (file: File) => {
+      if (DEMO_MODE) {
+        await delay(600);
+        const url = URL.createObjectURL(file);
+        persist((s) => ({ ...s, org: { ...s.org, logo_url: url } }));
+        logAudit("org.logo.upload", "tenancy", "Uploaded company logo");
+        return url;
+      }
+      const fd = new FormData();
+      fd.append("file", file);
+      const needsDc = !!tokens.dualControl;
+      const res = await api.postMultipart<unknown>("/organizations/me/logo", fd, needsDc ? { dualControl: true } : undefined);
+      const mapped = mapOrgFromApi(res, state.org.email);
+      const logoUrl = mapped.logo_url;
+      persist((s) => ({ ...s, org: { ...s.org, ...mapped, logo_url: logoUrl } }));
+      logAudit("org.logo.upload", "tenancy", "Uploaded company logo");
+      return logoUrl;
+    },
+    [persist, logAudit, state.org.email],
+  );
+
+  const deleteLogo = useCallback(async () => {
+    if (DEMO_MODE) {
+      await delay(350);
+      persist((s) => ({ ...s, org: { ...s.org, logo_url: null } }));
+      logAudit("org.logo.delete", "tenancy", "Removed company logo");
+      return;
+    }
+    const needsDc = !!tokens.dualControl;
+    const res = await api.delete<unknown>("/organizations/me/logo", needsDc ? { dualControl: true } : undefined);
+    if (res) {
+      const mapped = mapOrgFromApi(res, state.org.email);
+      persist((s) => ({ ...s, org: { ...s.org, ...mapped, logo_url: null } }));
+    } else {
+      persist((s) => ({ ...s, org: { ...s.org, logo_url: null } }));
+    }
+    logAudit("org.logo.delete", "tenancy", "Removed company logo");
+  }, [persist, logAudit, state.org.email]);
+
   // ── Misc ─────────────────────────────────────────────────────────────────
   const toggleTool = useCallback(
     async (id: number) => {
@@ -1440,24 +1693,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session, state, operate, securityDbReady,
       register, login, verifyMfa, logout, hydrateSession,
-      acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup,
+      acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
       requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
       issueLoginLink, clearDevice,
       refreshConnections, createConnection, testConnection, bootstrapConnection, deleteConnection,
-      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices,
+      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
       toggleTool, createTicket, decidePending, resetDemo,
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
-      register, login, verifyMfa, logout, hydrateSession, acceptPrivacy, saveIdentity, sendOtp, verifyOtp,
-      startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, updateOrgProfile,
+      register, login, verifyMfa, logout, hydrateSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
+      startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
       issueLoginLink, clearDevice,
       refreshConnections, createConnection, testConnection, bootstrapConnection, deleteConnection,
-      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, toggleTool, createTicket, decidePending, resetDemo,
+      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
+      toggleTool, createTicket, decidePending, resetDemo,
       toast, dismissToast],
   );
 

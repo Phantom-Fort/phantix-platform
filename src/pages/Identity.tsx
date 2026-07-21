@@ -8,15 +8,26 @@ import { useStore } from "@/lib/store";
 import type { Organization, OrgContact } from "@/lib/types";
 import { timeAgo, cx } from "@/lib/utils";
 
+/** Allowed by PUT /organizations/me/preferred-services (API enum). */
 const serviceCatalog = [
-  { key: "attack_surface", name: "Attack Surface Management", desc: "Assets, discovery, tags, history" },
-  { key: "vapt", name: "VAPT Campaigns", desc: "Guided testing with correlation" },
-  { key: "risk", name: "Risk Management", desc: "Scoring, prioritization, treatments" },
-  { key: "compliance", name: "Compliance & GRC", desc: "Frameworks, questionnaire, evidence" },
-  { key: "reporting", name: "Reporting", desc: "Verified-only client packages" },
-  { key: "vulnerability_management", name: "Vulnerability management", desc: "Continuous vuln workflows" },
-  { key: "penetration_testing", name: "Penetration testing", desc: "Engagement-style assessments" },
+  { key: "penetration_testing", name: "Penetration testing", desc: "Engagement-style assessments & VAPT" },
+  { key: "vulnerability_management", name: "Vulnerability management", desc: "Continuous vuln discovery & tracking" },
+  { key: "red_team", name: "Red team", desc: "Adversary simulation" },
+  { key: "blue_team", name: "Blue team", desc: "Detection & defense operations" },
+  { key: "purple_team", name: "Purple team", desc: "Collaborative attack/defense" },
+  { key: "mssp", name: "MSSP", desc: "Managed security service provider" },
+  { key: "soc_as_a_service", name: "SOC as a service", desc: "Outsourced security operations centre" },
+  { key: "incident_response", name: "Incident response", desc: "IR retainers and playbooks" },
+  { key: "threat_intelligence", name: "Threat intelligence", desc: "Intel feeds and analysis" },
+  { key: "security_awareness", name: "Security awareness", desc: "Training and phishing simulations" },
+  { key: "compliance_audit", name: "Compliance & audit", desc: "Frameworks, GRC, evidence" },
+  { key: "cloud_security", name: "Cloud security", desc: "CSPM and cloud posture" },
+  { key: "application_security", name: "Application security", desc: "AppSec and secure SDLC" },
+  { key: "ot_security", name: "OT security", desc: "Industrial / operational technology" },
+  { key: "other", name: "Other", desc: "Custom or unlisted services" },
 ];
+
+const ALLOWED_SERVICES = new Set(serviceCatalog.map((s) => s.key));
 
 const industries = [
   "technology", "financial_services", "fintech", "healthcare", "government",
@@ -36,15 +47,62 @@ function emptyContact(): OrgContact {
 export default function Identity() {
   const {
     state, rotateServiceKey, revokeServiceKey, updateOrgProfile, savePreferredServices,
-    toast, operate, requireDualControl, hydrateSession,
+    uploadLogo, deleteLogo, toast, operate, requireDualControl, hydrateSession,
   } = useStore();
   const [tab, setTab] = useState("overview");
   const [keyModal, setKeyModal] = useState<string | null>(null);
   const [revokeOpen, setRevokeOpen] = useState(false);
-  const [preferred, setPreferred] = useState<string[]>(state.org.preferred_services ?? ["attack_surface", "vapt", "risk", "reporting"]);
+  const [preferred, setPreferred] = useState<string[]>(() =>
+    (state.org.preferred_services ?? ["vulnerability_management", "penetration_testing", "compliance_audit"]).filter((k) =>
+      ALLOWED_SERVICES.has(k),
+    ),
+  );
   const [form, setForm] = useState<Organization>(state.org);
   const [busy, setBusy] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const logoInputRef = React.useRef<HTMLInputElement>(null);
   const key = state.serviceKey;
+
+  const onLogoSelected = async (file: File | null) => {
+    if (!file) return;
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"];
+    if (!allowed.includes(file.type) && !/\.(png|jpe?g|webp|svg)$/i.test(file.name)) {
+      toast("error", "Invalid file", "Use PNG, JPEG, WebP, or SVG.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast("error", "File too large", "Logo must be 2MB or smaller.");
+      return;
+    }
+    if (state.dualControl.configured && !operate.unlocked) {
+      if (!(await requireDualControl("Uploading a company logo requires a dual-control operate session."))) return;
+    }
+    setLogoBusy(true);
+    try {
+      await uploadLogo(file);
+      toast("success", "Logo uploaded", "POST /organizations/me/logo — used on report covers and footers.");
+    } catch (err) {
+      toast("error", "Upload failed", err instanceof Error ? err.message : "Could not upload logo");
+    } finally {
+      setLogoBusy(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
+  const onLogoRemove = async () => {
+    if (state.dualControl.configured && !operate.unlocked) {
+      if (!(await requireDualControl("Removing the company logo requires a dual-control operate session."))) return;
+    }
+    setLogoBusy(true);
+    try {
+      await deleteLogo();
+      toast("success", "Logo removed", "DELETE /organizations/me/logo");
+    } catch (err) {
+      toast("error", "Remove failed", err instanceof Error ? err.message : "Could not remove logo");
+    } finally {
+      setLogoBusy(false);
+    }
+  };
 
   useEffect(() => {
     void hydrateSession();
@@ -52,7 +110,9 @@ export default function Identity() {
 
   useEffect(() => {
     setForm(state.org);
-    if (state.org.preferred_services?.length) setPreferred(state.org.preferred_services);
+    if (state.org.preferred_services?.length) {
+      setPreferred(state.org.preferred_services.filter((k) => ALLOWED_SERVICES.has(k)));
+    }
   }, [state.org]);
 
   const set = <K extends keyof Organization>(k: K, v: Organization[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -372,7 +432,7 @@ export default function Identity() {
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <Card>
-              <CardHeader title="Report branding" subtitle="Logo on executive packages" action={<ImagePlus size={16} className="text-slate-500" />} />
+              <CardHeader title="Report branding" subtitle="POST/DELETE /organizations/me/logo — PNG/JPEG/WebP/SVG, max 2MB" action={<ImagePlus size={16} className="text-slate-500" />} />
               <div className="flex items-center gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
                 <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-phantix-800/70">
                   {state.org.logo_url ? (
@@ -383,10 +443,28 @@ export default function Identity() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-slate-200">{state.org.name}</p>
-                  <p className="text-xs text-slate-500">Appears on PDF/DOCX headers</p>
+                  <p className="text-xs text-slate-500">Used on report cover pages and footers</p>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
+                    className="hidden"
+                    onChange={(e) => void onLogoSelected(e.target.files?.[0] ?? null)}
+                  />
                   <div className="mt-2 flex gap-2">
-                    <button className="btn-secondary !py-2 !text-xs" onClick={() => toast("info", "Logo upload", "POST /organizations/me/logo (multipart)")}>Upload logo</button>
-                    <button className="btn-ghost !py-2 !text-xs" onClick={() => toast("info", "Logo removed", "DELETE /organizations/me/logo")}>Remove</button>
+                    <button
+                      type="button"
+                      className="btn-secondary !py-2 !text-xs"
+                      disabled={logoBusy}
+                      onClick={() => logoInputRef.current?.click()}
+                    >
+                      {logoBusy ? "Working…" : "Upload logo"}
+                    </button>
+                    {state.org.logo_url && (
+                      <button type="button" className="btn-ghost !py-2 !text-xs" disabled={logoBusy} onClick={() => void onLogoRemove()}>
+                        Remove
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

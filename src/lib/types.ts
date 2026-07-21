@@ -181,18 +181,28 @@ export interface SupportTicket {
 export interface SetupState {
   privacy_accepted: boolean;
   privacy_accepted_at: string | null;
+  privacy_notice_version: string | null;
   identity_saved: boolean;
   email_otp_sent: boolean;
   email_otp_destination: string | null;
   identity_verified: boolean;
+  email_verified: boolean;
+  company_verified: boolean;
   domain: string | null;
   domain_token: string | null;
   domain_dns_ok: boolean;
   domain_http_ok: boolean;
+  /** Copyable instructions from domain/start (DNS TXT + HTTP). */
+  domain_instructions: Record<string, unknown> | null;
   cac_submitted: boolean;
   cac_skipped: boolean;
   manual_review: "none" | "pending" | "approved" | "rejected";
   setup_complete: boolean;
+  /** Server: privacy + email OTP done, not yet completed. */
+  can_complete_setup: boolean;
+  next_step: string | null;
+  progress_percent: number;
+  steps: { id: string; title: string; required: boolean; completed: boolean; description: string }[];
 }
 
 export interface DualControlAssignment {

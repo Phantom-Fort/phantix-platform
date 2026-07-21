@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ShieldCheck, Building2, MailCheck, Globe, CheckCircle2, Copy, ArrowRight,
   ArrowLeft, FileText, Landmark, UserCheck, Loader2, PartyPopper, Info, RefreshCw,
+  Users, Database,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE, emailFromToken } from "@/lib/api";
@@ -11,44 +12,66 @@ import { cx, maskEmail } from "@/lib/utils";
 
 const stepsMeta = [
   { id: 1, key: "privacy", label: "Privacy notice", icon: <ShieldCheck size={16} /> },
-  { id: 2, key: "identity", label: "Company profile", icon: <Building2 size={16} /> },
+  { id: 2, key: "identity", label: "Company profile", icon: <Building2 size={16} />, optional: true },
   { id: 3, key: "otp", label: "Email verification", icon: <MailCheck size={16} /> },
   { id: 4, key: "verify", label: "Company verification", icon: <Globe size={16} />, optional: true },
   { id: 5, key: "complete", label: "Complete", icon: <PartyPopper size={16} /> },
 ];
 
+/** Map server next_step → wizard step index (1–5). */
+function stepFromSetup(s: {
+  privacy_accepted: boolean;
+  identity_verified: boolean;
+  email_verified: boolean;
+  setup_complete: boolean;
+  can_complete_setup: boolean;
+  next_step: string | null;
+  identity_saved: boolean;
+}): number {
+  if (s.setup_complete) return 5;
+  const ns = (s.next_step || "").toLowerCase();
+  if (ns === "privacy" || !s.privacy_accepted) return 1;
+  if (ns === "email_otp" || (!s.identity_verified && !s.email_verified)) {
+    return s.identity_saved || s.privacy_accepted ? 3 : 2;
+  }
+  if (ns === "complete" || s.can_complete_setup) return s.can_complete_setup ? 5 : 4;
+  if (["company_verification", "domain", "cac_rc", "manual_review", "verify"].includes(ns)) return 4;
+  if (!s.privacy_accepted) return 1;
+  if (!s.identity_verified && !s.email_verified) return 3;
+  if (s.can_complete_setup) return 5;
+  return 4;
+}
+
 export default function SetupWizard() {
   const store = useStore();
-  const { state, session, toast, hydrateSession } = store;
+  const { state, session, toast, hydrateSession, refreshSetup } = store;
   const s = state.setup;
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!DEMO_MODE) void hydrateSession(session?.email || state.org.primary_email || "");
-  }, [hydrateSession, session?.email, state.org.primary_email]);
+    if (!DEMO_MODE) {
+      void hydrateSession(session?.email || state.org.email || state.org.primary_email || "");
+    }
+  }, [hydrateSession, session?.email, state.org.email, state.org.primary_email]);
 
-  // Source of truth = setup state (mirrors GET /organizations/me/setup rehydration)
-  const currentStep = useMemo(() => {
-    if (!s.privacy_accepted) return 1;
-    if (!s.identity_verified) return s.identity_saved ? 3 : 2;
-    if (!s.setup_complete) return 4;
-    return 5;
-  }, [s]);
+  // Poll setup while on wizard (picks up manual review approval)
+  useEffect(() => {
+    if (DEMO_MODE || s.setup_complete) return;
+    const t = setInterval(() => void refreshSetup(), 20_000);
+    return () => clearInterval(t);
+  }, [refreshSetup, s.setup_complete]);
 
+  const currentStep = useMemo(() => stepFromSetup(s), [s]);
   const [step, setStep] = useState(currentStep);
   useEffect(() => setStep(currentStep), [currentStep]);
 
-  useEffect(() => {
-    if (s.setup_complete && step === 5) {
-      // stay on complete screen — user clicks through to dashboard
-    }
-  }, [s.setup_complete, step]);
+  const progress = s.progress_percent || (s.setup_complete ? 100 : s.privacy_accepted && (s.identity_verified || s.email_verified) ? 66 : s.privacy_accepted ? 33 : 0);
 
   const stepDone = (id: number) => {
     if (id === 1) return s.privacy_accepted;
-    if (id === 2) return s.identity_saved || s.identity_verified;
-    if (id === 3) return s.identity_verified;
-    if (id === 4) return (s.domain_dns_ok || s.domain_http_ok) || s.cac_submitted || s.cac_skipped || s.manual_review !== "none";
+    if (id === 2) return s.identity_saved || s.identity_verified || s.email_verified;
+    if (id === 3) return s.identity_verified || s.email_verified;
+    if (id === 4) return s.company_verified || s.domain_dns_ok || s.domain_http_ok || s.cac_submitted || s.manual_review === "approved";
     if (id === 5) return s.setup_complete;
     return false;
   };
@@ -57,7 +80,6 @@ export default function SetupWizard() {
     <div className="relative flex min-h-screen">
       <div className="pointer-events-none absolute inset-0 bg-grid-faint bg-grid [mask-image:radial-gradient(ellipse_60%_50%_at_30%_0%,black,transparent)]" />
 
-      {/* Left rail */}
       <aside className="relative hidden w-[320px] shrink-0 flex-col border-r border-phantix-700/40 bg-phantix-950/70 p-8 backdrop-blur-xl lg:flex">
         <div className="flex items-center gap-3">
           <img src="/logo-transparent.png" alt="Phantix" className="h-10 w-10 object-contain" />
@@ -67,17 +89,33 @@ export default function SetupWizard() {
           </div>
         </div>
 
-        <div className="mt-10 flex-1 space-y-1">
+        <div className="mt-6">
+          <div className="mb-1.5 flex justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <span>Progress</span>
+            <span className="text-gold-400">{progress}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-phantix-800">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-gold-400 to-gold-600"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-8 flex-1 space-y-1">
           {stepsMeta.map((m, i) => {
             const done = stepDone(m.id);
             const active = step === m.id;
-            const reachable = m.id <= currentStep || done;
+            const reachable = m.id <= Math.max(currentStep, step) || done || (m.id === 2 && s.privacy_accepted);
             return (
               <div key={m.id} className="relative">
                 {i < stepsMeta.length - 1 && (
                   <div className={cx("absolute left-[19px] top-11 h-[calc(100%-24px)] w-px", done ? "bg-emerald-400/50" : "bg-phantix-700/60")} />
                 )}
                 <button
+                  type="button"
                   onClick={() => reachable && setStep(m.id)}
                   disabled={!reachable}
                   className={cx(
@@ -114,15 +152,18 @@ export default function SetupWizard() {
 
         <div className="rounded-xl border border-phantix-700/40 bg-phantix-900/60 p-4 text-[11px] leading-5 text-slate-500">
           <Info size={13} className="mb-1.5 text-gold-400" />
-          State rehydrates from <span className="font-mono text-slate-400">GET /organizations/me/setup</span> on
-          every load — you can leave and resume anytime.
+          Rehydrates from <span className="font-mono text-slate-400">GET /organizations/me/setup</span>.
+          Required: privacy + email OTP. Domain / CAC / manual review are optional.
+          {s.next_step && (
+            <span className="mt-2 block text-slate-400">
+              Server next step: <span className="font-mono text-gold-400/90">{s.next_step}</span>
+            </span>
+          )}
         </div>
       </aside>
 
-      {/* Content */}
       <main className="relative flex flex-1 items-start justify-center overflow-y-auto px-4 py-10 lg:px-10">
         <div className="w-full max-w-2xl">
-          {/* Mobile step indicator */}
           <div className="mb-6 flex items-center gap-2 lg:hidden">
             {stepsMeta.map((m) => (
               <div key={m.id} className={cx("h-1.5 flex-1 rounded-full", stepDone(m.id) ? "bg-emerald-400" : step === m.id ? "bg-gold-400" : "bg-phantix-700/60")} />
@@ -138,7 +179,7 @@ export default function SetupWizard() {
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             >
               {step === 1 && <PrivacyStep />}
-              {step === 2 && <IdentityStep onSkip={() => setStep(3)} />}
+              {step === 2 && <IdentityStep onSkip={() => setStep(3)} onDone={() => setStep(3)} />}
               {step === 3 && <OtpStep />}
               {step === 4 && <VerifyStep onContinue={() => setStep(5)} />}
               {step === 5 && <CompleteStep />}
@@ -146,7 +187,7 @@ export default function SetupWizard() {
           </AnimatePresence>
 
           {step > 1 && step < 5 && (
-            <button onClick={() => setStep(step - 1)} className="mt-6 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-200">
+            <button type="button" onClick={() => setStep(step - 1)} className="mt-6 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-200">
               <ArrowLeft size={15} /> Back
             </button>
           )}
@@ -158,7 +199,7 @@ export default function SetupWizard() {
 
 // ── Step 1: Privacy ───────────────────────────────────────────────────────────
 function PrivacyStep() {
-  const { acceptPrivacy, state } = useStore();
+  const { acceptPrivacy, state, toast } = useStore();
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,15 +211,19 @@ function PrivacyStep() {
     summary?: string;
     highlights?: { id: string; label: string; text: string }[];
     acceptance_required_copy?: string;
+    phantix_stores?: string[];
   } | null>(null);
 
   useEffect(() => {
     if (DEMO_MODE) {
       setPrivacy({
-        version: "demo",
+        version: state.setup.privacy_notice_version || "2026-07-10",
         title: "How Phantix handles your organization’s data",
-        summary: "Demo privacy notice — connect VITE_API_BASE for live copy.",
-        highlights: [],
+        summary: "Demo privacy notice — connect VITE_API_BASE for live copy from GET /organizations/privacy.",
+        highlights: [
+          { id: "1", label: "Security data", text: "Findings and assets live only in your dedicated security database." },
+          { id: "2", label: "Platform data", text: "We store account, billing, and setup state only." },
+        ],
         acceptance_required_copy: "I have read and accept the privacy model on behalf of my organization.",
       });
       return;
@@ -191,7 +236,7 @@ function PrivacyStep() {
         setError("Could not load privacy notice");
       }
     })();
-  }, []);
+  }, [state.setup.privacy_notice_version]);
 
   const onScroll = () => {
     const el = boxRef.current;
@@ -200,38 +245,74 @@ function PrivacyStep() {
   };
 
   if (state.setup.privacy_accepted) {
-    return <DoneCard title="Privacy notice accepted" detail={`Accepted ${new Date(state.setup.privacy_accepted_at!).toLocaleString()}`} />;
+    return (
+      <DoneCard
+        title="Privacy notice accepted"
+        detail={state.setup.privacy_accepted_at ? `Accepted ${new Date(state.setup.privacy_accepted_at).toLocaleString()}` : "Recorded"}
+      />
+    );
   }
 
+  const version = privacy?.version || state.setup.privacy_notice_version || undefined;
   const highlights = privacy?.highlights || [];
+
   return (
     <div className="card p-7">
       <StepTitle icon={<ShieldCheck size={18} />} kicker="Step 1 of 5 · required" title={privacy?.title || "Accept the privacy model"} />
-      <div ref={boxRef} onScroll={onScroll} className="mt-5 max-h-[300px] space-y-4 overflow-y-auto rounded-xl border border-phantix-700/50 bg-phantix-950/60 p-5 text-sm leading-6 text-slate-300">
+      <div
+        ref={boxRef}
+        onScroll={onScroll}
+        className="mt-5 max-h-[300px] space-y-4 overflow-y-auto rounded-xl border border-phantix-700/50 bg-phantix-950/60 p-5 text-sm leading-6 text-slate-300"
+      >
         {privacy?.summary && <p>{privacy.summary}</p>}
         {highlights.map((h) => (
-          <p key={h.id}><strong className="text-slate-100">{h.label}</strong> — {h.text}</p>
+          <p key={h.id}>
+            <strong className="text-slate-100">{h.label}</strong> — {h.text}
+          </p>
         ))}
+        {privacy?.phantix_stores?.length ? (
+          <ul className="list-disc space-y-1 pl-5 text-slate-400">
+            {privacy.phantix_stores.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
         {!privacy && !error && <p className="text-slate-500">Loading privacy notice…</p>}
         {error && <p className="text-severity-critical">{error}</p>}
       </div>
-      <label className={cx("mt-4 flex items-start gap-3 rounded-xl border p-4 transition-colors", checked ? "border-emerald-400/40 bg-emerald-400/5" : "border-phantix-700/50", !scrolled && "opacity-60")}>
-        <input type="checkbox" disabled={!scrolled || !privacy} checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-0.5 h-4 w-4 accent-gold-400" />
+      {version && <p className="mt-2 text-[11px] text-slate-600">Notice version: {version}</p>}
+      <label
+        className={cx(
+          "mt-4 flex items-start gap-3 rounded-xl border p-4 transition-colors",
+          checked ? "border-emerald-400/40 bg-emerald-400/5" : "border-phantix-700/50",
+          !scrolled && "opacity-60",
+        )}
+      >
+        <input
+          type="checkbox"
+          disabled={!scrolled || !privacy}
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-gold-400"
+        />
         <span className="text-sm text-slate-300">
           {privacy?.acceptance_required_copy || "I have read and accept the privacy model on behalf of my organization."}
           {!scrolled && <span className="block text-xs text-slate-500">Scroll to the end to enable.</span>}
         </span>
       </label>
       <button
+        type="button"
         className="btn-primary mt-5 w-full !py-3"
         disabled={!checked || busy || !privacy}
         onClick={async () => {
           setBusy(true);
           setError(null);
           try {
-            await acceptPrivacy(privacy?.version);
+            await acceptPrivacy(version);
+            toast("success", "Privacy accepted");
           } catch (err) {
             setError(err instanceof Error ? err.message : "Accept failed");
+          } finally {
             setBusy(false);
           }
         }}
@@ -243,29 +324,54 @@ function PrivacyStep() {
 }
 
 // ── Step 2: Identity ──────────────────────────────────────────────────────────
-function IdentityStep({ onSkip }: { onSkip: () => void }) {
-  const { saveIdentity, state } = useStore();
+function IdentityStep({ onSkip, onDone }: { onSkip: () => void; onDone: () => void }) {
+  const { saveIdentity, state, toast } = useStore();
   const [website, setWebsite] = useState(state.org.website ?? "");
   const [legalName, setLegalName] = useState(state.org.legal_name ?? state.org.name);
   const [phone, setPhone] = useState(state.org.phone ?? state.org.company_phone ?? "");
+  const [reg, setReg] = useState(state.org.registration_number ?? "");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (state.setup.identity_saved && (state.setup.identity_verified || state.setup.email_verified)) {
+    return <DoneCard title="Company profile saved" detail="You can edit full profile later under Identity." />;
+  }
 
   return (
     <div className="card p-7">
       <StepTitle icon={<Building2 size={18} />} kicker="Step 2 of 5 · optional" title="Company profile" />
-      <p className="mt-2 text-sm text-slate-400">Legal details used on verification records and report cover pages.</p>
+      <p className="mt-2 text-sm text-slate-400">
+        Legal details used on verification records and report covers. Website is used as the default for domain verification.
+      </p>
       <form
         className="mt-5 space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
-          await saveIdentity({ website, legal_name: legalName, company_phone: phone });
-          setBusy(false);
+          setError(null);
+          try {
+            await saveIdentity({
+              website: website || undefined,
+              legal_name: legalName || undefined,
+              company_phone: phone || undefined,
+              registration_number: reg || undefined,
+            });
+            toast("success", "Profile saved");
+            onDone();
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Save failed");
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <div>
           <label className="label">Legal name</label>
           <input className="input" value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Your Company Ltd" />
+        </div>
+        <div>
+          <label className="label">Registration / RC number</label>
+          <input className="input font-mono" value={reg} onChange={(e) => setReg(e.target.value)} placeholder="RC1234567" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -273,13 +379,18 @@ function IdentityStep({ onSkip }: { onSkip: () => void }) {
             <input className="input" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://yourcompany.com" />
           </div>
           <div>
-            <label className="label">Company phone (contact only)</label>
+            <label className="label">Company phone</label>
             <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234 …" />
           </div>
         </div>
+        {error && <p className="text-sm text-severity-critical">{error}</p>}
         <div className="flex gap-3">
-          <button className="btn-primary flex-1 !py-3" disabled={busy}>{busy ? "Saving…" : "Save & continue"}</button>
-          <button type="button" onClick={onSkip} className="btn-ghost">Skip for now</button>
+          <button type="submit" className="btn-primary flex-1 !py-3" disabled={busy}>
+            {busy ? "Saving…" : "Save & continue"}
+          </button>
+          <button type="button" onClick={onSkip} className="btn-ghost">
+            Skip for now
+          </button>
         </div>
       </form>
     </div>
@@ -291,15 +402,17 @@ function OtpStep() {
   const { sendOtp, verifyOtp, state, session, toast } = useStore();
   const s = state.setup;
   const companyEmail =
+    s.email_otp_destination ||
+    state.org.email ||
     state.org.primary_email ||
     session?.email ||
     emailFromToken() ||
-    s.email_otp_destination ||
     "";
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [masked, setMasked] = useState(companyEmail.includes("*") ? companyEmail : "");
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
@@ -308,8 +421,22 @@ function OtpStep() {
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  if (s.identity_verified) {
-    return <DoneCard title="Email verified" detail={`${companyEmail || "sign-in email"} confirmed by one-time code`} />;
+  if (s.identity_verified || s.email_verified) {
+    return (
+      <DoneCard
+        title="Email verified"
+        detail={`${masked || (companyEmail ? maskEmail(companyEmail) : "sign-in email")} confirmed by one-time code`}
+      />
+    );
+  }
+
+  if (!s.privacy_accepted) {
+    return (
+      <div className="card p-7">
+        <StepTitle icon={<MailCheck size={18} />} kicker="Step 3 · blocked" title="Accept privacy first" />
+        <p className="mt-3 text-sm text-slate-400">Email OTP is blocked until the privacy notice is accepted.</p>
+      </div>
+    );
   }
 
   const send = async () => {
@@ -318,53 +445,61 @@ function OtpStep() {
     try {
       const res = await sendOtp();
       setDevOtp(res.devOtp || null);
-      setCooldown(45);
-      toast("success", "Code sent", companyEmail ? `Check ${maskEmail(companyEmail)} for the 6-digit code.` : "Check your company email for the 6-digit code.");
+      setMasked(res.destinationMasked || masked);
+      setCooldown(res.resendAfter || 45);
+      toast("success", "Code sent", res.destinationMasked ? `Check ${res.destinationMasked}` : "Check your company email.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not send code";
+      setError(msg);
+      if (msg.toLowerCase().includes("privacy")) {
+        toast("warning", "Privacy required", "Accept the privacy notice before requesting OTP.");
+      }
     } finally {
       setBusy(false);
     }
   };
 
+  const displayDest = masked || (companyEmail.includes("*") ? companyEmail : companyEmail ? maskEmail(companyEmail) : "your company sign-in email");
+
   return (
     <div className="card p-7">
       <StepTitle icon={<MailCheck size={18} />} kicker="Step 3 of 5 · required" title="Verify your sign-in email" />
       <p className="mt-2 text-sm text-slate-400">
-        We'll email a one-time code to{" "}
-        <strong className="text-slate-200">
-          {companyEmail ? maskEmail(companyEmail) : "your company sign-in email"}
-        </strong>
-        . Email OTP only — phone verification was removed from the product.
+        We'll email a one-time code to <strong className="text-slate-200">{displayDest}</strong>. Email OTP only — phone verification is not supported.
       </p>
 
       {!s.email_otp_sent ? (
-        <button className="btn-primary mt-6 w-full !py-3" onClick={send} disabled={busy}>
+        <button type="button" className="btn-primary mt-6 w-full !py-3" onClick={() => void send()} disabled={busy}>
           {busy ? "Sending…" : "Send verification code"}
         </button>
       ) : (
         <div className="mt-6 space-y-4">
-          {devOtp && (
+          {devOtp && import.meta.env.DEV && (
             <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3.5 text-center">
               <p className="text-[10px] uppercase tracking-wider text-gold-400/80">Dev mode — your code</p>
               <p className="mt-1 font-mono text-2xl font-bold tracking-[0.4em] text-gold-300">{devOtp}</p>
-              <p className="mt-1 text-[10px] text-slate-500">OTP_DEV_EXPOSE — never shown in production</p>
             </div>
           )}
           <input
             className="input text-center font-mono !text-2xl !tracking-[0.5em]"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
             placeholder="••••••"
             autoFocus
+            inputMode="numeric"
+            autoComplete="one-time-code"
           />
           {error && <p className="text-sm text-severity-critical">{error}</p>}
           <button
+            type="button"
             className="btn-primary w-full !py-3"
-            disabled={busy || code.length !== 6}
+            disabled={busy || code.length < 4}
             onClick={async () => {
               setBusy(true);
               setError(null);
               try {
                 await verifyOtp(code);
+                toast("success", "Email verified");
               } catch (err) {
                 setError(err instanceof Error ? err.message : "Verification failed");
                 setCode("");
@@ -375,48 +510,66 @@ function OtpStep() {
           >
             {busy ? "Verifying…" : "Verify email"}
           </button>
-          <button onClick={send} disabled={cooldown > 0 || busy} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">
+          <button type="button" onClick={() => void send()} disabled={cooldown > 0 || busy} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">
             {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
           </button>
         </div>
       )}
+      {error && !s.email_otp_sent && <p className="mt-3 text-sm text-severity-critical">{error}</p>}
     </div>
   );
 }
 
 // ── Step 4: Company verification (optional) ───────────────────────────────────
 function VerifyStep({ onContinue }: { onContinue: () => void }) {
-  const { state, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, toast } = useStore();
+  const { state, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, toast, refreshSetup } = useStore();
   const s = state.setup;
   const [mode, setMode] = useState<"none" | "domain" | "cac" | "manual">("none");
-  const [domain, setDomain] = useState(() => (typeof s.domain === "string" ? s.domain : ""));
+  const [domain, setDomain] = useState(() => s.domain || extractHost(state.org.website) || "");
   const [busy, setBusy] = useState(false);
-  const [cac, setCac] = useState("");
   const [rc, setRc] = useState("");
-  const domainValue = typeof domain === "string" ? domain : "";
-  const verified = (s.domain_dns_ok || s.domain_http_ok) || s.cac_submitted || s.manual_review === "approved";
+  const [cacType, setCacType] = useState("");
+  const [cacDate, setCacDate] = useState("");
+  const [cacStatus, setCacStatus] = useState("Active");
+  const [cacAddress, setCacAddress] = useState("");
+  const [tin, setTin] = useState("");
+  const [notes, setNotes] = useState("");
+  const [checkMsg, setCheckMsg] = useState<string | null>(null);
+  const [lastCheckAt, setLastCheckAt] = useState(0);
+
+  const verified =
+    s.company_verified || s.domain_dns_ok || s.domain_http_ok || s.cac_submitted || s.manual_review === "approved";
 
   const copy = (text: string, what: string) => {
     navigator.clipboard?.writeText(text).catch(() => {});
     toast("success", `${what} copied`);
   };
 
+  const instr = s.domain_instructions || {};
+  const dnsTxt =
+    String(instr.dns_txt || instr.dns || instr.txt || (s.domain_token ? `phantix-verify=${s.domain_token}` : "")) || "";
+  const httpUrl =
+    String(instr.http_url || instr.url || (s.domain ? `https://${s.domain}/.well-known/phantix-verify.txt` : "")) || "";
+  const httpBody = String(instr.http_body || instr.body || s.domain_token || "");
+
   return (
     <div className="space-y-4">
       <div className="card p-7">
         <StepTitle icon={<Globe size={18} />} kicker="Step 4 of 5 · optional" title="Prove company control" />
         <p className="mt-2 text-sm text-slate-400">
-          Any <strong>one</strong> of these marks the company as verified. You can also skip entirely — only
-          privacy + email OTP are required to complete setup.
+          Any <strong>one</strong> mode marks the company as verified. You can skip — only privacy + email OTP are required to complete setup.
         </p>
 
         {verified && (
           <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-emerald-400/30 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-300">
             <CheckCircle2 size={16} /> Company verified
+            {s.domain_dns_ok && <span className="chip border-emerald-400/30 text-[10px]">DNS</span>}
+            {s.domain_http_ok && <span className="chip border-emerald-400/30 text-[10px]">HTTP</span>}
+            {s.cac_submitted && <span className="chip border-emerald-400/30 text-[10px]">CAC</span>}
+            {s.manual_review === "approved" && <span className="chip border-emerald-400/30 text-[10px]">Manual</span>}
           </div>
         )}
 
-        {/* Mode cards */}
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             { id: "domain" as const, icon: <Globe size={17} />, name: "Domain", desc: "DNS TXT or well-known file", done: s.domain_dns_ok || s.domain_http_ok },
@@ -424,6 +577,7 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
             { id: "manual" as const, icon: <UserCheck size={17} />, name: "Manual review", desc: "Staff approval", done: s.manual_review === "approved" },
           ].map((m) => (
             <button
+              type="button"
               key={m.id}
               onClick={() => setMode(mode === m.id ? "none" : m.id)}
               className={cx(
@@ -432,7 +586,9 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
               )}
             >
               <div className="flex items-center justify-between">
-                <span className={cx("flex h-9 w-9 items-center justify-center rounded-lg", mode === m.id ? "bg-gold-400/15 text-gold-400" : "bg-phantix-800/70 text-phantix-300")}>{m.icon}</span>
+                <span className={cx("flex h-9 w-9 items-center justify-center rounded-lg", mode === m.id ? "bg-gold-400/15 text-gold-400" : "bg-phantix-800/70 text-phantix-300")}>
+                  {m.icon}
+                </span>
                 {m.done && <CheckCircle2 size={15} className="text-emerald-400" />}
                 {m.id === "manual" && s.manual_review === "pending" && <Loader2 size={14} className="animate-spin text-severity-medium" />}
               </div>
@@ -442,21 +598,32 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
           ))}
         </div>
 
-        {/* Domain flow */}
         <AnimatePresence>
           {mode === "domain" && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
               <div className="mt-4 rounded-2xl border border-phantix-700/50 bg-phantix-950/50 p-5">
                 {!s.domain_token ? (
-                  <div className="flex gap-3">
-                    <input className="input font-mono" value={domainValue} onChange={(e) => setDomain(e.target.value)} placeholder="yourcompany.com" />
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      className="input font-mono flex-1"
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value.replace(/^https?:\/\//, "").split("/")[0])}
+                      placeholder="yourcompany.com"
+                    />
                     <button
+                      type="button"
                       className="btn-primary shrink-0"
-                      disabled={!domainValue.includes(".") || busy}
+                      disabled={!domain.includes(".") || busy}
                       onClick={async () => {
                         setBusy(true);
-                        await startDomainVerification(domainValue);
-                        setBusy(false);
+                        try {
+                          await startDomainVerification(domain, state.org.website || undefined);
+                          toast("success", "Verification started", "Add the DNS or HTTP proof, then check.");
+                        } catch (err) {
+                          toast("error", "Start failed", err instanceof Error ? err.message : "Could not start domain verification");
+                        } finally {
+                          setBusy(false);
+                        }
                       }}
                     >
                       {busy ? "Issuing…" : "Start"}
@@ -465,48 +632,70 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
                 ) : (
                   <div className="space-y-4">
                     <p className="text-sm text-slate-300">
-                      Prove control of <span className="font-mono text-gold-300">{typeof s.domain === "string" ? s.domain : domainValue}</span> with either method:
+                      Prove control of <span className="font-mono text-gold-300">{s.domain || domain}</span> with either method:
                     </p>
                     <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option A — DNS TXT record</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option A — DNS TXT</p>
                         {s.domain_dns_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">phantix-verify={s.domain_token}</code>
-                        <button onClick={() => copy(`phantix-verify=${s.domain_token}`, "TXT value")} className="btn-secondary !px-3 !py-2"><Copy size={14} /></button>
+                        <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">{dnsTxt}</code>
+                        <button type="button" onClick={() => copy(dnsTxt, "TXT value")} className="btn-secondary !px-3 !py-2">
+                          <Copy size={14} />
+                        </button>
                       </div>
                     </div>
                     <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option B — HTTP well-known file</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option B — HTTP well-known</p>
                         {s.domain_http_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">
-                          https://{(typeof s.domain === "string" ? s.domain : domainValue) || "yourcompany.com"}/.well-known/phantix-verify.txt
-                        </code>
-                        <button onClick={() => copy(`https://${(typeof s.domain === "string" ? s.domain : domainValue) || "yourcompany.com"}/.well-known/phantix-verify.txt`, "URL")} className="btn-secondary !px-3 !py-2"><Copy size={14} /></button>
+                        <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">{httpUrl}</code>
+                        <button type="button" onClick={() => copy(httpUrl, "URL")} className="btn-secondary !px-3 !py-2">
+                          <Copy size={14} />
+                        </button>
                       </div>
-                      <p className="mt-1.5 text-[11px] text-slate-500">File body = the token only.</p>
+                      <p className="mt-1.5 text-[11px] text-slate-500">File body must be exactly the token{httpBody ? `: ${httpBody.slice(0, 24)}…` : ""}.</p>
+                      {httpBody && (
+                        <button type="button" className="mt-2 text-xs text-gold-400 hover:text-gold-300" onClick={() => copy(httpBody, "Token body")}>
+                          Copy token body
+                        </button>
+                      )}
                     </div>
-                    <button
-                      className="btn-primary w-full"
-                      disabled={busy || (s.domain_dns_ok && s.domain_http_ok)}
-                      onClick={async () => {
-                        setBusy(true);
-                        try {
-                          await checkDomain("auto");
-                          toast("success", "Verification check complete", "DNS and HTTP probes re-evaluated.");
-                        } catch (err) {
-                          toast("error", "Check failed", err instanceof Error ? err.message : "Domain check failed");
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      {busy ? <><Loader2 size={15} className="animate-spin" /> Checking DNS & HTTP…</> : s.domain_dns_ok || s.domain_http_ok ? <><RefreshCw size={14} /> Check again</> : "I've added it — check"}
-                    </button>
+                    {checkMsg && <p className="text-xs text-slate-400">{checkMsg}</p>}
+                    <div className="flex flex-wrap gap-2">
+                      {(["auto", "dns", "http"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          className="btn-secondary !py-2 !text-xs capitalize"
+                          disabled={busy || Date.now() - lastCheckAt < 5000}
+                          onClick={async () => {
+                            if (Date.now() - lastCheckAt < 5000) {
+                              toast("info", "Wait a few seconds", "Avoid hammering DNS/HTTP checks.");
+                              return;
+                            }
+                            setBusy(true);
+                            setLastCheckAt(Date.now());
+                            try {
+                              const r = await checkDomain(m);
+                              setCheckMsg(r.message);
+                              if (r.dns || r.http) toast("success", "Domain verified", r.message);
+                              else toast("warning", "Not verified yet", r.message);
+                              void refreshSetup();
+                            } catch (err) {
+                              toast("error", "Check failed", err instanceof Error ? err.message : "Domain check failed");
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                        >
+                          {busy ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Check {m}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -517,24 +706,75 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
               <div className="mt-4 rounded-2xl border border-phantix-700/50 bg-phantix-950/50 p-5">
                 {s.cac_submitted ? (
-                  <p className="flex items-center gap-2 text-sm text-emerald-300"><CheckCircle2 size={15} /> CAC / RC details recorded.</p>
+                  <p className="flex items-center gap-2 text-sm text-emerald-300">
+                    <CheckCircle2 size={15} /> CAC / RC details recorded.
+                  </p>
+                ) : s.cac_skipped ? (
+                  <p className="text-sm text-slate-400">CAC step skipped.</p>
                 ) : (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="label">CAC number</label>
-                        <input className="input font-mono" value={cac} onChange={(e) => setCac(e.target.value)} placeholder="RC1234567" />
+                        <label className="label">RC number</label>
+                        <input className="input font-mono" value={rc} onChange={(e) => setRc(e.target.value)} placeholder="RC1234567" />
                       </div>
                       <div>
-                        <label className="label">RC number</label>
-                        <input className="input font-mono" value={rc} onChange={(e) => setRc(e.target.value)} placeholder="optional" />
+                        <label className="label">Company type</label>
+                        <input className="input" value={cacType} onChange={(e) => setCacType(e.target.value)} placeholder="Private Limited" />
+                      </div>
+                      <div>
+                        <label className="label">Registration date</label>
+                        <input className="input" type="date" value={cacDate} onChange={(e) => setCacDate(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="label">Status</label>
+                        <input className="input" value={cacStatus} onChange={(e) => setCacStatus(e.target.value)} />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="label">Registered address</label>
+                        <input className="input" value={cacAddress} onChange={(e) => setCacAddress(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="label">TIN</label>
+                        <input className="input font-mono" value={tin} onChange={(e) => setTin(e.target.value)} />
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <button className="btn-primary flex-1" disabled={!cac || busy} onClick={async () => { setBusy(true); await submitCac(cac, rc); setBusy(false); }}>
+                      <button
+                        type="button"
+                        className="btn-primary flex-1"
+                        disabled={!rc || busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            await submitCac({
+                              rc_number: rc,
+                              company_type: cacType || undefined,
+                              registration_date: cacDate || undefined,
+                              status: cacStatus || undefined,
+                              registered_address: cacAddress || undefined,
+                              tin: tin || undefined,
+                            });
+                            toast("success", "CAC details submitted");
+                          } catch (err) {
+                            toast("error", "Submit failed", err instanceof Error ? err.message : "CAC submit failed");
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
                         {busy ? "Submitting…" : "Submit details"}
                       </button>
-                      <button className="btn-ghost" onClick={() => skipCac()}>Skip</button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        onClick={async () => {
+                          await skipCac();
+                          toast("info", "CAC skipped");
+                        }}
+                      >
+                        Skip
+                      </button>
                     </div>
                   </div>
                 )}
@@ -548,13 +788,40 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
                 {s.manual_review === "pending" ? (
                   <div className="flex items-center gap-3 text-sm text-slate-300">
                     <Loader2 size={16} className="animate-spin text-severity-medium" />
-                    Awaiting staff review — you'll see the outcome here. Staff resolve it from their console.
+                    Awaiting staff review — this screen refreshes automatically.
+                    <button type="button" className="btn-ghost !py-1 !text-xs" onClick={() => void refreshSetup()}>
+                      Refresh now
+                    </button>
                   </div>
+                ) : s.manual_review === "approved" ? (
+                  <p className="flex items-center gap-2 text-sm text-emerald-300">
+                    <CheckCircle2 size={15} /> Manual review approved
+                  </p>
+                ) : s.manual_review === "rejected" ? (
+                  <p className="text-sm text-severity-critical">Manual review was rejected. You can re-request with notes.</p>
                 ) : (
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm text-slate-400">Request a Phantix staff member to verify your company manually.</p>
-                    <button className="btn-primary shrink-0" disabled={busy} onClick={async () => { setBusy(true); await requestManualReview(); setBusy(false); }}>
-                      {busy ? "Requesting…" : "Request review"}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="label">Notes for staff (optional)</label>
+                      <textarea className="input min-h-[72px]" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. DNS not available on CDN…" />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary w-full"
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          await requestManualReview(notes || undefined);
+                          toast("success", "Review requested");
+                        } catch (err) {
+                          toast("error", "Request failed", err instanceof Error ? err.message : "Could not request review");
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      {busy ? "Requesting…" : "Request staff review"}
                     </button>
                   </div>
                 )}
@@ -564,8 +831,8 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
         </AnimatePresence>
       </div>
 
-      <button onClick={onContinue} className="btn-primary w-full !py-3.5">
-        {verified ? "Continue" : "Skip verification & continue"} <ArrowRight size={15} />
+      <button type="button" onClick={onContinue} className="btn-primary w-full !py-3.5">
+        {verified ? "Continue to complete" : "Skip verification & continue"} <ArrowRight size={15} />
       </button>
     </div>
   );
@@ -577,23 +844,36 @@ function CompleteStep() {
   const s = state.setup;
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const canComplete = s.privacy_accepted && s.identity_verified;
+  const canComplete = s.can_complete_setup || (s.privacy_accepted && (s.identity_verified || s.email_verified) && !s.setup_complete);
 
   if (s.setup_complete) {
     return (
       <div className="card relative overflow-hidden p-8 text-center">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(232,181,77,0.15),transparent_60%)]" />
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }} className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-gold-400 bg-gold-400/15 shadow-glow">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
+          className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-gold-400 bg-gold-400/15 shadow-glow"
+        >
           <PartyPopper size={32} className="text-gold-400" />
         </motion.div>
         <h2 className="relative mt-6 font-display text-3xl font-bold text-white">Setup complete</h2>
         <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-          <strong className="text-slate-200">{state.org.name}</strong> is live. Next: bootstrap dual control,
-          connect your security database, and invite operators.
+          <strong className="text-slate-200">{state.org.name}</strong> is live. Next: dual control, then your security database.
         </p>
-        <button onClick={() => navigate("/dashboard")} className="btn-primary relative mt-7 !px-8 !py-3">
-          Enter the platform <ArrowRight size={15} />
+        <div className="relative mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button type="button" onClick={() => navigate("/users")} className="btn-primary !py-3">
+            <Users size={15} /> Set up dual control
+          </button>
+          <button type="button" onClick={() => navigate("/connections")} className="btn-secondary !py-3">
+            <Database size={15} /> Connect security DB
+          </button>
+        </div>
+        <button type="button" onClick={() => navigate("/dashboard")} className="btn-ghost relative mt-4 text-sm">
+          Enter dashboard <ArrowRight size={14} />
         </button>
       </div>
     );
@@ -601,9 +881,13 @@ function CompleteStep() {
 
   const rows = [
     { label: "Privacy notice", ok: s.privacy_accepted, required: true },
-    { label: "Email verified (OTP)", ok: s.identity_verified, required: true },
+    { label: "Email verified (OTP)", ok: s.identity_verified || s.email_verified, required: true },
     { label: "Company profile", ok: s.identity_saved, required: false },
-    { label: "Company verification", ok: (s.domain_dns_ok || s.domain_http_ok) || s.cac_submitted || s.manual_review !== "none", required: false },
+    {
+      label: "Company verification",
+      ok: s.company_verified || s.domain_dns_ok || s.domain_http_ok || s.cac_submitted || s.manual_review === "approved",
+      required: false,
+    },
   ];
 
   return (
@@ -624,14 +908,22 @@ function CompleteStep() {
           Privacy acceptance and email OTP are required. Complete those steps first — the API returns 400 otherwise.
         </p>
       )}
+      {error && <p className="mt-3 text-sm text-severity-critical">{error}</p>}
       <button
+        type="button"
         className="btn-primary mt-5 w-full !py-3.5"
         disabled={!canComplete || busy}
         onClick={async () => {
           setBusy(true);
-          await completeSetup();
-          setBusy(false);
-          toast("success", "Organization setup complete", "Welcome to Phantix Platform.");
+          setError(null);
+          try {
+            await completeSetup();
+            toast("success", "Organization setup complete", "Welcome to Phantix Platform.");
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Complete failed — check privacy and email OTP");
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         {busy ? "Completing…" : "Complete setup"} <CheckCircle2 size={15} />
@@ -640,7 +932,6 @@ function CompleteStep() {
   );
 }
 
-// ── Shared bits ───────────────────────────────────────────────────────────────
 function StepTitle({ icon, kicker, title }: { icon: React.ReactNode; kicker: string; title: string }) {
   return (
     <div>
@@ -662,4 +953,14 @@ function DoneCard({ title, detail }: { title: string; detail: string }) {
       <p className="mt-1.5 text-sm text-slate-400">{detail}</p>
     </div>
   );
+}
+
+function extractHost(website: string | null | undefined): string {
+  if (!website) return "";
+  try {
+    const u = website.includes("://") ? new URL(website) : new URL(`https://${website}`);
+    return u.hostname;
+  } catch {
+    return website.replace(/^https?:\/\//, "").split("/")[0] || "";
+  }
 }
