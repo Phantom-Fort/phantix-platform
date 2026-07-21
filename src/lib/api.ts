@@ -17,7 +17,23 @@ export const tokens = {
   set orgUser(v: string | null) { v ? sessionStorage.setItem("platform_org_user_token", v) : sessionStorage.removeItem("platform_org_user_token"); },
   get dualControl() { return sessionStorage.getItem("platform_dual_control"); },
   set dualControl(v: string | null) { v ? sessionStorage.setItem("platform_dual_control", v) : sessionStorage.removeItem("platform_dual_control"); },
+  get email() { return sessionStorage.getItem("platform_company_email"); },
+  set email(v: string | null) { v ? sessionStorage.setItem("platform_company_email", v) : sessionStorage.removeItem("platform_company_email"); },
 };
+
+/** Read email claim from company JWT (payload is base64url JSON). */
+export function emailFromToken(token?: string | null): string {
+  const t = token ?? tokens.platform;
+  if (!t) return tokens.email || "";
+  try {
+    const part = t.split(".")[1];
+    if (!part) return tokens.email || "";
+    const json = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
+    return (json.email as string) || tokens.email || "";
+  } catch {
+    return tokens.email || "";
+  }
+}
 
 export function deviceId(): string {
   let id = localStorage.getItem("phantix_device_id");
@@ -72,6 +88,7 @@ async function request<T>(
     if (res.status === 401) {
       tokens.platform = null;
       tokens.orgUser = null;
+      tokens.email = null;
     }
     throw new ApiError(res.status, detail);
   }

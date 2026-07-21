@@ -14,7 +14,7 @@ const serviceCatalog = [
 ];
 
 export default function Identity() {
-  const { state, rotateServiceKey, revokeServiceKey, toast, operate } = useStore();
+  const { state, rotateServiceKey, revokeServiceKey, toast, operate, requireDualControl } = useStore();
   const [keyModal, setKeyModal] = useState<string | null>(null);
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [preferred, setPreferred] = useState<string[]>(["attack_surface", "vapt", "risk", "reporting"]);
@@ -76,7 +76,7 @@ export default function Identity() {
                   <button
                     className="btn-primary flex-1"
                     onClick={async () => {
-                      if (!operate.unlocked) return toast("warning", "Operate mode required", "Key rotation is a mutation — unlock dual control first.");
+                      if (!operate.unlocked && !(await requireDualControl("Service key rotation requires a dual-control operate session."))) return;
                       setKeyModal(await rotateServiceKey());
                     }}
                   >
@@ -92,6 +92,7 @@ export default function Identity() {
                 <button
                   className="btn-primary mt-4"
                   onClick={async () => {
+                    if (!operate.unlocked && !(await requireDualControl("Creating a service key requires a dual-control operate session."))) return;
                     setKeyModal(await rotateServiceKey());
                   }}
                 >
@@ -188,7 +189,12 @@ export default function Identity() {
           grace period. Login links already issued are unaffected.
         </p>
         <div className="mt-5 flex gap-3">
-          <button className="btn-danger flex-1" onClick={async () => { await revokeServiceKey(); setRevokeOpen(false); toast("info", "Service key revoked"); }}>
+          <button className="btn-danger flex-1" onClick={async () => {
+            if (!operate.unlocked && !(await requireDualControl("Revoking a service key requires a dual-control operate session."))) return;
+            await revokeServiceKey();
+            setRevokeOpen(false);
+            toast("info", "Service key revoked");
+          }}>
             Revoke key
           </button>
           <button className="btn-secondary" onClick={() => setRevokeOpen(false)}>Cancel</button>

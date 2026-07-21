@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
-import { tokens, DEMO_MODE, delay, api, deviceId } from "./api";
+import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken } from "./api";
 import type {
   AuditEvent,
   ChildCompany,
@@ -18,24 +18,24 @@ import type {
   ToolItem,
 } from "./types";
 
-// ── Demo tenant ───────────────────────────────────────────────────────────────
+// ── Empty live shell (never seed fake tenant data when API is configured) ─────
 
-const initialOrg: Organization = {
-  id: 11,
-  name: "Acme Financial Group",
-  slug: "acme-financial",
-  creator_user_id: 1,
+const emptyOrg = (): Organization => ({
+  id: 0,
+  name: "",
+  slug: "",
+  creator_user_id: null,
   legal_name: null,
   website: null,
   company_phone: null,
   country: "NG",
-  industry: "Financial Services",
-  primary_email: "admin@acme.ng",
-  plan: "Scale",
-  created_at: "2026-07-21T08:00:00Z",
-};
+  industry: "",
+  primary_email: "",
+  plan: "",
+  created_at: "",
+});
 
-const initialSetup: SetupState = {
+const emptySetup = (): SetupState => ({
   privacy_accepted: false,
   privacy_accepted_at: null,
   identity_saved: false,
@@ -50,21 +50,10 @@ const initialSetup: SetupState = {
   cac_skipped: false,
   manual_review: "none",
   setup_complete: false,
-};
+});
 
-const initialUsers: OrgUser[] = [];
-
-const initialConnections: DbConnection[] = [];
-
-const initialCompanies: ChildCompany[] = [];
-
-const initialServiceKey: ServiceKeyMeta | null = null;
-
-const initialAudit: AuditEvent[] = [
-  { id: 1, event_key: "org.register", category: "auth", action: "Organization registered", initiator_name: "Account owner", initiator_title: "Primary email", authorizer_name: null, authorizer_title: null, created_at: new Date().toISOString() },
-];
-
-const initialTools: ToolItem[] = [
+/** Demo-only seed catalog — never used when VITE_API_BASE is set. */
+const demoTools: ToolItem[] = [
   { id: 1, key: "nmap", name: "Nmap", category: "Discovery", description: "Port & service scanning with admin-pinned flags", subscribed: true, price_note: "Included" },
   { id: 2, key: "nuclei", name: "Nuclei", category: "Vulnerability", description: "Template-driven CVE & misconfiguration engine", subscribed: true, price_note: "Included" },
   { id: 3, key: "subfinder", name: "Subfinder", category: "Discovery", description: "Passive subdomain enumeration", subscribed: true, price_note: "Included" },
@@ -73,12 +62,39 @@ const initialTools: ToolItem[] = [
   { id: 6, key: "gowitness", name: "Gowitness", category: "Evidence", description: "Screenshot capture for report evidence", subscribed: false, price_note: "Add-on" },
 ];
 
-const initialPayments: Payment[] = [
+const demoPayments: Payment[] = [
   { id: 1, reference: "PHX-2026-0711", amount_ngn: 500, status: "paid", period: "July 2026 (first month −50%)", created_at: "2026-07-01T09:00:00Z" },
   { id: 2, reference: "PHX-2026-0811", amount_ngn: 1000, status: "pending", period: "August 2026", created_at: "2026-08-01T09:00:00Z" },
 ];
 
-const initialTickets: SupportTicket[] = [];
+const demoOrg = (): Organization => ({
+  id: 11,
+  name: "Demo Financial Group",
+  slug: "demo-financial",
+  creator_user_id: 1,
+  legal_name: "Demo Financial Group Ltd",
+  website: "https://example.com",
+  company_phone: null,
+  country: "NG",
+  industry: "fintech",
+  primary_email: "admin@example.com",
+  plan: "Scale",
+  created_at: "2026-07-21T08:00:00Z",
+});
+
+const demoAudit = (): AuditEvent[] => [
+  {
+    id: 1,
+    event_key: "org.register",
+    category: "auth",
+    action: "Organization registered",
+    initiator_name: "Account owner",
+    initiator_title: "Primary email",
+    authorizer_name: null,
+    authorizer_title: null,
+    created_at: new Date().toISOString(),
+  },
+];
 
 type OperateState = {
   unlocked: boolean;
@@ -112,6 +128,7 @@ interface PersistedState {
 const STORAGE_KEY = "phantix_platform_demo_v1";
 
 function loadPersisted(): PersistedState | null {
+  if (!DEMO_MODE) return null;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as PersistedState) : null;
@@ -120,22 +137,155 @@ function loadPersisted(): PersistedState | null {
   }
 }
 
-const freshState = (): PersistedState => ({
-  org: initialOrg,
-  setup: initialSetup,
-  users: initialUsers,
+const emptyState = (): PersistedState => ({
+  org: emptyOrg(),
+  setup: emptySetup(),
+  users: [],
   dualControl: { configured: false, require_dual_control: false, initiator_user_id: null, authorizer_user_id: null },
-  connections: initialConnections,
-  companies: initialCompanies,
-  serviceKey: initialServiceKey,
+  connections: [],
+  companies: [],
+  serviceKey: null,
   loginLinks: [],
-  audit: initialAudit,
+  audit: [],
   pending: [],
-  tools: initialTools,
-  payments: initialPayments,
-  tickets: initialTickets,
+  tools: [],
+  payments: [],
+  tickets: [],
+  nextId: 1,
+});
+
+const demoState = (): PersistedState => ({
+  org: demoOrg(),
+  setup: emptySetup(),
+  users: [],
+  dualControl: { configured: false, require_dual_control: false, initiator_user_id: null, authorizer_user_id: null },
+  connections: [],
+  companies: [],
+  serviceKey: null,
+  loginLinks: [],
+  audit: demoAudit(),
+  pending: [],
+  tools: demoTools,
+  payments: demoPayments,
+  tickets: [],
   nextId: 100,
 });
+
+const freshState = (): PersistedState => (DEMO_MODE ? demoState() : emptyState());
+
+type SetupApi = Record<string, unknown>;
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+function pickBool(...vals: unknown[]): boolean {
+  for (const v of vals) {
+    if (typeof v === "boolean") return v;
+    if (v === "true" || v === 1) return true;
+    if (v === "false" || v === 0) return false;
+    const nested = asRecord(v);
+    if (nested) {
+      if (typeof nested.ok === "boolean") return nested.ok;
+      if (typeof nested.verified === "boolean") return nested.verified;
+      if (typeof nested.success === "boolean") return nested.success;
+      if (typeof nested.passed === "boolean") return nested.passed;
+    }
+  }
+  return false;
+}
+
+function pickStr(...vals: unknown[]): string | null {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v;
+  }
+  return null;
+}
+
+/** Normalize domain check / setup verification flags from varied API shapes. */
+function parseDomainFlags(raw: unknown): { dns: boolean; http: boolean; domain: string | null; token: string | null } {
+  const r = asRecord(raw) || {};
+  const verification = asRecord(r.verification) || asRecord(r.verifications) || asRecord(r.domain_verification) || r;
+  const modes = asRecord(verification.modes) || asRecord(r.modes);
+  const dnsMode = asRecord(modes?.domain_dns) || asRecord(verification.domain_dns) || asRecord(r.dns);
+  const httpMode = asRecord(modes?.domain_http) || asRecord(verification.domain_http) || asRecord(r.http);
+
+  const dns = pickBool(
+    verification.domain_dns_ok,
+    verification.dns_ok,
+    verification.dns_verified,
+    r.domain_dns_ok,
+    r.dns_ok,
+    r.dns_verified,
+    dnsMode?.completed,
+    dnsMode?.verified,
+    dnsMode?.ok,
+    dnsMode,
+  );
+  const http = pickBool(
+    verification.domain_http_ok,
+    verification.http_ok,
+    verification.http_verified,
+    r.domain_http_ok,
+    r.http_ok,
+    r.http_verified,
+    httpMode?.completed,
+    httpMode?.verified,
+    httpMode?.ok,
+    httpMode,
+  );
+  // company/domain verified often means at least one mode passed
+  const anyOk = pickBool(verification.domain_verified, r.domain_verified, r.company_verified, verification.company_verified);
+  return {
+    dns: dns || (anyOk && !http ? true : dns),
+    http: http || (anyOk && !dns ? true : http),
+    domain: pickStr(verification.domain, r.domain, verification.hostname),
+    token: pickStr(verification.domain_token, verification.token, r.domain_token, r.token, verification.verification_token),
+  };
+}
+
+function mapSetupFromApi(api: SetupApi, emailFallback = ""): { org: Partial<Organization>; setup: SetupState } {
+  const privacy = asRecord(api.privacy) || {};
+  const identity = asRecord(api.identity) || {};
+  const cac = asRecord(api.cac) || asRecord(api.cac_rc) || {};
+  const manual = asRecord(api.manual_review) || {};
+  const flags = parseDomainFlags(api);
+
+  const reviewRaw =
+    (typeof api.manual_review === "string" && api.manual_review) ||
+    (typeof manual.status === "string" && manual.status) ||
+    "none";
+  const review = (["none", "pending", "approved", "rejected"].includes(reviewRaw) ? reviewRaw : "none") as SetupState["manual_review"];
+
+  return {
+    org: {
+      id: typeof api.organization_id === "number" ? api.organization_id : 0,
+      name: typeof api.organization_name === "string" ? api.organization_name : "",
+      slug: typeof api.slug === "string" ? api.slug : "",
+      primary_email: emailFallback,
+    },
+    setup: {
+      privacy_accepted: pickBool(api.privacy_notice_accepted, privacy.accepted, privacy.privacy_notice_accepted),
+      privacy_accepted_at:
+        (typeof api.privacy_notice_accepted_at === "string" && api.privacy_notice_accepted_at) ||
+        (typeof privacy.accepted_at === "string" && privacy.accepted_at) ||
+        null,
+      identity_saved: pickBool(identity.saved, api.identity_saved),
+      email_otp_sent: false,
+      email_otp_destination:
+        pickStr(api.primary_email_masked, identity.primary_email_masked, emailFallback) || null,
+      identity_verified: pickBool(api.identity_verified, api.email_verified, identity.verified, identity.email_verified),
+      domain: flags.domain,
+      domain_token: flags.token,
+      domain_dns_ok: flags.dns,
+      domain_http_ok: flags.http,
+      cac_submitted: pickBool(cac.submitted, cac.cac_submitted, api.cac_submitted),
+      cac_skipped: pickBool(cac.skipped, cac.cac_skipped, api.cac_skipped),
+      manual_review: review,
+      setup_complete: pickBool(api.setup_completed, api.setup_complete),
+    },
+  };
+}
 
 type Store = {
   session: Session;
@@ -143,12 +293,13 @@ type Store = {
   operate: OperateState;
   securityDbReady: boolean;
   // auth
-  register: (name: string, email: string, password: string, country: string) => Promise<void>;
+  register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<void>;
   login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
   verifyMfa: (code: string) => Promise<void>;
   logout: () => void;
+  hydrateSession: (email?: string) => Promise<void>;
   // setup wizard
-  acceptPrivacy: () => Promise<void>;
+  acceptPrivacy: (version?: string) => Promise<void>;
   saveIdentity: (fields: { website: string; legal_name: string; company_phone: string }) => Promise<void>;
   sendOtp: () => Promise<{ devOtp: string }>;
   verifyOtp: (code: string) => Promise<void>;
@@ -163,6 +314,13 @@ type Store = {
   assignDualControl: (initiatorId: number, authorizerId: number) => Promise<void>;
   unlockOperate: (email: string, code: string) => Promise<void>;
   lockOperate: () => void;
+  /** Opens dual-control overlay when operate session missing. Resolves true if unlocked. */
+  requireDualControl: (reason?: string) => Promise<boolean>;
+  dualControlPrompt: { open: boolean; reason: string };
+  closeDualControlPrompt: (success: boolean) => void;
+  requestDualControlOtp: (email: string) => Promise<{ destinationMasked: string; devOtp: string }>;
+  verifyDualControlOtp: (code: string) => Promise<{ deviceRequired: boolean }>;
+  confirmDualControlDevice: (code: string) => Promise<void>;
   issueLoginLink: (userId: number) => Promise<string>;
   clearDevice: (userId: number) => Promise<void>;
   // connections
@@ -188,27 +346,77 @@ type Store = {
 const Ctx = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<PersistedState>(() => loadPersisted() ?? freshState());
-  const [session, setSession] = useState<Session>(() =>
-    tokens.platform ? { authenticated: true, email: "admin@acme.ng" } : null,
-  );
+  const [state, setState] = useState<PersistedState>(() => {
+    if (DEMO_MODE) return loadPersisted() ?? demoState();
+    // Live: never restore demo sessionStorage seed
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    return emptyState();
+  });
+  const [session, setSession] = useState<Session>(() => {
+    if (!tokens.platform) return null;
+    const email = emailFromToken();
+    return { authenticated: true, email };
+  });
   const [operate, setOperate] = useState<OperateState>(() =>
-    tokens.dualControl
+    DEMO_MODE && tokens.dualControl
       ? { unlocked: true, actingUser: "Operate user", actingRole: "initiator", expiresAt: Date.now() + 3 * 60_000 }
       : { unlocked: false, actingUser: null, actingRole: null, expiresAt: null },
   );
+  const [dualControlPrompt, setDualControlPrompt] = useState<{ open: boolean; reason: string }>({ open: false, reason: "" });
+  const dcPromptResolve = useRef<((ok: boolean) => void) | null>(null);
+  const dcMfaToken = useRef<string>("");
+  const dcDeviceToken = useRef<string>("");
+  const dcEmail = useRef<string>("");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
+  const hydrating = useRef(false);
 
   const persist = useCallback((updater: (s: PersistedState) => PersistedState) => {
     setState((prev) => {
       const next = updater(prev);
-      try {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch { /* quota */ }
+      if (DEMO_MODE) {
+        try {
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch { /* quota */ }
+      }
       return next;
     });
   }, []);
+
+  const hydrateSession = useCallback(async (email = "") => {
+    if (DEMO_MODE || !tokens.platform || hydrating.current) return;
+    hydrating.current = true;
+    try {
+      const resolvedEmail = email || emailFromToken() || tokens.email || "";
+      if (resolvedEmail) tokens.email = resolvedEmail;
+      const setupRes = await api.get<SetupApi>("/organizations/me/setup");
+      const mapped = mapSetupFromApi(setupRes, resolvedEmail);
+      const masked = typeof setupRes.primary_email_masked === "string" ? setupRes.primary_email_masked : "";
+      const displayEmail = resolvedEmail || masked || "";
+      persist((s) => ({
+        ...s,
+        org: {
+          ...s.org,
+          ...mapped.org,
+          primary_email: displayEmail || s.org.primary_email || "",
+        },
+        setup: {
+          ...mapped.setup,
+          email_otp_destination: mapped.setup.email_otp_destination || displayEmail || null,
+        },
+      }));
+      setSession({ authenticated: true, email: resolvedEmail || displayEmail });
+    } catch {
+      const fallback = email || emailFromToken() || tokens.email || "";
+      if (fallback) {
+        tokens.email = fallback;
+        setSession({ authenticated: true, email: fallback });
+        persist((s) => ({ ...s, org: { ...s.org, primary_email: fallback } }));
+      }
+    } finally {
+      hydrating.current = false;
+    }
+  }, [persist]);
 
   const toast = useCallback((kind: ToastKind, title: string, body?: string) => {
     const id = ++toastId.current;
@@ -234,25 +442,49 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Auth ────────────────────────────────────────────────────────────────
   const register = useCallback(
-    async (name: string, email: string, _password: string, country: string) => {
+    async (name: string, email: string, _password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => {
       if (DEMO_MODE) {
         await delay(700);
         persist((s) => ({
           ...s,
-          org: { ...s.org, name, primary_email: email, country, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") },
+          org: { ...s.org, name, primary_email: email, country, slug, industry },
+          setup: emptySetup(),
           audit: [{ id: s.nextId, event_key: "org.register", category: "auth", action: `Organization registered: ${name}`, initiator_name: email, initiator_title: "Primary email", authorizer_name: null, authorizer_title: null, created_at: new Date().toISOString() }, ...s.audit],
           nextId: s.nextId + 1,
         }));
         tokens.platform = "demo.company.jwt";
+        tokens.email = email;
         setSession({ authenticated: true, email });
         return;
       }
-      await api.post("/organizations/register", { name, email, password: _password, country });
-      const res = await api.postForm<{ access_token: string }>("/organizations/login", { username: email, password: _password });
+      await api.post("/organizations/register", { name, email, password: _password, country, slug, industry, secondary_email, primary_contact });
+      const res = await api.postForm<{
+        access_token: string;
+        organization_id?: number;
+        organization_slug?: string;
+        experience?: { organization_name?: string };
+      }>("/organizations/login", { username: email, password: _password });
       tokens.platform = res.access_token;
+      tokens.orgUser = null;
+      tokens.email = email;
+      setState(emptyState());
       setSession({ authenticated: true, email });
+      persist((s) => ({
+        ...s,
+        org: {
+          ...s.org,
+          id: res.organization_id ?? 0,
+          name: res.experience?.organization_name || name,
+          slug: res.organization_slug || slug,
+          primary_email: email,
+          country,
+          industry,
+        },
+        setup: emptySetup(),
+      }));
+      await hydrateSession(email);
     },
-    [persist],
+    [persist, hydrateSession],
   );
 
   const login = useCallback(async (email: string, password: string) => {
@@ -262,18 +494,37 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem("mfa_token", "demo-mfa");
       return { mfaRequired: true };
     }
-    const res = await api.postForm<{ access_token?: string; mfa_required?: boolean; mfa_token?: string }>(
-      "/organizations/login",
-      { username: email, password },
-    );
+    const res = await api.postForm<{
+      access_token?: string;
+      mfa_required?: boolean;
+      mfa_token?: string;
+      organization_id?: number;
+      organization_slug?: string;
+      experience?: { organization_name?: string };
+    }>("/organizations/login", { username: email, password });
     if (res.access_token) {
       tokens.platform = res.access_token;
+      tokens.orgUser = null;
+      tokens.email = email;
+      setState(emptyState());
       setSession({ authenticated: true, email });
+      persist((s) => ({
+        ...s,
+        org: {
+          ...s.org,
+          id: res.organization_id ?? 0,
+          name: res.experience?.organization_name || "",
+          slug: res.organization_slug || "",
+          primary_email: email,
+        },
+        setup: emptySetup(),
+      }));
+      await hydrateSession(email);
       return { mfaRequired: false };
     }
     sessionStorage.setItem("mfa_token", res.mfa_token ?? "");
     return { mfaRequired: true };
-  }, []);
+  }, [persist, hydrateSession]);
 
   const verifyMfa = useCallback(async (code: string) => {
     if (DEMO_MODE) {
@@ -283,32 +534,75 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setSession({ authenticated: true, email: state.org.primary_email });
       return;
     }
-    const res = await api.post<{ access_token: string }>("/organizations/login/mfa", {
+    const res = await api.post<{
+      access_token: string;
+      organization_id?: number;
+      organization_slug?: string;
+      experience?: { organization_name?: string };
+    }>("/organizations/login/mfa", {
       mfa_token: sessionStorage.getItem("mfa_token"),
       code,
     });
     tokens.platform = res.access_token;
-    setSession({ authenticated: true, email: "" });
-  }, [state.org.primary_email]);
+    const email = session?.email || emailFromToken(res.access_token) || tokens.email || "";
+    if (email) tokens.email = email;
+    setState(emptyState());
+    setSession({ authenticated: true, email });
+    persist((s) => ({
+      ...s,
+      org: {
+        ...s.org,
+        id: res.organization_id ?? 0,
+        name: res.experience?.organization_name || "",
+        slug: res.organization_slug || "",
+        primary_email: email,
+      },
+      setup: emptySetup(),
+    }));
+    await hydrateSession(email);
+  }, [state.org.primary_email, session?.email, persist, hydrateSession]);
 
   const logout = useCallback(() => {
     tokens.platform = null;
     tokens.orgUser = null;
     tokens.dualControl = null;
+    tokens.email = null;
     setSession(null);
     setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+    if (!DEMO_MODE) setState(emptyState());
   }, []);
 
   // ── Setup wizard ─────────────────────────────────────────────────────────
-  const acceptPrivacy = useCallback(async () => {
-    await delay(400);
+  const acceptPrivacy = useCallback(async (version?: string) => {
+    if (DEMO_MODE) {
+      await delay(400);
+      persist((s) => ({ ...s, setup: { ...s.setup, privacy_accepted: true, privacy_accepted_at: new Date().toISOString() } }));
+      logAudit("setup.privacy_accept", "setup", "Accepted the privacy notice");
+      return;
+    }
+    let v = version;
+    if (!v) {
+      const p = await api.get<{ version?: string }>("/organizations/privacy");
+      v = p?.version;
+    }
+    if (!v) throw new Error("Could not load privacy notice version");
+    await api.post("/organizations/me/setup/privacy/accept", { accepted: true, notice_version: v });
     persist((s) => ({ ...s, setup: { ...s.setup, privacy_accepted: true, privacy_accepted_at: new Date().toISOString() } }));
-    logAudit("setup.privacy_accept", "setup", "Accepted the privacy notice");
-  }, [persist, logAudit]);
+    await hydrateSession(session?.email || state.org.primary_email);
+  }, [persist, logAudit, hydrateSession, session?.email, state.org.primary_email]);
 
   const saveIdentity = useCallback(
     async (fields: { website: string; legal_name: string; company_phone: string }) => {
-      await delay(400);
+      if (DEMO_MODE) {
+        await delay(400);
+        persist((s) => ({
+          ...s,
+          org: { ...s.org, website: fields.website || null, legal_name: fields.legal_name || null, company_phone: fields.company_phone || null },
+          setup: { ...s.setup, identity_saved: true },
+        }));
+        return;
+      }
+      await api.post("/organizations/me/setup/identity", fields);
       persist((s) => ({
         ...s,
         org: { ...s.org, website: fields.website || null, legal_name: fields.legal_name || null, company_phone: fields.company_phone || null },
@@ -326,9 +620,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       persist((s) => ({ ...s, setup: { ...s.setup, email_otp_sent: true, email_otp_destination: s.org.primary_email } }));
       return { devOtp };
     }
-    await api.post("/organizations/me/setup/otp/send", { channel: "email" });
-    return { devOtp: "" };
-  }, [persist]);
+    const res = await api.post<{ dev_otp?: string }>("/organizations/me/setup/otp/send", { channel: "email" });
+    const dest = state.org.primary_email || session?.email || emailFromToken() || tokens.email || "";
+    if (dest) tokens.email = dest;
+    persist((s) => ({
+      ...s,
+      org: { ...s.org, primary_email: dest || s.org.primary_email },
+      setup: { ...s.setup, email_otp_sent: true, email_otp_destination: dest || s.setup.email_otp_destination },
+    }));
+    return { devOtp: res?.dev_otp || "" };
+  }, [persist, state.org.primary_email, session?.email]);
 
   const verifyOtp = useCallback(
     async (code: string) => {
@@ -342,15 +643,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       await api.post("/organizations/me/setup/otp/verify", { channel: "email", code });
       persist((s) => ({ ...s, setup: { ...s.setup, identity_verified: true } }));
+      await hydrateSession(session?.email || state.org.primary_email);
     },
-    [persist, logAudit],
+    [persist, logAudit, hydrateSession, session?.email, state.org.primary_email],
   );
 
   const startDomainVerification = useCallback(
     async (domain: string) => {
-      await delay(600);
-      const token = `phx_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
-      persist((s) => ({ ...s, setup: { ...s.setup, domain, domain_token: token, domain_dns_ok: false, domain_http_ok: false } }));
+      if (DEMO_MODE) {
+        await delay(600);
+        const token = `phx_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
+        persist((s) => ({ ...s, setup: { ...s.setup, domain, domain_token: token, domain_dns_ok: false, domain_http_ok: false } }));
+        return token;
+      }
+      const res = await api.post<Record<string, unknown>>("/organizations/me/setup/verify/domain/start", { domain });
+      const flags = parseDomainFlags(res);
+      const token = flags.token || "";
+      persist((s) => ({
+        ...s,
+        setup: {
+          ...s.setup,
+          domain: flags.domain || domain,
+          domain_token: token,
+          domain_dns_ok: false,
+          domain_http_ok: false,
+        },
+      }));
       return token;
     },
     [persist],
@@ -358,53 +676,96 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const checkDomain = useCallback(
     async (method: "auto" | "dns" | "http") => {
-      await delay(1400);
-      persist((s) => {
-        const dnsOk = s.setup.domain_dns_ok || method !== "http";
-        const httpOk = s.setup.domain_http_ok || method !== "dns";
-        return { ...s, setup: { ...s.setup, domain_dns_ok: dnsOk, domain_http_ok: httpOk } };
-      });
-      logAudit("setup.domain_verify", "setup", "Domain verification check passed");
+      if (DEMO_MODE) {
+        await delay(1400);
+        persist((s) => {
+          const dnsOk = s.setup.domain_dns_ok || method !== "http";
+          const httpOk = s.setup.domain_http_ok || method !== "dns";
+          return { ...s, setup: { ...s.setup, domain_dns_ok: dnsOk, domain_http_ok: httpOk } };
+        });
+        logAudit("setup.domain_verify", "setup", "Domain verification check passed");
+        return;
+      }
+      const res = await api.post<Record<string, unknown>>("/organizations/me/setup/verify/domain/check", { method });
+      const flags = parseDomainFlags(res);
+      // Prefer check response, then rehydrate from GET /me/setup (source of truth)
+      persist((s) => ({
+        ...s,
+        setup: {
+          ...s.setup,
+          domain: flags.domain || s.setup.domain,
+          domain_token: flags.token || s.setup.domain_token,
+          domain_dns_ok: flags.dns || s.setup.domain_dns_ok,
+          domain_http_ok: flags.http || s.setup.domain_http_ok,
+        },
+      }));
+      await hydrateSession(session?.email || state.org.primary_email || emailFromToken());
+      // If hydrate wiped flags (unknown shape), re-apply successful check flags
+      if (flags.dns || flags.http) {
+        persist((s) => ({
+          ...s,
+          setup: {
+            ...s.setup,
+            domain_dns_ok: s.setup.domain_dns_ok || flags.dns,
+            domain_http_ok: s.setup.domain_http_ok || flags.http,
+            domain: s.setup.domain || flags.domain,
+            domain_token: s.setup.domain_token || flags.token,
+          },
+        }));
+      }
     },
-    [persist, logAudit],
+    [persist, logAudit, hydrateSession, session?.email, state.org.primary_email],
   );
 
   const submitCac = useCallback(
-    async (_cac: string, _rc: string) => {
-      await delay(500);
+    async (cac: string, rc: string) => {
+      if (DEMO_MODE) {
+        await delay(500);
+        persist((s) => ({ ...s, setup: { ...s.setup, cac_submitted: true } }));
+        logAudit("setup.cac", "setup", "Submitted CAC / RC details");
+        return;
+      }
+      await api.post("/organizations/me/setup/cac", { cac_number: cac, rc_number: rc || undefined });
       persist((s) => ({ ...s, setup: { ...s.setup, cac_submitted: true } }));
-      logAudit("setup.cac", "setup", "Submitted CAC / RC details");
     },
     [persist, logAudit],
   );
 
   const skipCac = useCallback(async () => {
-    await delay(250);
+    if (DEMO_MODE) {
+      await delay(250);
+      persist((s) => ({ ...s, setup: { ...s.setup, cac_skipped: true } }));
+      return;
+    }
+    await api.post("/organizations/me/setup/cac", { skip: true });
     persist((s) => ({ ...s, setup: { ...s.setup, cac_skipped: true } }));
   }, [persist]);
 
   const requestManualReview = useCallback(async () => {
-    await delay(500);
+    if (DEMO_MODE) {
+      await delay(500);
+      persist((s) => ({ ...s, setup: { ...s.setup, manual_review: "pending" } }));
+      logAudit("setup.manual_review", "setup", "Requested manual company review");
+      return;
+    }
+    await api.post("/organizations/me/setup/verify/manual-review", {});
     persist((s) => ({ ...s, setup: { ...s.setup, manual_review: "pending" } }));
-    logAudit("setup.manual_review", "setup", "Requested manual company review");
   }, [persist, logAudit]);
 
   const completeSetup = useCallback(async () => {
-    await delay(600);
-    persist((s) => {
-      if (!s.setup.privacy_accepted || !s.setup.identity_verified) return s;
-      const companyVerified = (s.setup.domain_dns_ok || s.setup.domain_http_ok) || s.setup.cac_submitted || s.setup.manual_review === "approved";
-      return {
-        ...s,
-        setup: {
-          ...s.setup,
-          manual_review: s.setup.manual_review === "none" && !companyVerified ? s.setup.manual_review : s.setup.manual_review,
-          setup_complete: true,
-        },
-      };
-    });
-    logAudit("setup.complete", "setup", "Completed organization setup");
-  }, [persist, logAudit]);
+    if (DEMO_MODE) {
+      await delay(600);
+      persist((s) => {
+        if (!s.setup.privacy_accepted || !s.setup.identity_verified) return s;
+        return { ...s, setup: { ...s.setup, setup_complete: true } };
+      });
+      logAudit("setup.complete", "setup", "Completed organization setup");
+      return;
+    }
+    await api.post("/organizations/me/setup/complete", {});
+    persist((s) => ({ ...s, setup: { ...s.setup, setup_complete: true } }));
+    await hydrateSession(session?.email || state.org.primary_email);
+  }, [persist, logAudit, hydrateSession, session?.email, state.org.primary_email]);
 
   // ── Users & dual control ─────────────────────────────────────────────────
   const createUser = useCallback(
@@ -442,32 +803,249 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [persist, logAudit],
   );
 
-  const unlockOperate = useCallback(
-    async (email: string, code: string) => {
-      await delay(800);
+  const applyOperateSession = useCallback(
+    (payload: {
+      access_token?: string;
+      session_token?: string;
+      dual_control_session?: string;
+      inactivity_expires_at?: string;
+      user?: { full_name?: string; email?: string; id?: number };
+    }) => {
+      if (payload.access_token) tokens.orgUser = payload.access_token;
+      const sessionTok = payload.session_token || payload.dual_control_session;
+      if (sessionTok) tokens.dualControl = sessionTok;
+      const email = payload.user?.email || dcEmail.current;
       const user = state.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      if (!user) throw new Error("No organization user with that email");
-      const isInitiator = state.dualControl.initiator_user_id === user.id;
-      const isAuthorizer = state.dualControl.authorizer_user_id === user.id;
-      if (state.dualControl.configured && !isInitiator && !isAuthorizer) {
-        throw new Error("Only the assigned initiator or authorizer can open operate sessions");
+      const isInitiator = user ? state.dualControl.initiator_user_id === user.id : true;
+      const isAuthorizer = user ? state.dualControl.authorizer_user_id === user.id : false;
+      let expiresAt = Date.now() + 3 * 60_000;
+      if (payload.inactivity_expires_at) {
+        const t = Date.parse(payload.inactivity_expires_at);
+        if (!Number.isNaN(t)) expiresAt = t;
       }
-      if (code.length !== 6) throw new Error("Enter the 6-digit code");
-      tokens.orgUser = "demo.org_user.jwt";
-      tokens.dualControl = `dc_${crypto.randomUUID()}`;
       setOperate({
         unlocked: true,
-        actingUser: user.full_name,
-        actingRole: isInitiator ? "initiator" : isAuthorizer ? "authorizer" : "initiator",
-        expiresAt: Date.now() + 3 * 60_000,
+        actingUser: payload.user?.full_name || user?.full_name || email || "Operate user",
+        actingRole: isAuthorizer && !isInitiator ? "authorizer" : "initiator",
+        expiresAt,
       });
-      persist((s) => ({ ...s, users: s.users.map((u) => (u.id === user.id ? { ...u, last_login_at: new Date().toISOString() } : u)) }));
+      if (user) {
+        persist((s) => ({
+          ...s,
+          users: s.users.map((u) => (u.id === user.id ? { ...u, last_login_at: new Date().toISOString() } : u)),
+        }));
+      }
     },
     [persist, state.users, state.dualControl],
   );
 
+  const unlockOperate = useCallback(
+    async (email: string, code: string) => {
+      if (DEMO_MODE) {
+        await delay(800);
+        const user = state.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+        if (!user) throw new Error("No organization user with that email");
+        const isInitiator = state.dualControl.initiator_user_id === user.id;
+        const isAuthorizer = state.dualControl.authorizer_user_id === user.id;
+        if (state.dualControl.configured && !isInitiator && !isAuthorizer) {
+          throw new Error("Only the assigned initiator or authorizer can open operate sessions");
+        }
+        if (code.length !== 6) throw new Error("Enter the 6-digit code");
+        tokens.orgUser = "demo.org_user.jwt";
+        tokens.dualControl = `dc_${crypto.randomUUID()}`;
+        setOperate({
+          unlocked: true,
+          actingUser: user.full_name,
+          actingRole: isInitiator ? "initiator" : isAuthorizer ? "authorizer" : "initiator",
+          expiresAt: Date.now() + 3 * 60_000,
+        });
+        persist((s) => ({ ...s, users: s.users.map((u) => (u.id === user.id ? { ...u, last_login_at: new Date().toISOString() } : u)) }));
+        return;
+      }
+      dcEmail.current = email;
+      const loginRes = await api.post<{
+        mfa_required?: boolean;
+        mfa_token?: string;
+        destination_masked?: string;
+        access_token?: string;
+        session_token?: string;
+      }>("/org-users/auth/login", {
+        email,
+        purpose: "dual_control",
+        device_id: deviceId(),
+      });
+      if (loginRes.access_token || loginRes.session_token) {
+        applyOperateSession(loginRes);
+        return;
+      }
+      const mfaTok = loginRes.mfa_token || "";
+      const mfaRes = await api.post<{
+        access_token?: string;
+        session_token?: string;
+        dual_control_session?: string;
+        device_verification_required?: boolean;
+        device_token?: string;
+        inactivity_expires_at?: string;
+        user?: { full_name?: string; email?: string; id?: number };
+      }>("/org-users/auth/login/mfa", {
+        mfa_token: mfaTok,
+        code,
+        device_id: deviceId(),
+      });
+      if (mfaRes.device_verification_required && mfaRes.device_token) {
+        throw new Error("Device verification required — use the dual-control overlay");
+      }
+      applyOperateSession(mfaRes);
+    },
+    [persist, state.users, state.dualControl, applyOperateSession],
+  );
+
+  const closeDualControlPrompt = useCallback((success: boolean) => {
+    setDualControlPrompt({ open: false, reason: "" });
+    const resolve = dcPromptResolve.current;
+    dcPromptResolve.current = null;
+    resolve?.(success);
+  }, []);
+
+  const requireDualControl = useCallback(
+    (reason = "This action requires an active dual-control operate session.") => {
+      if (operate.unlocked && tokens.dualControl) return Promise.resolve(true);
+      if (!state.dualControl.configured && !DEMO_MODE) {
+        toast("warning", "Set up dual control first", "Assign initiator + authorizer under People & Control.");
+        return Promise.resolve(false);
+      }
+      return new Promise<boolean>((resolve) => {
+        dcPromptResolve.current = resolve;
+        setDualControlPrompt({ open: true, reason });
+      });
+    },
+    [operate.unlocked, state.dualControl.configured, toast],
+  );
+
+  const requestDualControlOtp = useCallback(
+    async (email: string) => {
+      dcEmail.current = email;
+      if (DEMO_MODE) {
+        await delay(500);
+        const user = state.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+        if (state.users.length && !user) throw new Error("No organization user with that email");
+        if (user && state.dualControl.configured) {
+          const ok =
+            state.dualControl.initiator_user_id === user.id || state.dualControl.authorizer_user_id === user.id;
+          if (!ok) throw new Error("Only the assigned initiator or authorizer can open operate sessions");
+        }
+        const devOtp = String(Math.floor(100000 + Math.random() * 900000));
+        sessionStorage.setItem("dc_dev_otp", devOtp);
+        dcMfaToken.current = "demo-dc-mfa";
+        return { destinationMasked: email.replace(/(.{2}).+(@.+)/, "$1***$2"), devOtp };
+      }
+      const res = await api.post<{
+        mfa_required?: boolean;
+        mfa_token?: string;
+        destination_masked?: string;
+        dev_otp?: string;
+        access_token?: string;
+        session_token?: string;
+      }>("/org-users/auth/login", {
+        email,
+        purpose: "dual_control",
+        device_id: deviceId(),
+      });
+      if (res.access_token || res.session_token) {
+        applyOperateSession(res);
+        return { destinationMasked: res.destination_masked || email, devOtp: "" };
+      }
+      dcMfaToken.current = res.mfa_token || "";
+      if (!dcMfaToken.current) throw new Error("No MFA challenge returned");
+      return {
+        destinationMasked: res.destination_masked || email.replace(/(.{2}).+(@.+)/, "$1***$2"),
+        devOtp: res.dev_otp || "",
+      };
+    },
+    [state.users, state.dualControl, applyOperateSession],
+  );
+
+  const verifyDualControlOtp = useCallback(
+    async (code: string) => {
+      if (DEMO_MODE) {
+        await delay(600);
+        const expected = sessionStorage.getItem("dc_dev_otp");
+        if (expected && code !== expected) throw new Error("That code isn't right");
+        const email = dcEmail.current;
+        const user = state.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+        tokens.orgUser = "demo.org_user.jwt";
+        tokens.dualControl = `dc_${crypto.randomUUID()}`;
+        setOperate({
+          unlocked: true,
+          actingUser: user?.full_name || email || "Operate user",
+          actingRole:
+            user && state.dualControl.authorizer_user_id === user.id && state.dualControl.initiator_user_id !== user.id
+              ? "authorizer"
+              : "initiator",
+          expiresAt: Date.now() + 3 * 60_000,
+        });
+        return { deviceRequired: false };
+      }
+      const res = await api.post<{
+        access_token?: string;
+        session_token?: string;
+        dual_control_session?: string;
+        device_verification_required?: boolean;
+        device_token?: string;
+        inactivity_expires_at?: string;
+        user?: { full_name?: string; email?: string; id?: number };
+      }>("/org-users/auth/login/mfa", {
+        mfa_token: dcMfaToken.current,
+        code,
+        device_id: deviceId(),
+      });
+      if (res.device_verification_required && res.device_token) {
+        dcDeviceToken.current = res.device_token;
+        return { deviceRequired: true };
+      }
+      applyOperateSession(res);
+      if (!tokens.dualControl) throw new Error("Operate session was not issued");
+      return { deviceRequired: false };
+    },
+    [state.users, state.dualControl, applyOperateSession],
+  );
+
+  const confirmDualControlDevice = useCallback(
+    async (code: string) => {
+      if (DEMO_MODE) {
+        tokens.dualControl = `dc_${crypto.randomUUID()}`;
+        tokens.orgUser = "demo.org_user.jwt";
+        setOperate({
+          unlocked: true,
+          actingUser: dcEmail.current || "Operate user",
+          actingRole: "initiator",
+          expiresAt: Date.now() + 3 * 60_000,
+        });
+        return;
+      }
+      const res = await api.post<{
+        access_token?: string;
+        session_token?: string;
+        dual_control_session?: string;
+        inactivity_expires_at?: string;
+        user?: { full_name?: string; email?: string; id?: number };
+      }>("/org-users/auth/login/device", {
+        device_token: dcDeviceToken.current,
+        code,
+        device_id: deviceId(),
+      });
+      applyOperateSession(res);
+      if (!tokens.dualControl) throw new Error("Operate session was not issued");
+    },
+    [applyOperateSession],
+  );
+
   const lockOperate = useCallback(() => {
+    if (!DEMO_MODE && tokens.dualControl) {
+      void api.post("/org-users/auth/logout", {}).catch(() => {});
+    }
     tokens.dualControl = null;
+    // keep orgUser for identity reads if needed; clear dual session only
     setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
   }, []);
 
@@ -614,9 +1192,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const resetDemo = useCallback(() => {
+    if (!DEMO_MODE) return;
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem("dev_otp");
-    setState(freshState());
+    setState(demoState());
+  }, []);
+
+  // Live: rehydrate org/setup from API when a company JWT already exists
+  React.useEffect(() => {
+    if (!DEMO_MODE && tokens.platform) {
+      void hydrateSession(session?.email || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const securityDbReady = state.connections.some((c) => c.connection_purpose === "security_data_storage" && c.bootstrap_status === "ready");
@@ -624,18 +1211,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       session, state, operate, securityDbReady,
-      register, login, verifyMfa, logout,
+      register, login, verifyMfa, logout, hydrateSession,
       acceptPrivacy, saveIdentity, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup,
-      createUser, assignDualControl, unlockOperate, lockOperate, issueLoginLink, clearDevice,
+      createUser, assignDualControl, unlockOperate, lockOperate,
+      requireDualControl, dualControlPrompt, closeDualControlPrompt,
+      requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
+      issueLoginLink, clearDevice,
       createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey,
       toggleTool, createTicket, decidePending, resetDemo,
       toasts, toast, dismissToast,
     }),
-    [session, state, operate, securityDbReady, toasts,
-      register, login, verifyMfa, logout, acceptPrivacy, saveIdentity, sendOtp, verifyOtp,
+    [session, state, operate, securityDbReady, toasts, dualControlPrompt,
+      register, login, verifyMfa, logout, hydrateSession, acceptPrivacy, saveIdentity, sendOtp, verifyOtp,
       startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup,
-      createUser, assignDualControl, unlockOperate, lockOperate, issueLoginLink, clearDevice,
+      createUser, assignDualControl, unlockOperate, lockOperate,
+      requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
+      issueLoginLink, clearDevice,
       createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, toggleTool, createTicket, decidePending, resetDemo,
       toast, dismissToast],

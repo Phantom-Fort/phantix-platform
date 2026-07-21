@@ -118,7 +118,7 @@ export default function Companies() {
         >
           <div>
             <label className="label">Company name</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Pay Ltd" required />
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Company Ltd" required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

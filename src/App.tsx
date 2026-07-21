@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
+import DualControlOverlay from "@/components/DualControlOverlay";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import Privacy from "@/pages/auth/Privacy";
@@ -56,6 +57,7 @@ export default function App() {
           </Route>
         </Routes>
         <ToastViewport />
+        <DualControlOverlay />
       </BrowserRouter>
     </StoreProvider>
   );

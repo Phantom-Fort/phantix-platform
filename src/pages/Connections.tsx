@@ -6,20 +6,17 @@ import { useStore } from "@/lib/store";
 import { timeAgo, cx } from "@/lib/utils";
 
 export default function Connections() {
-  const { state, testConnection, bootstrapConnection, deleteConnection, operate, securityDbReady, toast } = useStore();
+  const { state, testConnection, bootstrapConnection, deleteConnection, operate, securityDbReady, toast, requireDualControl } = useStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  const guard = () => {
+  const guard = async () => {
     if (!state.dualControl.configured) {
       toast("warning", "Set up dual control first", "Mutations are blocked until initiator + authorizer are assigned (People & Control).");
       return false;
     }
-    if (!operate.unlocked) {
-      toast("warning", "Operate mode required", "Unlock a dual-control session to manage connections.");
-      return false;
-    }
-    return true;
+    if (operate.unlocked) return true;
+    return requireDualControl("Manage security database connections requires a dual-control operate session.");
   };
 
   return (
@@ -28,7 +25,7 @@ export default function Connections() {
         title="Security database"
         description="BYO dedicated database — the bootstrap gate for scans, VAPT and findings. Config-inspection connections read security metadata only, never business rows."
         actions={
-          <button className="btn-primary" onClick={() => guard() && setCreateOpen(true)}>
+          <button className="btn-primary" onClick={async () => { if (await guard()) setCreateOpen(true); }}>
             <Plus size={15} /> Add connection
           </button>
         }
@@ -59,7 +56,7 @@ export default function Connections() {
             icon={<Database size={22} />}
             title="No connections yet"
             body="Register your dedicated security database (PostgreSQL recommended). Credentials are Fernet-encrypted on the platform DB."
-            action={<button className="btn-primary" onClick={() => guard() && setCreateOpen(true)}><Plus size={15} /> Add the first connection</button>}
+            action={<button className="btn-primary" onClick={async () => { if (await guard()) setCreateOpen(true); }}><Plus size={15} /> Add the first connection</button>}
           />
         </Card>
       ) : (
@@ -106,7 +103,7 @@ export default function Connections() {
                         className="btn-primary !py-2"
                         disabled={busyId === c.id}
                         onClick={async () => {
-                          if (!guard()) return;
+                          if (!(await guard())) return;
                           setBusyId(c.id);
                           await bootstrapConnection(c.id);
                           setBusyId(null);
@@ -120,7 +117,7 @@ export default function Connections() {
                     <button
                       className="btn-ghost !p-2 text-slate-500 hover:text-severity-critical"
                       onClick={async () => {
-                        if (!guard()) return;
+                        if (!(await guard())) return;
                         await deleteConnection(c.id);
                         toast("info", "Connection deleted");
                       }}

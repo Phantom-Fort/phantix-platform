@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
 
 export default function Tools() {
-  const { state, toggleTool, operate, toast } = useStore();
+  const { state, toggleTool, operate, toast, requireDualControl } = useStore();
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -33,7 +33,7 @@ export default function Tools() {
                   className={t.subscribed ? "btn-ghost !px-3 !py-1.5 !text-xs" : "btn-primary !px-3.5 !py-1.5 !text-xs"}
                   onClick={async () => {
                     if (!t.subscribed && !operate.unlocked) {
-                      return toast("warning", "Operate mode required", "Tool subscriptions are mutations — unlock dual control.");
+                      if (!(await requireDualControl("Tool subscription changes require a dual-control operate session."))) return;
                     }
                     await toggleTool(t.id);
                     toast("success", t.subscribed ? "Unsubscribed" : `${t.name} subscribed`, t.subscribed ? undefined : "POST /tools/subscribe");

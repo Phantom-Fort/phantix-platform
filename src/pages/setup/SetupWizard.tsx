@@ -6,6 +6,7 @@ import {
   ArrowLeft, FileText, Landmark, UserCheck, Loader2, PartyPopper, Info, RefreshCw,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { api, DEMO_MODE, emailFromToken } from "@/lib/api";
 import { cx, maskEmail } from "@/lib/utils";
 
 const stepsMeta = [
@@ -18,9 +19,13 @@ const stepsMeta = [
 
 export default function SetupWizard() {
   const store = useStore();
-  const { state, toast } = store;
+  const { state, session, toast, hydrateSession } = store;
   const s = state.setup;
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!DEMO_MODE) void hydrateSession(session?.email || state.org.primary_email || "");
+  }, [hydrateSession, session?.email, state.org.primary_email]);
 
   // Source of truth = setup state (mirrors GET /organizations/me/setup rehydration)
   const currentStep = useMemo(() => {
@@ -58,7 +63,7 @@ export default function SetupWizard() {
           <img src="/logo-transparent.png" alt="Phantix" className="h-10 w-10 object-contain" />
           <div>
             <p className="font-display text-[15px] font-bold text-white">Organization setup</p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-gold-400">{state.org.name}</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-gold-400">{state.org.name || "Your organization"}</p>
           </div>
         </div>
 
@@ -156,8 +161,37 @@ function PrivacyStep() {
   const { acceptPrivacy, state } = useStore();
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [privacy, setPrivacy] = useState<{
+    version?: string;
+    title?: string;
+    summary?: string;
+    highlights?: { id: string; label: string; text: string }[];
+    acceptance_required_copy?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (DEMO_MODE) {
+      setPrivacy({
+        version: "demo",
+        title: "How Phantix handles your organization’s data",
+        summary: "Demo privacy notice — connect VITE_API_BASE for live copy.",
+        highlights: [],
+        acceptance_required_copy: "I have read and accept the privacy model on behalf of my organization.",
+      });
+      return;
+    }
+    (async () => {
+      try {
+        const p = await api.get<typeof privacy>("/organizations/privacy");
+        setPrivacy(p);
+      } catch {
+        setError("Could not load privacy notice");
+      }
+    })();
+  }, []);
 
   const onScroll = () => {
     const el = boxRef.current;
@@ -169,30 +203,37 @@ function PrivacyStep() {
     return <DoneCard title="Privacy notice accepted" detail={`Accepted ${new Date(state.setup.privacy_accepted_at!).toLocaleString()}`} />;
   }
 
+  const highlights = privacy?.highlights || [];
   return (
     <div className="card p-7">
-      <StepTitle icon={<ShieldCheck size={18} />} kicker="Step 1 of 5 · required" title="Accept the privacy model" />
+      <StepTitle icon={<ShieldCheck size={18} />} kicker="Step 1 of 5 · required" title={privacy?.title || "Accept the privacy model"} />
       <div ref={boxRef} onScroll={onScroll} className="mt-5 max-h-[300px] space-y-4 overflow-y-auto rounded-xl border border-phantix-700/50 bg-phantix-950/60 p-5 text-sm leading-6 text-slate-300">
-        <p><strong className="text-white">Phantix is privacy-first by architecture.</strong> The platform runs tooling in the cloud; your security data never leaves infrastructure you own.</p>
-        <p><strong className="text-slate-100">Phantix stores</strong> — tenancy (org profile, users, dual-control assignments), Fernet-encrypted connection credentials, billing state, and dual-control audit metadata.</p>
-        <p><strong className="text-slate-100">Your dedicated security database stores</strong> — assets, tags, history, discovery jobs, scan results, findings, risks, treatments and compliance evidence. All inside the <span className="font-mono text-gold-300">phantix</span> schema only.</p>
-        <p><strong className="text-slate-100">Phantix never reads</strong> — production business rows, customer PII datasets, or document contents. Config-inspection connections read catalogs and security metadata only.</p>
-        <p><strong className="text-slate-100">Identity</strong> — your sign-in email is verified by one-time code. Email OTP only; phone verification is not part of the product.</p>
-        <p><strong className="text-slate-100">Company verification</strong> — optional: prove domain control (DNS TXT or well-known file), submit CAC/RC details, or request a manual staff review.</p>
+        {privacy?.summary && <p>{privacy.summary}</p>}
+        {highlights.map((h) => (
+          <p key={h.id}><strong className="text-slate-100">{h.label}</strong> — {h.text}</p>
+        ))}
+        {!privacy && !error && <p className="text-slate-500">Loading privacy notice…</p>}
+        {error && <p className="text-severity-critical">{error}</p>}
       </div>
       <label className={cx("mt-4 flex items-start gap-3 rounded-xl border p-4 transition-colors", checked ? "border-emerald-400/40 bg-emerald-400/5" : "border-phantix-700/50", !scrolled && "opacity-60")}>
-        <input type="checkbox" disabled={!scrolled} checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-0.5 h-4 w-4 accent-gold-400" />
+        <input type="checkbox" disabled={!scrolled || !privacy} checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-0.5 h-4 w-4 accent-gold-400" />
         <span className="text-sm text-slate-300">
-          I have read and accept the privacy model on behalf of my organization.
+          {privacy?.acceptance_required_copy || "I have read and accept the privacy model on behalf of my organization."}
           {!scrolled && <span className="block text-xs text-slate-500">Scroll to the end to enable.</span>}
         </span>
       </label>
       <button
         className="btn-primary mt-5 w-full !py-3"
-        disabled={!checked || busy}
+        disabled={!checked || busy || !privacy}
         onClick={async () => {
           setBusy(true);
-          await acceptPrivacy();
+          setError(null);
+          try {
+            await acceptPrivacy(privacy?.version);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Accept failed");
+            setBusy(false);
+          }
         }}
       >
         {busy ? "Recording…" : "Accept & continue"} <ArrowRight size={15} />
@@ -224,12 +265,12 @@ function IdentityStep({ onSkip }: { onSkip: () => void }) {
       >
         <div>
           <label className="label">Legal name</label>
-          <input className="input" value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Acme Financial Group Ltd" />
+          <input className="input" value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Your Company Ltd" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="label">Website</label>
-            <input className="input" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://acme.ng" />
+            <input className="input" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://yourcompany.com" />
           </div>
           <div>
             <label className="label">Company phone (contact only)</label>
@@ -247,8 +288,14 @@ function IdentityStep({ onSkip }: { onSkip: () => void }) {
 
 // ── Step 3: Email OTP ─────────────────────────────────────────────────────────
 function OtpStep() {
-  const { sendOtp, verifyOtp, state, toast } = useStore();
+  const { sendOtp, verifyOtp, state, session, toast } = useStore();
   const s = state.setup;
+  const companyEmail =
+    state.org.primary_email ||
+    session?.email ||
+    emailFromToken() ||
+    s.email_otp_destination ||
+    "";
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -262,7 +309,7 @@ function OtpStep() {
   }, [cooldown]);
 
   if (s.identity_verified) {
-    return <DoneCard title="Email verified" detail={`${s.email_otp_destination ?? state.org.primary_email} confirmed by one-time code`} />;
+    return <DoneCard title="Email verified" detail={`${companyEmail || "sign-in email"} confirmed by one-time code`} />;
   }
 
   const send = async () => {
@@ -272,7 +319,7 @@ function OtpStep() {
       const res = await sendOtp();
       setDevOtp(res.devOtp || null);
       setCooldown(45);
-      toast("success", "Code sent", `Check ${maskEmail(state.org.primary_email)} for the 6-digit code.`);
+      toast("success", "Code sent", companyEmail ? `Check ${maskEmail(companyEmail)} for the 6-digit code.` : "Check your company email for the 6-digit code.");
     } finally {
       setBusy(false);
     }
@@ -282,8 +329,11 @@ function OtpStep() {
     <div className="card p-7">
       <StepTitle icon={<MailCheck size={18} />} kicker="Step 3 of 5 · required" title="Verify your sign-in email" />
       <p className="mt-2 text-sm text-slate-400">
-        We'll email a one-time code to <strong className="text-slate-200">{maskEmail(state.org.primary_email)}</strong>.
-        Email OTP only — phone verification was removed from the product.
+        We'll email a one-time code to{" "}
+        <strong className="text-slate-200">
+          {companyEmail ? maskEmail(companyEmail) : "your company sign-in email"}
+        </strong>
+        . Email OTP only — phone verification was removed from the product.
       </p>
 
       {!s.email_otp_sent ? (
@@ -339,10 +389,11 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
   const { state, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, toast } = useStore();
   const s = state.setup;
   const [mode, setMode] = useState<"none" | "domain" | "cac" | "manual">("none");
-  const [domain, setDomain] = useState(s.domain ?? "");
+  const [domain, setDomain] = useState(() => (typeof s.domain === "string" ? s.domain : ""));
   const [busy, setBusy] = useState(false);
   const [cac, setCac] = useState("");
   const [rc, setRc] = useState("");
+  const domainValue = typeof domain === "string" ? domain : "";
   const verified = (s.domain_dns_ok || s.domain_http_ok) || s.cac_submitted || s.manual_review === "approved";
 
   const copy = (text: string, what: string) => {
@@ -398,13 +449,13 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
               <div className="mt-4 rounded-2xl border border-phantix-700/50 bg-phantix-950/50 p-5">
                 {!s.domain_token ? (
                   <div className="flex gap-3">
-                    <input className="input font-mono" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="acme.ng" />
+                    <input className="input font-mono" value={domainValue} onChange={(e) => setDomain(e.target.value)} placeholder="yourcompany.com" />
                     <button
                       className="btn-primary shrink-0"
-                      disabled={!domain.includes(".") || busy}
+                      disabled={!domainValue.includes(".") || busy}
                       onClick={async () => {
                         setBusy(true);
-                        await startDomainVerification(domain);
+                        await startDomainVerification(domainValue);
                         setBusy(false);
                       }}
                     >
@@ -414,7 +465,7 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
                 ) : (
                   <div className="space-y-4">
                     <p className="text-sm text-slate-300">
-                      Prove control of <span className="font-mono text-gold-300">{s.domain}</span> with either method:
+                      Prove control of <span className="font-mono text-gold-300">{typeof s.domain === "string" ? s.domain : domainValue}</span> with either method:
                     </p>
                     <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
@@ -433,9 +484,9 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
                       </div>
                       <div className="mt-2 flex items-center gap-2">
                         <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">
-                          https://{s.domain}/.well-known/phantix-verify.txt
+                          https://{(typeof s.domain === "string" ? s.domain : domainValue) || "yourcompany.com"}/.well-known/phantix-verify.txt
                         </code>
-                        <button onClick={() => copy(`https://${s.domain}/.well-known/phantix-verify.txt`, "URL")} className="btn-secondary !px-3 !py-2"><Copy size={14} /></button>
+                        <button onClick={() => copy(`https://${(typeof s.domain === "string" ? s.domain : domainValue) || "yourcompany.com"}/.well-known/phantix-verify.txt`, "URL")} className="btn-secondary !px-3 !py-2"><Copy size={14} /></button>
                       </div>
                       <p className="mt-1.5 text-[11px] text-slate-500">File body = the token only.</p>
                     </div>
@@ -444,9 +495,14 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
                       disabled={busy || (s.domain_dns_ok && s.domain_http_ok)}
                       onClick={async () => {
                         setBusy(true);
-                        await checkDomain("auto");
-                        setBusy(false);
-                        toast("success", "Verification check complete", "DNS and HTTP probes re-evaluated.");
+                        try {
+                          await checkDomain("auto");
+                          toast("success", "Verification check complete", "DNS and HTTP probes re-evaluated.");
+                        } catch (err) {
+                          toast("error", "Check failed", err instanceof Error ? err.message : "Domain check failed");
+                        } finally {
+                          setBusy(false);
+                        }
                       }}
                     >
                       {busy ? <><Loader2 size={15} className="animate-spin" /> Checking DNS & HTTP…</> : s.domain_dns_ok || s.domain_http_ok ? <><RefreshCw size={14} /> Check again</> : "I've added it — check"}

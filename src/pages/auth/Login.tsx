@@ -9,8 +9,8 @@ import { APP_DEMO_URL } from "@/lib/links";
 export default function Login() {
   const { login, verifyMfa, state } = useStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState(state.org.primary_email);
-  const [password, setPassword] = useState("••••••••••");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [stage, setStage] = useState<"password" | "mfa">("password");
   const [busy, setBusy] = useState(false);

@@ -11,14 +11,15 @@ import { timeAgo, maskEmail, cx } from "@/lib/utils";
 import type { OrgUser } from "@/lib/types";
 
 export default function People() {
-  const { state, operate, toast } = useStore();
+  const { state, operate, toast, requireDualControl } = useStore();
   const [searchParams] = useSearchParams();
-  const [unlockOpen, setUnlockOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("unlock") === "1") setUnlockOpen(true);
-  }, [searchParams]);
+    if (searchParams.get("unlock") === "1") {
+      void requireDualControl("Unlock operate mode to manage people and dual-control actions.");
+    }
+  }, [searchParams, requireDualControl]);
 
   const dc = state.dualControl;
   const initiator = state.users.find((u) => u.id === dc.initiator_user_id);
@@ -32,14 +33,21 @@ export default function People() {
         actions={
           <>
             {dc.configured && !operate.unlocked && (
-              <button className="btn-primary" onClick={() => setUnlockOpen(true)}>
+              <button
+                className="btn-primary"
+                onClick={() => void requireDualControl("Unlock operate mode to manage people and dual-control actions.")}
+              >
                 <Unlock size={15} /> Unlock operate
               </button>
             )}
             {dc.configured && (
               <button
                 className="btn-secondary"
-                onClick={() => (operate.unlocked ? setAddOpen(true) : toast("warning", "Operate mode required", "Creating users post-bootstrap needs an initiator/authorizer session."))}
+                onClick={async () => {
+                  if (operate.unlocked || (await requireDualControl("Creating users post-bootstrap needs an initiator/authorizer session."))) {
+                    setAddOpen(true);
+                  }
+                }}
               >
                 <UserPlus size={15} /> Add user
               </button>
@@ -86,12 +94,11 @@ export default function People() {
             </Card>
           </motion.div>
 
-          <UsersTable onUnlock={() => setUnlockOpen(true)} />
+          <UsersTable onUnlock={() => void requireDualControl("This action requires a dual-control operate session.")} />
           <LoginLinks />
         </>
       )}
 
-      <UnlockModal open={unlockOpen} onClose={() => setUnlockOpen(false)} />
       <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   );
@@ -283,7 +290,7 @@ function PersonForm({
         </div>
         <div className="sm:col-span-2">
           <label className="label">Work email</label>
-          <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={slot === "Initiator" ? "ada@acme.ng" : "chidi@acme.ng"} required />
+          <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={slot === "Initiator" ? "user@yourcompany.com" : "user@yourcompany.com"} required />
           <p className="mt-1.5 text-[11px] text-slate-500">
             OTP-only (no password) — recommended. Free-mail is rejected unless it matches a registration contact.
           </p>
@@ -359,7 +366,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
                       onClick={async () => {
-                        if (!operate.unlocked) return onUnlock();
+                        if (!operate.unlocked) { onUnlock(); return; }
                         const url = await issueLoginLink(u.id);
                         setLink({ user: u.full_name, url });
                       }}
@@ -370,7 +377,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
                       title="Clear device bind"
                       onClick={async () => {
-                        if (!operate.unlocked) return onUnlock();
+                        if (!operate.unlocked) { onUnlock(); return; }
                         await clearDevice(u.id);
                         toast("success", "Device bind cleared", `${u.full_name} can bind a new browser at next login.`);
                       }}
@@ -431,80 +438,6 @@ function LoginLinks() {
         </div>
       </Card>
     </motion.div>
-  );
-}
-
-// ── Operate unlock modal ──────────────────────────────────────────────────────
-function UnlockModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { unlockOperate, state, toast } = useStore();
-  const initiator = state.users.find((u) => u.id === state.dualControl.initiator_user_id);
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [stage, setStage] = useState<"email" | "otp">("email");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setEmail(initiator?.email ?? "");
-      setStage("email");
-      setCode("");
-      setError(null);
-    }
-  }, [open, initiator?.email]);
-
-  return (
-    <Modal open={open} onClose={onClose} title="Unlock operate mode">
-      <div className="mb-4 rounded-xl border border-gold-400/25 bg-gold-400/8 p-3.5 text-xs leading-5 text-gold-300/90">
-        <Info size={12} className="mr-1.5 inline" />
-        POST /org-users/auth/login with purpose=dual_control → OTP → session. Operate sessions idle out after
-        ~3 minutes; activity touches the clock.
-      </div>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setError(null);
-          setBusy(true);
-          try {
-            if (stage === "email") {
-              setStage("otp");
-            } else {
-              await unlockOperate(email, code);
-              toast("success", "Operate mode unlocked", "Mutations enabled while the session stays active.");
-              onClose();
-            }
-          } catch (err) {
-            setError(err instanceof Error ? err.message : "Unlock failed");
-          } finally {
-            setBusy(false);
-          }
-        }}
-        className="space-y-4"
-      >
-        {stage === "email" ? (
-          <div>
-            <label className="label">Work email (initiator or authorizer)</label>
-            <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ada@acme.ng" />
-          </div>
-        ) : (
-          <div>
-            <label className="label">One-time code</label>
-            <input
-              className="input text-center font-mono !text-lg !tracking-[0.4em]"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="••••••"
-              autoFocus
-            />
-            <p className="mt-2 text-xs text-slate-500">Code sent to {maskEmail(email)} · any 6 digits in demo</p>
-          </div>
-        )}
-        {error && <p className="text-sm text-severity-critical">{error}</p>}
-        <button className="btn-primary w-full" disabled={busy || (stage === "otp" && code.length !== 6)}>
-          {busy ? "Verifying…" : stage === "email" ? "Email me a code" : "Unlock operate mode"}
-        </button>
-      </form>
-    </Modal>
   );
 }
 

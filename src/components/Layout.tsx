@@ -54,7 +54,7 @@ function OperateCountdown({ expiresAt }: { expiresAt: number }) {
 }
 
 export default function Layout() {
-  const { session, state, operate, lockOperate, logout, securityDbReady, resetDemo, toast } = useStore();
+  const { session, state, operate, lockOperate, logout, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
   const [userMenu, setUserMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -136,7 +136,10 @@ export default function Layout() {
                     <p className="text-[11px] leading-4 text-slate-500">
                       {initiator?.full_name.split(" ")[0]} + {authorizer?.full_name.split(" ")[0]} assigned
                     </p>
-                    <button onClick={() => navigate("/users?unlock=1")} className="btn-primary mt-2 w-full !px-3 !py-1.5 !text-[11px]">
+                    <button
+                      onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
+                      className="btn-primary mt-2 w-full !px-3 !py-1.5 !text-[11px]"
+                    >
                       <Unlock size={12} /> Unlock operate
                     </button>
                   </>
@@ -196,6 +199,7 @@ export default function Layout() {
                       <p className="text-xs text-slate-500 font-mono">type=access · company JWT</p>
                     </div>
                     <div className="p-1.5">
+                      {import.meta.env.VITE_API_BASE ? null : (
                       <button
                         onClick={() => {
                           resetDemo();
@@ -207,6 +211,7 @@ export default function Layout() {
                       >
                         <RotateCcw size={15} /> Reset demo data
                       </button>
+                      )}
                       <button
                         onClick={() => {
                           logout();
