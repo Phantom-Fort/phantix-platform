@@ -108,8 +108,20 @@ export default function Identity() {
     void hydrateSession();
   }, [hydrateSession]);
 
+  const normalize: Record<string, string> = {
+    soc2: "soc_2", health: "phi", payment_cards: "pci",
+  };
+
   useEffect(() => {
-    setForm(state.org);
+    const org = { ...state.org };
+    const normalizeList = (field: "compliance_frameworks" | "data_types_handled") => {
+      if (org[field]) {
+        org[field] = org[field].map((v) => normalize[v] ?? v).filter((v) => v);
+      }
+    };
+    normalizeList("compliance_frameworks");
+    normalizeList("data_types_handled");
+    setForm(org);
     if (state.org.preferred_services?.length) {
       setPreferred(state.org.preferred_services.filter((k) => ALLOWED_SERVICES.has(k)));
     }
@@ -358,13 +370,13 @@ export default function Identity() {
 
             <ChipGroup
               title="Compliance frameworks"
-              options={["iso_27001", "ndpr", "soc2", "pci_dss", "nist_csf", "gdpr", "hipaa"]}
+              options={["iso_27001", "soc_2", "pci_dss", "gdpr", "ndpr", "hipaa", "nist_csf", "cis_controls", "cbn_risk_based", "swift_csp", "iso_27701", "other"]}
               selected={form.compliance_frameworks ?? []}
               onToggle={(v) => toggleList("compliance_frameworks", v)}
             />
             <ChipGroup
               title="Data types handled"
-              options={["pii", "financial", "health", "payment_cards", "credentials", "intellectual_property"]}
+              options={["pii", "phi", "pci", "financial", "credentials", "intellectual_property", "government", "biometric", "other"]}
               selected={form.data_types_handled ?? []}
               onToggle={(v) => toggleList("data_types_handled", v)}
             />
@@ -575,6 +587,14 @@ function ChipGroup({
   selected: string[];
   onToggle: (v: string) => void;
 }) {
+  const labels: Record<string, string> = {
+    iso_27001: "ISO 27001", soc_2: "SOC 2", pci_dss: "PCI DSS", gdpr: "GDPR",
+    ndpr: "NDPR", hipaa: "HIPAA", nist_csf: "NIST CSF", cis_controls: "CIS Controls",
+    cbn_risk_based: "CBN Risk-Based", swift_csp: "SWIFT CSP", iso_27701: "ISO 27701",
+    pii: "PII", phi: "PHI", pci: "PCI", financial: "Financial",
+    credentials: "Credentials", intellectual_property: "Intellectual Property",
+    government: "Government", biometric: "Biometric",
+  };
   return (
     <div className="mt-5">
       <p className="label">{title}</p>
@@ -588,7 +608,7 @@ function ChipGroup({
               onClick={() => onToggle(o)}
               className={cx("chip", on ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-phantix-700/50 text-slate-500")}
             >
-              {o}
+              {labels[o] ?? o}
             </button>
           );
         })}
