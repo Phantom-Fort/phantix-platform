@@ -408,7 +408,10 @@ export default function Identity() {
                 <>
                   <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-sm text-slate-200">{key.prefix}</span>
+                      <div>
+                        <span className="font-mono text-sm text-slate-200">{key.prefix}</span>
+                        <p className="mt-0.5 text-[10px] text-slate-600">De-identified — the full key was shown only at creation</p>
+                      </div>
                       <StatusBadge status="active" />
                     </div>
                     <p className="mt-2 text-xs text-slate-500">

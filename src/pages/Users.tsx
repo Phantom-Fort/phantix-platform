@@ -429,8 +429,8 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
             <strong className="text-gold-300">app.phantix.site</strong> — the Command Centre where scans, campaigns and reports live.
             Share this with {link?.user || "the user"}. They visit the link, verify via email OTP, and get direct access — no platform login needed.
           </div>
-          <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-xs leading-6 text-gold-300/90 break-all">
-            {link?.url}
+          <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3.5 text-xs leading-5 text-slate-400">
+            <strong>Shown once.</strong> The platform stores no secrets. Rotating the service key does not invalidate this link.
           </div>
           <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-xs leading-6 text-gold-300/90 break-all">
             {link?.url}
@@ -439,7 +439,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
             className="btn-primary w-full"
             onClick={() => {
               navigator.clipboard?.writeText(link?.url ?? "").catch(() => {});
-              toast("success", "Link copied");
+              toast("success", "Link copied", "Share this with the user — they sign in on app.phantix.site.");
               setLink(null);
             }}
           >
