@@ -62,8 +62,8 @@ const demoTools: ToolItem[] = [
 ];
 
 const demoPayments: Payment[] = [
-  { id: 1, reference: "PHX-2026-0711", amount_ngn: 500, status: "paid", period: "July 2026 (first month −50%)", created_at: "2026-07-01T09:00:00Z" },
-  { id: 2, reference: "PHX-2026-0811", amount_ngn: 1000, status: "pending", period: "August 2026", created_at: "2026-08-01T09:00:00Z" },
+  { id: 1, reference: "PHX-2026-0711", amount_ngn: 50000, status: "paid", period: "July 2026 (first month −50%)", created_at: "2026-07-01T09:00:00Z" },
+  { id: 2, reference: "PHX-2026-0811", amount_ngn: 100000, status: "pending", period: "August 2026", created_at: "2026-08-01T09:00:00Z" },
 ];
 
 const demoOrg = (): Organization => ({
