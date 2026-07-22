@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Users, UserPlus, ShieldCheck, Link2, KeyRound, ArrowRight, ArrowLeft,
-  CheckCircle2, Copy, Unlock, Smartphone, AlertTriangle, Info,
+  CheckCircle2, Copy, Unlock, Smartphone, AlertTriangle, Info, RefreshCw,
 } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
@@ -14,6 +14,7 @@ export default function People() {
   const { state, operate, toast, requireDualControl } = useStore();
   const [searchParams] = useSearchParams();
   const [addOpen, setAddOpen] = useState(false);
+  const [reassignOpen, setReassignOpen] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("unlock") === "1") {
@@ -86,16 +87,31 @@ export default function People() {
               </div>
               <div className="mt-4 flex items-start gap-3 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0 text-gold-400" />
+                <div className="min-w-0 flex-1">
                 <p className="text-[11px] leading-4 text-slate-500">
-                  Reassigning revokes live operate sessions — both users must re-login with purpose=dual_control.
-                  The company JWT is now read-only (+ reports) for mutations.
+                  Reassign here using your company JWT — no operate session needed.
+                  After reassigning, the new initiator must login with purpose=dual_control to get a session token.
+                  Use organization-domain emails (allowed domains) or registration contact emails only.
                 </p>
+                  <button
+                    className="btn-secondary mt-2 !px-3 !py-1.5 !text-xs"
+                    onClick={() => setReassignOpen(true)}
+                  >
+                    <RefreshCw size={12} /> Reassign
+                  </button>
+                </div>
               </div>
             </Card>
           </motion.div>
 
           <UsersTable onUnlock={() => void requireDualControl("This action requires a dual-control operate session.")} />
           <LoginLinks />
+          <ReassignModal
+            open={reassignOpen}
+            onClose={() => setReassignOpen(false)}
+            currentInitiatorId={dc.initiator_user_id}
+            currentAuthorizerId={dc.authorizer_user_id}
+          />
         </>
       )}
 
@@ -436,6 +452,98 @@ function LoginLinks() {
         </div>
       </Card>
     </motion.div>
+  );
+}
+
+// ── Reassign dual control modal ────────────────────────────────────────────────
+function ReassignModal({
+  open, onClose, currentInitiatorId, currentAuthorizerId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  currentInitiatorId: number | null;
+  currentAuthorizerId: number | null;
+}) {
+  const { state, assignDualControl, toast, operate } = useStore();
+  const [initiatorId, setInitiatorId] = useState<number>(currentInitiatorId ?? 0);
+  const [authorizerId, setAuthorizerId] = useState<number>(currentAuthorizerId ?? 0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const activeUsers = state.users.filter((u) => u.is_active);
+  const policy = state.dualControl.email_policy;
+  const allowedDomains = policy?.allowed_domains ?? [];
+  const exemptEmails = policy?.registration_emails_exempt ?? [];
+
+  useEffect(() => {
+    setInitiatorId(currentInitiatorId ?? 0);
+    setAuthorizerId(currentAuthorizerId ?? 0);
+    setError(null);
+  }, [open, currentInitiatorId, currentAuthorizerId]);
+
+  return (
+    <Modal open={open} onClose={onClose} title="Reassign dual control">
+      <div className="space-y-4">
+        <div className="rounded-xl border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
+          Assign initiator and authorizer to users on your organization domain.{allowedDomains.length > 0 && (
+            <span> Allowed: <strong>{allowedDomains.join(", ")}</strong>.</span>
+          )}{exemptEmails.length > 0 && (
+            <span> Registration contacts exempt: <strong>{exemptEmails.join(", ")}</strong>.</span>
+          )}
+          {" "}Gmail/yahoo/outlook users cannot complete dual-control login.
+        </div>
+        <div>
+          <label className="label">Initiator</label>
+          <select
+            className="input"
+            value={initiatorId || ""}
+            onChange={(e) => setInitiatorId(Number(e.target.value))}
+          >
+            <option value="" disabled>Select initiator</option>
+            {activeUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name} — {u.email} ({u.role})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Authorizer</label>
+          <select
+            className="input"
+            value={authorizerId || ""}
+            onChange={(e) => setAuthorizerId(Number(e.target.value))}
+          >
+            <option value="" disabled>Select authorizer</option>
+            {activeUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name} — {u.email} ({u.role})
+              </option>
+            ))}
+          </select>
+        </div>
+        {error && <p className="text-sm text-severity-critical">{error}</p>}
+        <button
+          className="btn-primary w-full"
+          disabled={busy || !initiatorId || !authorizerId || initiatorId === authorizerId}
+          onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              await assignDualControl(initiatorId, authorizerId);
+              toast("success", "Dual control updated", "The new assignments are active. Both users must re-login with purpose=dual_control.");
+              onClose();
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "Assignment failed");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Updating…" : "Save changes"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

@@ -142,7 +142,7 @@ const emptyState = (): PersistedState => ({
   org: emptyOrg(),
   setup: emptySetup(),
   users: [],
-  dualControl: { configured: false, require_dual_control: false, initiator_user_id: null, authorizer_user_id: null },
+  dualControl: { configured: false, require_dual_control: false, initiator_user_id: null, authorizer_user_id: null, email_policy: null },
   connections: [],
   companies: [],
   serviceKey: null,
@@ -159,7 +159,7 @@ const demoState = (): PersistedState => ({
   org: demoOrg(),
   setup: emptySetup(),
   users: [],
-  dualControl: { configured: false, require_dual_control: false, initiator_user_id: null, authorizer_user_id: null },
+  dualControl: { configured: false, require_dual_control: false, initiator_user_id: null, authorizer_user_id: null, email_policy: null },
   connections: [],
   companies: [],
   serviceKey: null,
@@ -510,6 +510,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         require_dual_control: false,
         initiator_user_id: null,
         authorizer_user_id: null,
+        email_policy: null,
       };
       if (dcRes && typeof dcRes === "object") {
         // Handle both flat and paginated { items: [...] } responses
@@ -517,11 +518,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const d = raw as Record<string, unknown>;
         const initId = Number(d.initiator_user_id ?? (d.initiator as { id?: number })?.id ?? 0) || null;
         const authId = Number(d.authorizer_user_id ?? (d.authorizer as { id?: number })?.id ?? 0) || null;
+        const ep = d.email_policy as { allowed_domains?: string[]; registration_emails_exempt?: string[] } | undefined;
         dualControl = {
           configured: Boolean(d.configured ?? (initId && authId)),
           require_dual_control: Boolean(d.require_dual_control ?? true),
           initiator_user_id: initId,
           authorizer_user_id: authId,
+          email_policy: ep ? {
+            allowed_domains: Array.isArray(ep.allowed_domains) ? ep.allowed_domains : [],
+            registration_emails_exempt: Array.isArray(ep.registration_emails_exempt) ? ep.registration_emails_exempt : [],
+          } : null,
         };
       }
 
@@ -1182,14 +1188,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await delay(550);
         persist((s) => ({
           ...s,
-          dualControl: { configured: true, require_dual_control: true, initiator_user_id: initiatorId, authorizer_user_id: authorizerId },
+          dualControl: { configured: true, require_dual_control: true, initiator_user_id: initiatorId, authorizer_user_id: authorizerId, email_policy: s.dualControl.email_policy },
         }));
         logAudit("dual_control.assign", "people", "Assigned initiator + authorizer slots");
         tokens.dualControl = null;
         setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
         return;
       }
-      // Bootstrap: company JWT (no dual-control session) — per DUAL_CONTROL_SETUP_FE.md Phase 2
+      // Company JWT accepted for both bootstrap and reassignment (per backend docs)
       await api.put("/org-users/dual-control", {
         initiator_user_id: initiatorId,
         authorizer_user_id: authorizerId,
@@ -1215,7 +1221,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       persist((s) => ({
         ...s,
-        dualControl: { configured: true, require_dual_control: true, initiator_user_id: initiatorId, authorizer_user_id: authorizerId },
+        dualControl: { configured: true, require_dual_control: true, initiator_user_id: initiatorId, authorizer_user_id: authorizerId, email_policy: s.dualControl.email_policy },
       }));
       logAudit("dual_control.assign", "people", "Assigned initiator + authorizer slots");
       tokens.dualControl = null;
@@ -1744,7 +1750,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const decidePending = useCallback(
     async (id: number, approve: boolean) => {
-      await delay(450);
+      if (DEMO_MODE) {
+        await delay(450);
+        persist((s) => ({ ...s, pending: s.pending.map((p) => (p.id === id ? { ...p, status: approve ? "authorized" as const : "rejected" as const } : p)) }));
+        return;
+      }
+      const path = approve ? `/audit/pending/${id}/authorize` : `/audit/pending/${id}/reject`;
+      await api.post(path, undefined, { dualControl: true });
       persist((s) => ({ ...s, pending: s.pending.map((p) => (p.id === id ? { ...p, status: approve ? "authorized" as const : "rejected" as const } : p)) }));
     },
     [persist],

@@ -210,4 +210,10 @@ export interface DualControlAssignment {
   require_dual_control: boolean;
   initiator_user_id: number | null;
   authorizer_user_id: number | null;
+  email_policy: DualControlEmailPolicy | null;
+}
+
+export interface DualControlEmailPolicy {
+  allowed_domains: string[];
+  registration_emails_exempt: string[];
 }
