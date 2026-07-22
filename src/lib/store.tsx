@@ -1526,7 +1526,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         logAudit("org_user.clear_device", "people", `Cleared device bind for ${user?.full_name ?? userId}`);
         return;
       }
-      await api.delete(`/organizations/me/users/${userId}/device`);
+      await api.delete(`/organizations/me/users/${userId}/device`, { dualControl: true });
       const user = state.users.find((u) => u.id === userId);
       logAudit("org_user.clear_device", "people", `Cleared device bind for ${user?.full_name ?? userId}`);
     },
@@ -1716,11 +1716,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         logAudit("company.create", "tenancy", `Created child company: ${c.name}`);
         return;
       }
-      const res = await api.post<Record<string, unknown>>("/organizations/me/companies", {
-        name: c.name,
-        industry: c.industry || undefined,
-        country: c.country || undefined,
-      });
+      const res = await api.post<Record<string, unknown>>(
+        "/organizations/me/companies",
+        { name: c.name, industry: c.industry || undefined, country: c.country || undefined },
+        { dualControl: true },
+      );
       persist((s) => ({
         ...s,
         companies: [...s.companies, {
@@ -1757,7 +1757,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       // Per TWO_PLATFORM_AUTH.md: POST /organizations/me/service-key creates-or-rotates
       const path = companyId ? `/organizations/me/companies/${companyId}/service-key` : "/organizations/me/service-key";
-      const res = await api.post<{ key?: string; secret?: string; service_key?: string; prefix?: string; access_key?: string; api_key?: string }>(path);
+      const res = await api.post<{ key?: string; secret?: string; service_key?: string; prefix?: string; access_key?: string; api_key?: string }>(
+        path, undefined, { dualControl: true },
+      );
       const secret = res?.secret ?? res?.key ?? res?.service_key ?? res?.access_key ?? res?.api_key ?? "";
       if (!secret) throw new Error("Service key was not returned by the backend");
       const prefix = secret.includes("_") ? `${secret.slice(0, secret.indexOf("_") + 13)}…` : `${secret.slice(0, 12)}…`;
@@ -1784,7 +1786,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     const keyId = state.serviceKey?.id;
     if (!keyId) throw new Error("No active service key to revoke");
-    await api.delete(`/organizations/me/service-key/${keyId}`);
+    await api.delete(`/organizations/me/service-key/${keyId}`, { dualControl: true });
     persist((s) => ({ ...s, serviceKey: null }));
     logAudit("service_key.revoke", "tenancy", "Revoked service key");
   }, [persist, logAudit, state.serviceKey?.id]);
@@ -1849,7 +1851,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }));
         return;
       }
-      const res = await api.post<Record<string, unknown>>("/support/tickets", { subject, priority, body });
+      const res = await api.post<Record<string, unknown>>("/support/tickets", { subject, priority, body }, { dualControl: true });
       persist((s) => ({
         ...s,
         tickets: [{ id: Number(res.id ?? s.nextId), subject, priority, status: "open" as const, created_at: String(res.created_at ?? new Date().toISOString()), messages: [{ from: "You", body, at: new Date().toISOString() }] }, ...s.tickets],
