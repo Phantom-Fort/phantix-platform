@@ -1502,7 +1502,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const needsDc = state.dualControl.configured && !!tokens.dualControl;
       const res = await api.post<{ login_url?: string; url?: string; login_link?: string; token?: string; message?: string }>(
         `/organizations/me/users/${userId}/login-link`,
-        undefined,
+        {},
         needsDc ? { dualControl: true } : undefined,
       );
       const url = res?.login_url ?? res?.url ?? res?.login_link ?? "";
@@ -1757,12 +1757,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       // Per TWO_PLATFORM_AUTH.md: POST /organizations/me/service-key creates-or-rotates
       const path = companyId ? `/organizations/me/companies/${companyId}/service-key` : "/organizations/me/service-key";
-      const res = await api.post<{ key?: string; secret?: string; service_key?: string; prefix?: string; access_key?: string; api_key?: string }>(
-        path, undefined, { dualControl: true },
+      const keyName = companyId
+        ? state.companies.find((c) => c.id === companyId)?.name ?? state.org.name
+        : state.org.name;
+      const res = await api.post<{ api_key?: string; key_prefix?: string; secret?: string; key?: string; service_key?: string; prefix?: string }>(
+        path,
+        { name: keyName, scopes: ["assets:read", "scans:read", "scans:write", "reports:generate", "risk:read", "vapt:read", "compliance:read", "audit:read", "alerts:read", "ai:read", "users:read", "connections:read", "billing:read"], grace_hours: 168 },
+        { dualControl: true },
       );
-      const secret = res?.secret ?? res?.key ?? res?.service_key ?? res?.access_key ?? res?.api_key ?? "";
+      const secret = res?.api_key ?? res?.secret ?? res?.key ?? res?.service_key ?? "";
       if (!secret) throw new Error("Service key was not returned by the backend");
-      const prefix = secret.includes("_") ? `${secret.slice(0, secret.indexOf("_") + 13)}…` : `${secret.slice(0, 12)}…`;
+      const prefix = res?.key_prefix ?? (secret.includes("_") ? `${secret.slice(0, secret.indexOf("_") + 13)}…` : `${secret.slice(0, 12)}…`);
       if (companyId) {
         persist((s) => ({ ...s, companies: s.companies.map((c) => (c.id === companyId ? { ...c, key_prefix: prefix } : c)) }));
       } else {
@@ -1774,7 +1779,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       logAudit("service_key.rotate", "tenancy", "Rotated service key");
       return secret;
     },
-    [persist, logAudit],
+    [persist, logAudit, state.org.name, state.companies],
   );
 
   const revokeServiceKey = useCallback(async () => {
