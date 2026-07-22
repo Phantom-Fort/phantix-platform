@@ -48,6 +48,32 @@ export default function SetupWizard() {
   const s = state.setup;
   const navigate = useNavigate();
 
+  // Fetch privacy notice once for all steps
+  const [privacyNotice, setPrivacyNotice] = useState<Record<string, unknown> | null>(null);
+  useEffect(() => {
+    if (DEMO_MODE) {
+      setPrivacyNotice({
+        version: s.privacy_notice_version || "2026-07-10",
+        title: "How Phantix handles your organization's data",
+        summary: "Demo privacy notice — connect VITE_API_BASE for live copy from GET /organizations/privacy.",
+        highlights: [
+          { id: "1", label: "Security data", text: "Findings and assets live only in your dedicated security database." },
+          { id: "2", label: "Platform data", text: "We store account, billing, and setup state only." },
+        ],
+        acceptance_required_copy: "I have read and accept the privacy model on behalf of my organization.",
+      });
+      return;
+    }
+    (async () => {
+      try {
+        const p = await api.get<Record<string, unknown>>("/organizations/privacy");
+        setPrivacyNotice(p);
+      } catch {
+        // keep null — PrivacyStep will show its own error
+      }
+    })();
+  }, [s.privacy_notice_version]);
+
   useEffect(() => {
     if (!DEMO_MODE) {
       void hydrateSession(session?.email || state.org.email || state.org.primary_email || "");
@@ -178,11 +204,11 @@ export default function SetupWizard() {
               exit={{ opacity: 0, x: -24 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             >
-              {step === 1 && <PrivacyStep />}
-              {step === 2 && <IdentityStep onSkip={() => setStep(3)} onDone={() => setStep(3)} />}
-              {step === 3 && <OtpStep />}
-              {step === 4 && <VerifyStep onContinue={() => setStep(5)} />}
-              {step === 5 && <CompleteStep />}
+              {step === 1 && <PrivacyStep privacyNotice={privacyNotice} />}
+              {step === 2 && <IdentityStep onSkip={() => setStep(3)} onDone={() => setStep(3)} privacyNotice={privacyNotice} />}
+              {step === 3 && <OtpStep privacyNotice={privacyNotice} />}
+              {step === 4 && <VerifyStep onContinue={() => setStep(5)} privacyNotice={privacyNotice} />}
+              {step === 5 && <CompleteStep privacyNotice={privacyNotice} />}
             </motion.div>
           </AnimatePresence>
 
@@ -198,51 +224,15 @@ export default function SetupWizard() {
 }
 
 // ── Step 1: Privacy ───────────────────────────────────────────────────────────
-function PrivacyStep() {
+function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown> | null }) {
   const { acceptPrivacy, state, toast } = useStore();
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
-  const [privacy, setPrivacy] = useState<{
-    version?: string;
-    title?: string;
-    summary?: string;
-    highlights?: { id: string; label: string; text: string }[];
-    acceptance_required_copy?: string;
-    phantix_stores?: string[];
-  } | null>(null);
 
-  useEffect(() => {
-    if (DEMO_MODE) {
-      setPrivacy({
-        version: state.setup.privacy_notice_version || "2026-07-10",
-        title: "How Phantix handles your organization’s data",
-        summary: "Demo privacy notice — connect VITE_API_BASE for live copy from GET /organizations/privacy.",
-        highlights: [
-          { id: "1", label: "Security data", text: "Findings and assets live only in your dedicated security database." },
-          { id: "2", label: "Platform data", text: "We store account, billing, and setup state only." },
-        ],
-        acceptance_required_copy: "I have read and accept the privacy model on behalf of my organization.",
-      });
-      return;
-    }
-    (async () => {
-      try {
-        const p = await api.get<typeof privacy>("/organizations/privacy");
-        setPrivacy(p);
-      } catch {
-        setError("Could not load privacy notice");
-      }
-    })();
-  }, [state.setup.privacy_notice_version]);
-
-  const onScroll = () => {
-    const el = boxRef.current;
-    if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) setScrolled(true);
-  };
+  const pn = privacyNotice as Record<string, unknown> | null;
 
   if (state.setup.privacy_accepted) {
     return (
@@ -253,32 +243,52 @@ function PrivacyStep() {
     );
   }
 
-  const version = privacy?.version || state.setup.privacy_notice_version || undefined;
-  const highlights = privacy?.highlights || [];
+  const version = (pn?.version as string) || state.setup.privacy_notice_version || undefined;
+  const title = (pn?.title as string) || "Accept the privacy model";
+  const summary = pn?.summary as string | undefined;
+  const highlights = (pn?.highlights as { id: string; label: string; text: string }[] | undefined) || [];
+  const phantixStores = (pn?.phantix_stores as string[] | undefined) || [];
+  const acceptance = (pn?.acceptance_required_copy as string) || "I have read and accept the privacy model on behalf of my organization.";
+  const body = pn?.body as string | undefined;
+  const noticeText = body || (pn?.notice_text as string) || (pn?.text as string) || undefined;
 
   return (
     <div className="card p-7">
-      <StepTitle icon={<ShieldCheck size={18} />} kicker="Step 1 of 5 · required" title={privacy?.title || "Accept the privacy model"} />
+      <StepTitle icon={<ShieldCheck size={18} />} kicker="Step 1 of 5 · required" title={title} />
       <div
         ref={boxRef}
-        onScroll={onScroll}
+        onScroll={() => {
+          const el = boxRef.current;
+          if (!el) return;
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) setScrolled(true);
+        }}
         className="mt-5 max-h-[300px] space-y-4 overflow-y-auto rounded-xl border border-phantix-700/50 bg-phantix-950/60 p-5 text-sm leading-6 text-slate-300"
       >
-        {privacy?.summary && <p>{privacy.summary}</p>}
-        {highlights.map((h) => (
-          <p key={h.id}>
-            <strong className="text-slate-100">{h.label}</strong> — {h.text}
-          </p>
-        ))}
-        {privacy?.phantix_stores?.length ? (
-          <ul className="list-disc space-y-1 pl-5 text-slate-400">
-            {privacy.phantix_stores.map((line) => (
-              <li key={line}>{line}</li>
+        {summary && <p className="text-slate-200">{summary}</p>}
+        {noticeText && (
+          <div className="space-y-3 whitespace-pre-line text-slate-400">{noticeText}</div>
+        )}
+        {highlights.length > 0 && !noticeText && (
+          <>
+            {highlights.map((h) => (
+              <div key={h.id}>
+                <strong className="text-slate-100">{h.label}</strong>
+                <p className="mt-0.5 text-slate-400">{h.text}</p>
+              </div>
             ))}
-          </ul>
-        ) : null}
-        {!privacy && !error && <p className="text-slate-500">Loading privacy notice…</p>}
-        {error && <p className="text-severity-critical">{error}</p>}
+          </>
+        )}
+        {phantixStores.length > 0 && (
+          <>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Data we store</p>
+            <ul className="list-disc space-y-1 pl-5 text-slate-400">
+              {phantixStores.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </>
+        )}
+        {!pn && !summary && <p className="text-slate-500">Loading privacy notice…</p>}
       </div>
       {version && <p className="mt-2 text-[11px] text-slate-600">Notice version: {version}</p>}
       <label
@@ -290,20 +300,21 @@ function PrivacyStep() {
       >
         <input
           type="checkbox"
-          disabled={!scrolled || !privacy}
+          disabled={!scrolled || !pn}
           checked={checked}
           onChange={(e) => setChecked(e.target.checked)}
           className="mt-0.5 h-4 w-4 accent-gold-400"
         />
         <span className="text-sm text-slate-300">
-          {privacy?.acceptance_required_copy || "I have read and accept the privacy model on behalf of my organization."}
+          {acceptance}
           {!scrolled && <span className="block text-xs text-slate-500">Scroll to the end to enable.</span>}
         </span>
       </label>
+      {error && <p className="mt-2 text-sm text-severity-critical">{error}</p>}
       <button
         type="button"
-        className="btn-primary mt-5 w-full !py-3"
-        disabled={!checked || busy || !privacy}
+        className="btn-primary mt-4 w-full !py-3"
+        disabled={!checked || busy || !pn}
         onClick={async () => {
           setBusy(true);
           setError(null);
@@ -324,7 +335,7 @@ function PrivacyStep() {
 }
 
 // ── Step 2: Identity ──────────────────────────────────────────────────────────
-function IdentityStep({ onSkip, onDone }: { onSkip: () => void; onDone: () => void }) {
+function IdentityStep({ onSkip, onDone, privacyNotice }: { onSkip: () => void; onDone: () => void; privacyNotice: Record<string, unknown> | null }) {
   const { saveIdentity, state, toast } = useStore();
   const [website, setWebsite] = useState(state.org.website ?? "");
   const [legalName, setLegalName] = useState(state.org.legal_name ?? state.org.name);
@@ -392,13 +403,14 @@ function IdentityStep({ onSkip, onDone }: { onSkip: () => void; onDone: () => vo
             Skip for now
           </button>
         </div>
-      </form>
+        </form>
+        <PrivacyRef notice={privacyNotice} />
     </div>
   );
 }
 
 // ── Step 3: Email OTP ─────────────────────────────────────────────────────────
-function OtpStep() {
+function OtpStep({ privacyNotice }: { privacyNotice: Record<string, unknown> | null }) {
   const { sendOtp, verifyOtp, state, session, toast } = useStore();
   const s = state.setup;
   const companyEmail =
@@ -516,12 +528,13 @@ function OtpStep() {
         </div>
       )}
       {error && !s.email_otp_sent && <p className="mt-3 text-sm text-severity-critical">{error}</p>}
+      <PrivacyRef notice={privacyNotice} />
     </div>
   );
 }
 
 // ── Step 4: Company verification (optional) ───────────────────────────────────
-function VerifyStep({ onContinue }: { onContinue: () => void }) {
+function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; privacyNotice: Record<string, unknown> | null }) {
   const { state, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, toast, refreshSetup } = useStore();
   const s = state.setup;
   const [mode, setMode] = useState<"none" | "domain" | "cac" | "manual">("none");
@@ -829,6 +842,7 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
             </motion.div>
           )}
         </AnimatePresence>
+        <PrivacyRef notice={privacyNotice} />
       </div>
 
       <button type="button" onClick={onContinue} className="btn-primary w-full !py-3.5">
@@ -839,7 +853,7 @@ function VerifyStep({ onContinue }: { onContinue: () => void }) {
 }
 
 // ── Step 5: Complete ──────────────────────────────────────────────────────────
-function CompleteStep() {
+function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown> | null }) {
   const { state, completeSetup, toast } = useStore();
   const s = state.setup;
   const navigate = useNavigate();
@@ -928,6 +942,7 @@ function CompleteStep() {
       >
         {busy ? "Completing…" : "Complete setup"} <CheckCircle2 size={15} />
       </button>
+      <PrivacyRef notice={privacyNotice} />
     </div>
   );
 }
@@ -951,6 +966,22 @@ function DoneCard({ title, detail }: { title: string; detail: string }) {
       </span>
       <h2 className="mt-4 font-display text-xl font-bold text-white">{title}</h2>
       <p className="mt-1.5 text-sm text-slate-400">{detail}</p>
+    </div>
+  );
+}
+
+function PrivacyRef({ notice }: { notice: Record<string, unknown> | null }) {
+  if (!notice) return null;
+  const title = (notice.title as string) || "Privacy notice";
+  const summary = (notice.summary as string) || "";
+  return (
+    <div className="mt-4 rounded-xl border border-phantix-700/30 bg-phantix-950/40 p-3 text-xs text-slate-500">
+      <p className="font-medium text-slate-400">{title}</p>
+      {summary && <p className="mt-0.5 line-clamp-2">{summary}</p>}
+      <p className="mt-1 text-[10px] text-slate-600">
+        This privacy model applies to all organization data stored by Phantix.
+        <span className="ml-1">Your data lives in your dedicated security database — we never store business rows.</span>
+      </p>
     </div>
   );
 }

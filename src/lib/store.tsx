@@ -512,7 +512,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         authorizer_user_id: null,
       };
       if (dcRes && typeof dcRes === "object") {
-        const d = dcRes as Record<string, unknown>;
+        // Handle both flat and paginated { items: [...] } responses
+        const raw = Array.isArray(dcRes) ? dcRes[0] : ((dcRes as { items?: unknown[] })?.items?.[0]) ?? dcRes;
+        const d = raw as Record<string, unknown>;
         const initId = Number(d.initiator_user_id ?? (d.initiator as { id?: number })?.id ?? 0) || null;
         const authId = Number(d.authorizer_user_id ?? (d.authorizer as { id?: number })?.id ?? 0) || null;
         dualControl = {
@@ -1111,6 +1113,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [persist, logAudit, hydrateSession, session?.email, state.org.email, state.org.primary_email]);
 
   // ── Users & dual control ─────────────────────────────────────────────────
+  function extractId(res: Record<string, unknown>): number {
+    const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
+    return n(res.id) || n(res.user_id) || n((res.user as Record<string, unknown> | undefined)?.id)
+      || n((res.data as Record<string, unknown> | undefined)?.id)
+      || n((res.items as Record<string, unknown>[] | undefined)?.[0]?.id) || 0;
+  }
+
   const createUser = useCallback(
     async (u: { full_name: string; email: string; title: string; role: string }) => {
       if (DEMO_MODE) {
@@ -1134,17 +1143,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         title: u.title,
         role: u.role,
       });
-      const id = Number(res.id ?? 0);
-      const created: OrgUser = {
-        id,
-        full_name: String(res.full_name ?? u.full_name),
-        email: String(res.email ?? u.email),
-        title: String(res.title ?? u.title),
-        role: String(res.role ?? u.role),
-        otp_only: true,
-        is_active: true,
-        last_login_at: null,
-      };
+      let id = extractId(res);
+      let full_name = String(res.full_name ?? res.name ?? u.full_name);
+      let email = String(res.email ?? u.email);
+      let title = String(res.title ?? u.title);
+      let role = String(res.role ?? u.role);
+      // If ID not found in POST response, fetch from GET to get the real server ID
+      if (!id) {
+        try {
+          const usersRes = await api.get<unknown>("/org-users");
+          const raw = Array.isArray(usersRes) ? usersRes : ((usersRes as { items?: unknown[] })?.items ?? []);
+          const match = (raw as Record<string, unknown>[]).find(
+            (x) => String(x.email ?? "").toLowerCase() === u.email.toLowerCase(),
+          );
+          if (match) {
+            id = Number(match.id ?? 0);
+            full_name = String(match.full_name ?? match.name ?? full_name);
+            email = String(match.email ?? email);
+            title = String(match.title ?? title);
+            role = String(match.role ?? role);
+          }
+        } catch { /* use POST values */ }
+      }
+      const created: OrgUser = { id, full_name, email, title, role, otp_only: true, is_active: true, last_login_at: null };
       persist((s) => ({
         ...s,
         users: [...s.users.filter((x) => x.id !== id), created],
@@ -1172,7 +1193,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await api.put("/org-users/dual-control", {
         initiator_user_id: initiatorId,
         authorizer_user_id: authorizerId,
+        require_dual_control: true,
       });
+      // Guardrail: verify the backend actually stored the assignment (DUAL_CONTROL_SETUP_FE §Phase 2)
+      try {
+        const dcCheck = await api.get<unknown>("/org-users/dual-control");
+        const raw = Array.isArray(dcCheck) ? dcCheck[0] : ((dcCheck as { items?: unknown[] })?.items?.[0]) ?? dcCheck;
+        const d = raw as Record<string, unknown>;
+        const configured = Boolean(d.configured);
+        const initObj = d.initiator as { id?: number } | undefined;
+        const authObj = d.authorizer as { id?: number } | undefined;
+        if (!configured || !initObj?.id || !authObj?.id) {
+          throw new Error(
+            "Dual control setup failed — the backend did not confirm the assignment. " +
+            "Make sure both users exist with organization-domain emails (your company email, not personal). " +
+            "If the issue persists, contact support.",
+          );
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith("Dual control setup failed")) throw e;
+      }
       persist((s) => ({
         ...s,
         dualControl: { configured: true, require_dual_control: true, initiator_user_id: initiatorId, authorizer_user_id: authorizerId },

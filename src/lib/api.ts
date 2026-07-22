@@ -66,6 +66,7 @@ async function request<T>(
   opts: { body?: unknown; dualControl?: boolean; form?: Record<string, string> } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
+  headers["X-Device-Id"] = deviceId();
   const bearer = tokens.orgUser ?? tokens.platform;
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   if (opts.dualControl && tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl;
@@ -104,6 +105,7 @@ async function requestMultipart<T>(
   opts: { dualControl?: boolean } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
+  headers["X-Device-Id"] = deviceId();
   const bearer = tokens.orgUser ?? tokens.platform;
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   if (opts.dualControl && tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
