@@ -1113,19 +1113,43 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // ── Users & dual control ─────────────────────────────────────────────────
   const createUser = useCallback(
     async (u: { full_name: string; email: string; title: string; role: string }) => {
-      await delay(500);
-      let created: OrgUser | null = null;
-      persist((s) => {
-        const id = s.nextId;
-        created = { id, full_name: u.full_name, email: u.email, title: u.title, role: u.role, otp_only: true, is_active: true, last_login_at: null };
-        return {
-          ...s,
-          users: [...s.users, created!],
-          audit: [{ id: id + 500, event_key: "org_user.create", category: "people", action: `Created org user: ${u.full_name} (${u.title})`, initiator_name: "Account owner", initiator_title: "Company JWT", authorizer_name: null, authorizer_title: null, created_at: new Date().toISOString() }, ...s.audit],
-          nextId: id + 1,
-        };
+      if (DEMO_MODE) {
+        await delay(500);
+        let created: OrgUser | null = null;
+        persist((s) => {
+          const id = s.nextId;
+          created = { id, full_name: u.full_name, email: u.email, title: u.title, role: u.role, otp_only: true, is_active: true, last_login_at: null };
+          return {
+            ...s,
+            users: [...s.users, created!],
+            audit: [{ id: id + 500, event_key: "org_user.create", category: "people", action: `Created org user: ${u.full_name} (${u.title})`, initiator_name: "Account owner", initiator_title: "Company JWT", authorizer_name: null, authorizer_title: null, created_at: new Date().toISOString() }, ...s.audit],
+            nextId: id + 1,
+          };
+        });
+        return created!;
+      }
+      const res = await api.post<Record<string, unknown>>("/org-users", {
+        full_name: u.full_name,
+        email: u.email,
+        title: u.title,
+        role: u.role,
       });
-      return created!;
+      const id = Number(res.id ?? 0);
+      const created: OrgUser = {
+        id,
+        full_name: String(res.full_name ?? u.full_name),
+        email: String(res.email ?? u.email),
+        title: String(res.title ?? u.title),
+        role: String(res.role ?? u.role),
+        otp_only: true,
+        is_active: true,
+        last_login_at: null,
+      };
+      persist((s) => ({
+        ...s,
+        users: [...s.users.filter((x) => x.id !== id), created],
+      }));
+      return created;
     },
     [persist],
   );
@@ -1133,13 +1157,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const assignDualControl = useCallback(
     async (initiatorId: number, authorizerId: number) => {
       if (initiatorId === authorizerId) throw new Error("Initiator and authorizer must be two different people");
-      await delay(550);
+      if (DEMO_MODE) {
+        await delay(550);
+        persist((s) => ({
+          ...s,
+          dualControl: { configured: true, require_dual_control: true, initiator_user_id: initiatorId, authorizer_user_id: authorizerId },
+        }));
+        logAudit("dual_control.assign", "people", "Assigned initiator + authorizer slots");
+        tokens.dualControl = null;
+        setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+        return;
+      }
+      // Bootstrap: company JWT (no dual-control session) — per DUAL_CONTROL_SETUP_FE.md Phase 2
+      await api.put("/org-users/dual-control", {
+        initiator_user_id: initiatorId,
+        authorizer_user_id: authorizerId,
+      });
       persist((s) => ({
         ...s,
         dualControl: { configured: true, require_dual_control: true, initiator_user_id: initiatorId, authorizer_user_id: authorizerId },
       }));
       logAudit("dual_control.assign", "people", "Assigned initiator + authorizer slots");
-      // Assigning revokes any operate session — per docs
       tokens.dualControl = null;
       setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
     },
