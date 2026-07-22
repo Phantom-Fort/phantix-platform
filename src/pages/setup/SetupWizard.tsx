@@ -66,8 +66,11 @@ export default function SetupWizard() {
     }
     (async () => {
       try {
-        const p = await api.get<Record<string, unknown>>("/organizations/privacy");
-        setPrivacyNotice(p);
+        const raw = await api.get<Record<string, unknown>>("/organizations/privacy");
+        // Unwrap paginated { items: [...], total: N } response
+        const items = raw?.items as unknown[] | undefined;
+        const p = (Array.isArray(items) ? items[0] : raw) as Record<string, unknown> | null;
+        setPrivacyNotice(p ?? raw);
       } catch {
         // keep null — PrivacyStep will show its own error
       }
@@ -246,8 +249,21 @@ function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown>
   const version = (pn?.version as string) || state.setup.privacy_notice_version || undefined;
   const title = (pn?.title as string) || "Accept the privacy model";
   const summary = pn?.summary as string | undefined;
-  const highlights = (pn?.highlights as { id: string; label: string; text: string }[] | undefined) || [];
-  const phantixStores = (pn?.phantix_stores as string[] | undefined) || [];
+  const rawHighlights: unknown = pn?.highlights;
+  const highlights: { id: string; label: string; text: string }[] = Array.isArray(rawHighlights)
+    ? (rawHighlights as Record<string, unknown>[]).map((h) => ({
+        id: String(h.id ?? ""),
+        label: String(h.label ?? ""),
+        text: String(h.text ?? ""),
+      }))
+    : [];
+  const rawStores: unknown = pn?.phantix_stores;
+  const phantixStores: { category: string; items: string[] }[] = Array.isArray(rawStores)
+    ? (rawStores as Record<string, unknown>[]).map((s) => ({
+        category: String(s.category ?? s.label ?? ""),
+        items: Array.isArray(s.items) ? s.items.map(String) : [],
+      }))
+    : [];
   const acceptance = (pn?.acceptance_required_copy as string) || "I have read and accept the privacy model on behalf of my organization.";
   const body = pn?.body as string | undefined;
   const noticeText = body || (pn?.notice_text as string) || (pn?.text as string) || undefined;
@@ -282,9 +298,14 @@ function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown>
           <>
             <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Data we store</p>
             <ul className="list-disc space-y-1 pl-5 text-slate-400">
-              {phantixStores.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
+              {phantixStores.map((cat) =>
+                cat.items.map((item, i) => (
+                  <li key={`${cat.category}-${i}`}>
+                    {cat.category && <span className="text-slate-300">{cat.category}: </span>}
+                    {item}
+                  </li>
+                ))
+              )}
             </ul>
           </>
         )}
