@@ -375,6 +375,7 @@ type Store = {
   clearDevice: (userId: number) => Promise<void>;
   // connections
   refreshConnections: () => Promise<void>;
+  refreshServiceKey: () => Promise<void>;
   createConnection: (
     c: Omit<DbConnection, "id" | "bootstrap_status" | "schema_version" | "last_test_at" | "last_test_ok" | "created_at"> & {
       username?: string;
@@ -1519,7 +1520,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const clearDevice = useCallback(
     async (userId: number) => {
-      await delay(400);
+      if (DEMO_MODE) {
+        await delay(400);
+        const user = state.users.find((u) => u.id === userId);
+        logAudit("org_user.clear_device", "people", `Cleared device bind for ${user?.full_name ?? userId}`);
+        return;
+      }
+      await api.delete(`/organizations/me/users/${userId}/device`);
       const user = state.users.find((u) => u.id === userId);
       logAudit("org_user.clear_device", "people", `Cleared device bind for ${user?.full_name ?? userId}`);
     },
@@ -1540,6 +1547,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (p) connections.push(p);
       }
       persist((s) => ({ ...s, connections }));
+    } catch { /* keep existing */ }
+  }, [persist]);
+
+  const refreshServiceKey = useCallback(async () => {
+    if (DEMO_MODE) return;
+    try {
+      const keyRes = await api.get<unknown>("/organizations/me/service-key").catch(() =>
+        api.get<unknown>("/organizations/me/service-keys").catch(() => null),
+      );
+      if (keyRes) {
+        const keyObj = Array.isArray(keyRes) ? keyRes[0] : keyRes;
+        if (keyObj && typeof keyObj === "object") {
+          const k = keyObj as Record<string, unknown>;
+          const svcKey: ServiceKeyMeta = {
+            id: Number(k.id ?? 0),
+            prefix: String(k.prefix ?? k.key_prefix ?? "pk_live_…"),
+            active: k.active !== false,
+            created_at: String(k.created_at ?? ""),
+            last_used_at: (k.last_used_at as string) ?? null,
+          };
+          persist((s) => ({ ...s, serviceKey: svcKey }));
+        }
+      }
     } catch { /* keep existing */ }
   }, [persist]);
 
@@ -1676,11 +1706,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // ── Companies & keys ─────────────────────────────────────────────────────
   const createCompany = useCallback(
     async (c: { name: string; industry: string; country: string }) => {
-      await delay(500);
+      if (DEMO_MODE) {
+        await delay(500);
+        persist((s) => ({
+          ...s,
+          companies: [...s.companies, { id: s.nextId, name: c.name, slug: c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), industry: c.industry || null, country: c.country || null, key_prefix: null, created_at: new Date().toISOString() }],
+          nextId: s.nextId + 1,
+        }));
+        logAudit("company.create", "tenancy", `Created child company: ${c.name}`);
+        return;
+      }
+      const res = await api.post<Record<string, unknown>>("/organizations/me/companies", {
+        name: c.name,
+        industry: c.industry || undefined,
+        country: c.country || undefined,
+      });
       persist((s) => ({
         ...s,
-        companies: [...s.companies, { id: s.nextId, name: c.name, slug: c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), industry: c.industry || null, country: c.country || null, key_prefix: null, created_at: new Date().toISOString() }],
-        nextId: s.nextId + 1,
+        companies: [...s.companies, {
+          id: Number(res.id ?? s.nextId),
+          name: String(res.name ?? c.name),
+          slug: String(res.slug ?? c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")),
+          industry: String(res.industry ?? c.industry ?? ""),
+          country: String(res.country ?? c.country ?? ""),
+          key_prefix: null,
+          created_at: String(res.created_at ?? new Date().toISOString()),
+        }],
       }));
       logAudit("company.create", "tenancy", `Created child company: ${c.name}`);
     },
@@ -1689,15 +1740,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const rotateServiceKey = useCallback(
     async (companyId?: number) => {
-      await delay(600);
-      const secret = `pk_live_${crypto.randomUUID().replace(/-/g, "")}`;
+      if (DEMO_MODE) {
+        await delay(600);
+        const secret = `pk_live_${crypto.randomUUID().replace(/-/g, "")}`;
+        if (companyId) {
+          persist((s) => ({ ...s, companies: s.companies.map((c) => (c.id === companyId ? { ...c, key_prefix: `${secret.slice(0, 12)}…` } : c)) }));
+        } else {
+          persist((s) => ({
+            ...s,
+            serviceKey: { id: s.nextId, prefix: `${secret.slice(0, 12)}…`, active: true, created_at: new Date().toISOString(), last_used_at: null },
+            nextId: s.nextId + 1,
+          }));
+        }
+        logAudit("service_key.rotate", "tenancy", "Rotated service key");
+        return secret;
+      }
+      // Per TWO_PLATFORM_AUTH.md: POST /organizations/me/service-key creates-or-rotates
+      const path = companyId ? `/organizations/me/companies/${companyId}/service-key` : "/organizations/me/service-key";
+      const res = await api.post<{ key?: string; secret?: string; service_key?: string; prefix?: string; access_key?: string; api_key?: string }>(path);
+      const secret = res?.secret ?? res?.key ?? res?.service_key ?? res?.access_key ?? res?.api_key ?? "";
+      if (!secret) throw new Error("Service key was not returned by the backend");
+      const prefix = secret.includes("_") ? `${secret.slice(0, secret.indexOf("_") + 13)}…` : `${secret.slice(0, 12)}…`;
       if (companyId) {
-        persist((s) => ({ ...s, companies: s.companies.map((c) => (c.id === companyId ? { ...c, key_prefix: `${secret.slice(0, 12)}…` } : c)) }));
+        persist((s) => ({ ...s, companies: s.companies.map((c) => (c.id === companyId ? { ...c, key_prefix: prefix } : c)) }));
       } else {
         persist((s) => ({
           ...s,
-          serviceKey: { id: s.nextId, prefix: `${secret.slice(0, 12)}…`, active: true, created_at: new Date().toISOString(), last_used_at: null },
-          nextId: s.nextId + 1,
+          serviceKey: { id: s.serviceKey?.id ?? s.nextId, prefix, active: true, created_at: new Date().toISOString(), last_used_at: null },
         }));
       }
       logAudit("service_key.rotate", "tenancy", "Rotated service key");
@@ -1707,10 +1776,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const revokeServiceKey = useCallback(async () => {
-    await delay(400);
+    if (DEMO_MODE) {
+      await delay(400);
+      persist((s) => ({ ...s, serviceKey: null }));
+      logAudit("service_key.revoke", "tenancy", "Revoked service key");
+      return;
+    }
+    const keyId = state.serviceKey?.id;
+    if (!keyId) throw new Error("No active service key to revoke");
+    await api.delete(`/organizations/me/service-key/${keyId}`);
     persist((s) => ({ ...s, serviceKey: null }));
     logAudit("service_key.revoke", "tenancy", "Revoked service key");
-  }, [persist, logAudit]);
+  }, [persist, logAudit, state.serviceKey?.id]);
 
   const uploadLogo = useCallback(
     async (file: File) => {
@@ -1763,11 +1840,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const createTicket = useCallback(
     async (subject: string, priority: string, body: string) => {
-      await delay(500);
+      if (DEMO_MODE) {
+        await delay(500);
+        persist((s) => ({
+          ...s,
+          tickets: [{ id: s.nextId, subject, priority, status: "open" as const, created_at: new Date().toISOString(), messages: [{ from: "You", body, at: new Date().toISOString() }] }, ...s.tickets],
+          nextId: s.nextId + 1,
+        }));
+        return;
+      }
+      const res = await api.post<Record<string, unknown>>("/support/tickets", { subject, priority, body });
       persist((s) => ({
         ...s,
-        tickets: [{ id: s.nextId, subject, priority, status: "open" as const, created_at: new Date().toISOString(), messages: [{ from: "You", body, at: new Date().toISOString() }] }, ...s.tickets],
-        nextId: s.nextId + 1,
+        tickets: [{ id: Number(res.id ?? s.nextId), subject, priority, status: "open" as const, created_at: String(res.created_at ?? new Date().toISOString()), messages: [{ from: "You", body, at: new Date().toISOString() }] }, ...s.tickets],
       }));
     },
     [persist],
@@ -1813,7 +1898,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
       requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
       issueLoginLink, clearDevice,
-      refreshConnections, createConnection, testConnection, bootstrapConnection, deleteConnection,
+      refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
       toggleTool, createTicket, decidePending, resetDemo,
       toasts, toast, dismissToast,
@@ -1824,7 +1909,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
       issueLoginLink, clearDevice,
-      refreshConnections, createConnection, testConnection, bootstrapConnection, deleteConnection,
+      refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
       toggleTool, createTicket, decidePending, resetDemo,
       toast, dismissToast],
