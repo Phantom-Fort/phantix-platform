@@ -61,6 +61,20 @@ export default function People() {
         <BootstrapWizard />
       ) : (
         <>
+          {!state.serviceKey && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+              <div className="flex items-start gap-3 rounded-2xl border border-severity-medium/30 bg-severity-medium/8 px-5 py-4">
+                <AlertTriangle size={18} className="mt-0.5 shrink-0 text-severity-medium" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-100">Service key required for app access</p>
+                  <p className="text-sm text-slate-400">
+                    Login links won't work until you create a service key. Go to Identity & Keys or click here to create one now.
+                  </p>
+                </div>
+                <a href="/identity" className="btn-primary shrink-0">Create service key <ArrowRight size={15} /></a>
+              </div>
+            </motion.div>
+          )}
           {/* Assignment card */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
             <Card className="border-gold-400/25">
@@ -379,6 +393,8 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                   <div className="flex justify-end gap-1.5">
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
+                      title={!state.serviceKey ? "App access requires an active service key — create one on the Identity page" : "Generate a one-time app sign-in URL"}
+                      disabled={!state.serviceKey}
                       onClick={async () => {
                         if (!operate.unlocked) { onUnlock(); return; }
                         const url = await issueLoginLink(u.id);
@@ -409,10 +425,13 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
       {/* Login link modal */}
       <Modal open={!!link} onClose={() => setLink(null)} title="Application login link">
         <div className="space-y-4">
-          <p className="text-sm leading-6 text-slate-300">
-            One-time sign-in URL for <strong>{link?.user}</strong> to the operator app. Shown{" "}
-            <strong className="text-gold-300">once</strong> — rotating the service key does not invalidate it.
-          </p>
+          <div className="rounded-xl border border-gold-400/25 bg-gold-400/5 p-3.5 text-xs leading-5 text-slate-400">
+            <strong className="text-gold-300">app.phantix.site</strong> — the Command Centre where scans, campaigns and reports live.
+            Share this with {link?.user || "the user"}. They visit the link, verify via email OTP, and get direct access — no platform login needed.
+          </div>
+          <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-xs leading-6 text-gold-300/90 break-all">
+            {link?.url}
+          </div>
           <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-xs leading-6 text-gold-300/90 break-all">
             {link?.url}
           </div>

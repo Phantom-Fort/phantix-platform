@@ -1478,10 +1478,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const issueLoginLink = useCallback(
     async (userId: number) => {
-      await delay(500);
-      const secret = `ll_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
+      if (DEMO_MODE) {
+        await delay(500);
+        const secret = `ll_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
+        const user = state.users.find((u) => u.id === userId);
+        const url = `https://app.phantix.site/login?org=${state.org.slug}&u=${userId}&t=${secret}`;
+        persist((s) => ({
+          ...s,
+          loginLinks: [{ id: s.nextId, user_id: userId, user_name: user?.full_name ?? "", created_at: new Date().toISOString(), used_at: null, status: "active" }, ...s.loginLinks],
+          nextId: s.nextId + 1,
+        }));
+        return url;
+      }
+      // App login requires an active service key (per backend enforcement)
+      if (!state.serviceKey) {
+        throw new Error(
+          "App access requires an active service key. " +
+          "Go to Identity & Keys → create a service key before issuing login links.",
+        );
+      }
+      // Requires org Bearer; dual-control session when configured
+      const needsDc = state.dualControl.configured && !!tokens.dualControl;
+      const res = await api.post<{ login_url?: string; url?: string; login_link?: string; token?: string; message?: string }>(
+        `/organizations/me/users/${userId}/login-link`,
+        undefined,
+        needsDc ? { dualControl: true } : undefined,
+      );
+      const url = res?.login_url ?? res?.url ?? res?.login_link ?? "";
+      if (!url) throw new Error(res?.message || "Login link was not returned — ensure you have an active operate session.");
       const user = state.users.find((u) => u.id === userId);
-      const url = `https://app.phantix.site/login?org=${state.org.slug}&u=${userId}&t=${secret}`;
       persist((s) => ({
         ...s,
         loginLinks: [{ id: s.nextId, user_id: userId, user_name: user?.full_name ?? "", created_at: new Date().toISOString(), used_at: null, status: "active" }, ...s.loginLinks],
@@ -1489,7 +1514,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }));
       return url;
     },
-    [persist, state.users, state.org.slug],
+    [persist, state.users, state.org.slug, state.dualControl.configured],
   );
 
   const clearDevice = useCallback(
