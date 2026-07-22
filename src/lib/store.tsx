@@ -11,6 +11,8 @@ import {
   orgToUpdateBody,
 } from "./org";
 import type {
+  AlertEvent,
+  AlertSettings,
   AuditEvent,
   ChildCompany,
   DbConnection,
@@ -123,6 +125,8 @@ interface PersistedState {
   tools: ToolItem[];
   payments: Payment[];
   tickets: SupportTicket[];
+  alerts: AlertEvent[];
+  alertSettings: AlertSettings;
   nextId: number;
 }
 
@@ -152,6 +156,8 @@ const emptyState = (): PersistedState => ({
   tools: [],
   payments: [],
   tickets: [],
+  alerts: [],
+  alertSettings: { alerts_enabled: true, smtp: { enabled: false, host: "", port: 587, from_email: "", from_name: "", use_tls: true }, email_recipients: [], whatsapp: { enabled: false, provider: "", recipients: [] }, telegram: { enabled: false, provider: "", recipients: [] }, notify: {} },
   nextId: 1,
 });
 
@@ -169,6 +175,12 @@ const demoState = (): PersistedState => ({
   tools: demoTools,
   payments: demoPayments,
   tickets: [],
+  alerts: [
+    { id: 1, event_type: "alert_sent", severity: "high", title: "Critical vulnerability on api.example.com", status: "delivered", channels: ["email"], created_at: new Date(Date.now() - 3600000).toISOString() },
+    { id: 2, event_type: "alert_sent", severity: "medium", title: "New unverified asset discovered", status: "delivered", channels: ["email", "whatsapp"], created_at: new Date(Date.now() - 7200000).toISOString() },
+    { id: 3, event_type: "alert_failed", severity: "critical", title: "Compromised credential detected", status: "failed", channels: ["email", "telegram"], created_at: new Date(Date.now() - 86400000).toISOString() },
+  ],
+  alertSettings: { alerts_enabled: true, smtp: { enabled: true, host: "smtp.example.com", port: 587, from_email: "alerts@acme.ng", from_name: "Phantix Alerts", use_tls: true }, email_recipients: ["security@acme.ng"], whatsapp: { enabled: false, provider: "", recipients: [] }, telegram: { enabled: true, provider: "telegram_bot", recipients: ["@acme_security"] }, notify: { critical: true, high: true, medium: true, low: false, info: false } },
   nextId: 100,
 });
 
@@ -400,6 +412,9 @@ type Store = {
   toggleTool: (id: number) => Promise<void>;
   createTicket: (subject: string, priority: string, body: string) => Promise<void>;
   decidePending: (id: number, approve: boolean) => Promise<void>;
+  sendTestAlert: () => Promise<void>;
+  updateAlertSettings: (settings: Partial<AlertSettings>) => Promise<void>;
+  exportAuditCsv: () => Promise<void>;
   resetDemo: () => void;
   // toasts
   toasts: Toast[];
@@ -454,7 +469,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const resolvedEmail = email || emailFromToken() || tokens.email || "";
       if (resolvedEmail) tokens.email = resolvedEmail;
 
-      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes] = await Promise.all([
+      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes, alertsRes, alertSettingsRes, auditRes, pendingRes] = await Promise.all([
         api.get<unknown>("/organizations/me").catch(() => null),
         api.get<SetupApi>("/organizations/me/setup").catch(() => null),
         api.get<unknown>("/db-connections").catch(() => null),
@@ -464,6 +479,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ),
         api.get<unknown>("/org-users").catch(() => null),
         api.get<unknown>("/org-users/dual-control").catch(() => null),
+        api.get<unknown>("/alerts/events").catch(() => null),
+        api.get<unknown>("/alerts/settings").catch(() => null),
+        api.get<unknown>("/audit/events").catch(() => null),
+        api.get<unknown>("/audit/pending").catch(() => null),
       ]);
 
       const org = meRes
@@ -562,6 +581,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         serviceKey: serviceKey ?? s.serviceKey,
         users: users.length ? users : s.users,
         dualControl: dualControl.configured ? dualControl : s.dualControl,
+        alerts: Array.isArray(alertsRes) ? (alertsRes as unknown as AlertEvent[]) : (((alertsRes as { items?: unknown[] })?.items ?? []) as AlertEvent[]),
+        alertSettings: (alertSettingsRes as AlertSettings) ?? s.alertSettings,
+        audit: Array.isArray(auditRes) ? (auditRes as unknown as AuditEvent[]) : s.audit,
+        pending: Array.isArray(pendingRes) ? (pendingRes as unknown as PendingAction[]) : s.pending,
       }));
       setSession({ authenticated: true, email: displayEmail });
     } catch {
@@ -1879,6 +1902,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [persist],
   );
 
+  const sendTestAlert = useCallback(async () => {
+    if (DEMO_MODE) {
+      await delay(400);
+      return;
+    }
+    await api.post("/alerts/test", undefined, { dualControl: true });
+  }, []);
+
+  const updateAlertSettings = useCallback(async (settings: Partial<AlertSettings>) => {
+    if (DEMO_MODE) {
+      await delay(400);
+      persist((s) => ({ ...s, alertSettings: { ...s.alertSettings, ...settings } }));
+      return;
+    }
+    const needsDc = !!tokens.dualControl;
+    await api.put("/alerts/settings", settings, needsDc ? { dualControl: true } : undefined);
+    persist((s) => ({ ...s, alertSettings: { ...s.alertSettings, ...settings } }));
+  }, [persist]);
+
+  const exportAuditCsv = useCallback(async () => {
+    if (DEMO_MODE) return;
+    await api.get("/audit/export?format=csv");
+  }, []);
+
   const resetDemo = useCallback(() => {
     if (!DEMO_MODE) return;
     sessionStorage.removeItem(STORAGE_KEY);
@@ -1907,7 +1954,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       issueLoginLink, clearDevice,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
-      toggleTool, createTicket, decidePending, resetDemo,
+      toggleTool, createTicket, decidePending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
@@ -1918,7 +1965,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       issueLoginLink, clearDevice,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
-      toggleTool, createTicket, decidePending, resetDemo,
+      toggleTool, createTicket, decidePending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toast, dismissToast],
   );
 

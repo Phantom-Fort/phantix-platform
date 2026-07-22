@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
-  RotateCcw, ShieldCheck, Sparkles,
+  RotateCcw, ShieldCheck, Sparkles, BellRing,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { APP_URL } from "@/lib/links";
@@ -36,6 +36,7 @@ const navSections: { label: string; items: { to: string; label: string; icon: Re
     label: "Governance",
     items: [
       { to: "/ai", label: "AI settings", icon: <Sparkles size={17} /> },
+      { to: "/alerts", label: "Alerts", icon: <BellRing size={17} /> },
       { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
     ],
   },

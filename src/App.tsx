@@ -17,6 +17,7 @@ import Billing from "@/pages/Billing";
 import AiSettings from "@/pages/AiSettings";
 import Support from "@/pages/Support";
 import Audit from "@/pages/Audit";
+import Alerts from "@/pages/Alerts";
 
 // Authenticated + setup-complete gate for management routes
 function RequireManagement({ children }: { children: React.ReactNode }) {
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/ai" element={<RequireManagement><AiSettings /></RequireManagement>} />
             <Route path="/support" element={<RequireManagement><Support /></RequireManagement>} />
             <Route path="/audit" element={<RequireManagement><Audit /></RequireManagement>} />
+            <Route path="/alerts" element={<RequireManagement><Alerts /></RequireManagement>} />
             <Route path="/settings" element={<Navigate to="/identity" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

@@ -217,3 +217,24 @@ export interface DualControlEmailPolicy {
   allowed_domains: string[];
   registration_emails_exempt: string[];
 }
+
+export type Severity = "critical" | "high" | "medium" | "low" | "info";
+
+export interface AlertEvent {
+  id: number;
+  event_type: string;
+  severity: Severity;
+  title: string;
+  status: "pending" | "delivered" | "failed";
+  channels: string[];
+  created_at: string;
+}
+
+export interface AlertSettings {
+  alerts_enabled: boolean;
+  smtp: { enabled: boolean; host: string; port: number; from_email: string; from_name: string; use_tls: boolean };
+  email_recipients: string[];
+  whatsapp: { enabled: boolean; provider: string; recipients: string[] };
+  telegram: { enabled: boolean; provider: string; recipients: string[] };
+  notify: Record<string, boolean>;
+}
