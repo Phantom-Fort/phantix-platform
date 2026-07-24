@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
 import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken } from "./api";
@@ -449,6 +449,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const hydrating = useRef(false);
+
+  // Auto-redirect to login when token expires (401 clears tokens via api client)
+  useEffect(() => {
+    const check = () => {
+      if (session?.authenticated && !tokens.platform) {
+        tokens.orgUser = null;
+        tokens.email = null;
+        tokens.dualControl = null;
+        setSession(null);
+        setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+      }
+    };
+    const interval = setInterval(check, 2000);
+    window.addEventListener("storage", check);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("storage", check);
+    };
+  }, [session]);
 
   const persist = useCallback((updater: (s: PersistedState) => PersistedState) => {
     setState((prev) => {
