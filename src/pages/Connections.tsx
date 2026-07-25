@@ -190,6 +190,32 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
   const { createConnection, toast } = useStore();
   const [busy, setBusy] = useState(false);
   const [purpose, setPurpose] = useState<"security_data_storage" | "config_inspection">("security_data_storage");
+  const [resolvingHost, setResolvingHost] = useState<string | null>(null);
+
+  const resolveHost = async (host: string): Promise<string> => {
+    // Skip if already an IP address
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) return host;
+    setResolvingHost(host);
+    try {
+      const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(host)}&type=A`);
+      const data = await res.json();
+      if (data.Answer?.length > 0) {
+        const ipv4 = data.Answer.find((a: any) => a.type === 1)?.data;
+        if (ipv4) {
+          toast("info", "DNS resolved", `${host} → ${ipv4}`);
+          return ipv4;
+        }
+      }
+      // No A record found — pass original host (backend may handle it)
+      toast("warning", "No IPv4 record", `${host} could not be resolved — passing as-is`);
+      return host;
+    } catch {
+      toast("warning", "DNS lookup failed", `Could not resolve ${host} — passing as-is`);
+      return host;
+    } finally {
+      setResolvingHost(null);
+    }
+  };
 
   return (
     <Modal open={open} onClose={onClose} title="Add database connection" wide>
@@ -200,6 +226,8 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           const f = new FormData(e.currentTarget);
           setBusy(true);
           try {
+            let host = String(f.get("host")).trim();
+            host = await resolveHost(host);
             await createConnection({
               name: String(f.get("name")),
               connection_purpose: purpose,
@@ -255,7 +283,9 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
           <div>
             <label className="label">Host</label>
-            <input name="host" className="input font-mono" placeholder="10.20.0.14" required />
+            <input name="host" className="input font-mono" placeholder="10.20.0.14 or db.example.com" required />
+            {resolvingHost && <p className="text-[10px] text-phantix-400 mt-1 animate-pulse-soft">Resolving {resolvingHost} → IPv4...</p>}
+            <p className="text-[10px] text-slate-500 mt-0.5">Hostnames are auto-resolved to IPv4 via DNS before connecting</p>
           </div>
           <div>
             <label className="label">Port</label>
@@ -298,7 +328,7 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           Least privilege: the storage role needs CONNECT, CREATE (or schema ownership), USAGE and DML on the
           phantix schema only — never access to application tables.
         </div>
-        <button className="btn-primary w-full" disabled={busy}>{busy ? "Saving…" : "Save connection"}</button>
+        <button className="btn-primary w-full" disabled={busy}>{resolvingHost ? "Resolving DNS…" : busy ? "Saving…" : "Save connection"}</button>
       </form>
     </Modal>
   );
