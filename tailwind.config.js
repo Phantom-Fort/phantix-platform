@@ -42,11 +42,8 @@ export default {
         card: "0 8px 30px -12px rgba(2, 6, 23, 0.6)",
       },
       backgroundImage: {
-        "grid-faint":
-          "linear-gradient(rgba(143,166,230,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(143,166,230,0.05) 1px, transparent 1px)",
       },
       backgroundSize: {
-        grid: "44px 44px",
       },
       keyframes: {
         "fade-up": {

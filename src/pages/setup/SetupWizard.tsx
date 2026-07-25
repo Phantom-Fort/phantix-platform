@@ -111,7 +111,7 @@ export default function SetupWizard() {
 
       <aside className="relative hidden w-[320px] shrink-0 flex-col border-r border-phantix-700/40 bg-phantix-950/70 p-8 backdrop-blur-xl lg:flex">
         <div className="flex items-center gap-3">
-          <img src="/logo-transparent.png" alt="Phantix" className="h-10 w-10 object-contain" />
+          <img src="/logo-white.png" alt="Phantix" className="h-10 w-10 object-contain" />
           <div>
             <p className="font-display text-[15px] font-bold text-white">Organization setup</p>
             <p className="text-[10px] uppercase tracking-[0.18em] text-gold-400">{state.org.name || "Your organization"}</p>
