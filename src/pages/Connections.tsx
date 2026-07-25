@@ -18,9 +18,12 @@ export default function Connections() {
     void hydrateSession();
   }, [refreshConnections, hydrateSession]);
 
-  /** Company JWT bootstrap until dual-control is assigned; then operate session required. */
+  /** Dual control must be set up before managing DB connections. */
   const guard = async () => {
-    if (!state.dualControl.configured) return true;
+    if (!state.dualControl.configured) {
+      toast("warning", "Dual control required", "Set up dual control (People page) before managing database connections.");
+      return false;
+    }
     if (operate.unlocked) return true;
     return requireDualControl("Manage security database connections requires a dual-control operate session.");
   };
@@ -187,7 +190,7 @@ export default function Connections() {
 }
 
 function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { createConnection, toast } = useStore();
+  const { createConnection, toast, state, requireDualControl, operate } = useStore();
   const [busy, setBusy] = useState(false);
   const [purpose, setPurpose] = useState<"security_data_storage" | "config_inspection">("security_data_storage");
   const [resolvingHost, setResolvingHost] = useState<string | null>(null);
@@ -223,6 +226,15 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
+          // Enforce dual control
+          if (!state.dualControl.configured) {
+            toast("warning", "Dual control required", "Set up initiator + authorizer on the People page first.");
+            return;
+          }
+          if (state.dualControl.configured && !operate.unlocked) {
+            const ok = await requireDualControl("Managing security database connections requires a dual-control operate session.");
+            if (!ok) return;
+          }
           const f = new FormData(e.currentTarget);
           setBusy(true);
           try {
