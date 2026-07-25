@@ -220,6 +220,25 @@ function BootstrapWizard() {
                       setPhase("review");
                     }
                     toast("success", `${form.full_name} created`, "OTP-only user — they sign in with domain-email OTP.");
+                  } catch (err: any) {
+                    // 409 = email already exists — find existing user and reuse
+                    if (err?.status === 409 || String(err?.message || "").toLowerCase().includes("already exists") || String(err?.message || "").toLowerCase().includes("duplicate")) {
+                      const existing = users.find((u) => u.email.toLowerCase() === form.email.toLowerCase());
+                      if (existing) {
+                        if (phase === "initiator") {
+                          setInitiator(existing);
+                          setPhase("authorizer");
+                        } else {
+                          setAuthorizer(existing);
+                          setPhase("review");
+                        }
+                        toast("info", `${existing.full_name} already exists`, "Reusing existing org user for dual control.");
+                        return;
+                      }
+                      setError("This email is already registered but not in the current user list. Try refreshing the page.");
+                    } else {
+                      setError(err instanceof Error ? err.message : "Could not create user. Check the email address.");
+                    }
                   } finally {
                     setBusy(false);
                   }
@@ -302,10 +321,15 @@ function PersonForm({
         onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
+          if (!fullName || !email) { setError("Name and email are required"); return; }
           if (excludeEmail && email.toLowerCase() === excludeEmail.toLowerCase()) {
             return setError("Initiator and authorizer must be two different people");
           }
-          await onSubmit({ full_name: fullName, email, title, role: slot === "Initiator" ? "org_admin" : "security_admin" });
+          try {
+            await onSubmit({ full_name: fullName, email, title, role: slot === "Initiator" ? "org_admin" : "security_admin" });
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "An error occurred");
+          }
         }}
       >
         <div>
