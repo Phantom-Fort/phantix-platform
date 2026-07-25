@@ -579,12 +579,14 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
     toast("success", `${what} copied`);
   };
 
-  const instr = s.domain_instructions || {};
-  const dnsTxt =
-    String(instr.dns_txt || instr.dns || instr.txt || (s.domain_token ? `phantix-verify=${s.domain_token}` : "")) || "";
-  const httpUrl =
-    String(instr.http_url || instr.url || (s.domain ? `https://${s.domain}/.well-known/phantix-verify.txt` : "")) || "";
-  const httpBody = String(instr.http_body || instr.body || s.domain_token || "");
+  const instr: any = s.domain_instructions || {};
+  // Handle new nested API shape: { dns: { value, host, record_type }, http: { url, body }, token }
+  const dnsValue = instr.dns?.value || instr.dns_txt || instr.value || instr.txt || "";
+  const dnsTxt = dnsValue || (s.domain_token ? `phantix-verify=${s.domain_token}` : "");
+  const dnsHost = instr.dns?.host || s.domain || domain || "";
+  const dnsRecordType = instr.dns?.record_type || "TXT";
+  const httpUrl = instr.http?.url || instr.http_url || instr.url || (s.domain ? `https://${s.domain}/.well-known/phantix-verify.txt` : "");
+  const httpBody = instr.http?.body || instr.http_body || instr.body || instr.token || s.domain_token || "";
 
   return (
     <div className="space-y-4">
@@ -673,29 +675,48 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option A — DNS TXT</p>
                         {s.domain_dns_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
                       </div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">{dnsTxt}</code>
-                        <button type="button" onClick={() => copy(dnsTxt, "TXT value")} className="btn-secondary !px-3 !py-2">
-                          <Copy size={14} />
-                        </button>
-                      </div>
+                      {dnsTxt ? (
+                        <>
+                          <div className="mt-2 flex items-center gap-2">
+                            <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">{dnsTxt}</code>
+                            <button type="button" onClick={() => copy(dnsTxt, "TXT value")} className="btn-secondary !px-3 !py-2">
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                          <p className="mt-1.5 text-[10px] text-slate-500">
+                            {dnsRecordType} record on <span className="font-mono text-slate-400">{dnsHost || "@"}</span>
+                            {instr.dns?.hint && <span className="block mt-0.5">{instr.dns.hint}</span>}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">Start verification to get instructions</p>
+                      )}
                     </div>
                     <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option B — HTTP well-known</p>
                         {s.domain_http_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
                       </div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">{httpUrl}</code>
-                        <button type="button" onClick={() => copy(httpUrl, "URL")} className="btn-secondary !px-3 !py-2">
-                          <Copy size={14} />
-                        </button>
-                      </div>
-                      <p className="mt-1.5 text-[11px] text-slate-500">File body must be exactly the token{httpBody ? `: ${httpBody.slice(0, 24)}…` : ""}.</p>
-                      {httpBody && (
-                        <button type="button" className="mt-2 text-xs text-gold-400 hover:text-gold-300" onClick={() => copy(httpBody, "Token body")}>
-                          Copy token body
-                        </button>
+                      {httpUrl ? (
+                        <>
+                          <div className="mt-2 flex items-center gap-2">
+                            <code className="flex-1 truncate rounded-lg bg-phantix-900/80 px-3 py-2 font-mono text-xs text-gold-300">{httpUrl}</code>
+                            <button type="button" onClick={() => copy(httpUrl, "URL")} className="btn-secondary !px-3 !py-2">
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                          <p className="mt-1.5 text-[10px] text-slate-500">{instr.http?.content_type ? `${instr.http.content_type}` : ""}{instr.http?.hint && <span className="block mt-0.5">{instr.http.hint}</span>}</p>
+                          {httpBody && (
+                            <>
+                              <p className="mt-1.5 text-[11px] text-slate-500">File body must be exactly: <code className="font-mono text-gold-300 text-[11px]">{httpBody.slice(0, 50)}{httpBody.length > 50 ? "…" : ""}</code></p>
+                              <button type="button" className="mt-1 text-xs text-gold-400 hover:text-gold-300" onClick={() => copy(httpBody, "Token body")}>
+                                Copy token body
+                              </button>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">Start verification to get instructions</p>
                       )}
                     </div>
                     {checkMsg && <p className="text-xs text-slate-400">{checkMsg}</p>}
