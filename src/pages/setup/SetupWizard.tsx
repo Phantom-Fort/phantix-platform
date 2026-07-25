@@ -86,7 +86,7 @@ export default function SetupWizard() {
   // Poll setup while on wizard (picks up manual review approval)
   useEffect(() => {
     if (DEMO_MODE || s.setup_complete) return;
-    const t = setInterval(() => void refreshSetup(), 20_000);
+    const t = setInterval(() => { refreshSetup().catch(() => {}); }, 20_000);
     return () => clearInterval(t);
   }, [refreshSetup, s.setup_complete]);
 

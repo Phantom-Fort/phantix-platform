@@ -454,6 +454,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const check = () => {
       if (session?.authenticated && !tokens.platform) {
+        // Don't redirect during setup — polling refreshSetup may hit transient 401s
+        if (window.location.pathname === "/setup") return;
         tokens.orgUser = null;
         tokens.email = null;
         tokens.dualControl = null;
@@ -809,6 +811,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           domain_instructions: s.setup.domain_instructions,
           domain_token: mapped.setup.domain_token || s.setup.domain_token,
           email_otp_destination: mapped.setup.email_otp_destination || s.setup.email_otp_destination,
+          email_otp_sent: s.setup.email_otp_sent || mapped.setup.email_otp_sent,
         },
       }));
     } catch { /* keep */ }
