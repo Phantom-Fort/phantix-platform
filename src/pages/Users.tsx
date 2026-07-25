@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Users, UserPlus, ShieldCheck, Link2, KeyRound, ArrowRight, ArrowLeft,
-  CheckCircle2, Copy, Unlock, Smartphone, AlertTriangle, Info, RefreshCw,
+  CheckCircle2, Copy, Unlock, Smartphone, AlertTriangle, Info, RefreshCw, Loader2,
 } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
@@ -361,6 +361,8 @@ function PersonForm({
 function UsersTable({ onUnlock }: { onUnlock: () => void }) {
   const { state, issueLoginLink, clearDevice, operate, toast } = useStore();
   const [link, setLink] = useState<{ user: string; url: string } | null>(null);
+  const [linkingId, setLinkingId] = useState<number | null>(null);
+  const [clearingId, setClearingId] = useState<number | null>(null);
   const dc = state.dualControl;
 
   if (state.users.length === 0) {
@@ -418,25 +420,41 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
                       title={!state.serviceKey ? "App access requires an active service key — create one on the Identity page" : "Generate a one-time app sign-in URL"}
-                      disabled={!state.serviceKey}
+                      disabled={!state.serviceKey || linkingId === u.id}
                       onClick={async () => {
                         if (!operate.unlocked) { onUnlock(); return; }
-                        const url = await issueLoginLink(u.id);
-                        setLink({ user: u.full_name, url });
+                        setLinkingId(u.id);
+                        try {
+                          const url = await issueLoginLink(u.id);
+                          setLink({ user: u.full_name, url });
+                        } catch (err) {
+                          toast("error", "Failed", err instanceof Error ? err.message : "Could not generate login link");
+                        } finally {
+                          setLinkingId(null);
+                        }
                       }}
                     >
-                      <Link2 size={13} /> Login link
+                      {linkingId === u.id ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+                      {linkingId === u.id ? "Generating…" : "Login link"}
                     </button>
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
                       title="Clear device bind"
+                      disabled={clearingId === u.id}
                       onClick={async () => {
                         if (!operate.unlocked) { onUnlock(); return; }
-                        await clearDevice(u.id);
-                        toast("success", "Device bind cleared", `${u.full_name} can bind a new browser at next login.`);
+                        setClearingId(u.id);
+                        try {
+                          await clearDevice(u.id);
+                          toast("success", "Device bind cleared", `${u.full_name} can bind a new browser at next login.`);
+                        } catch (err) {
+                          toast("error", "Failed", err instanceof Error ? err.message : "");
+                        } finally {
+                          setClearingId(null);
+                        }
                       }}
                     >
-                      <Smartphone size={13} />
+                      {clearingId === u.id ? <Loader2 size={13} className="animate-spin" /> : <Smartphone size={13} />}
                     </button>
                   </div>
                 </td>
