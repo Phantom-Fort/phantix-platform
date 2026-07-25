@@ -581,12 +581,18 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
+          if (!fullName || !email) { toast("error", "Missing fields", "Name and email are required"); return; }
           setBusy(true);
-          await createUser({ full_name: fullName, email, title, role });
-          setBusy(false);
-          toast("success", "User created", "OTP-only — they sign in with domain-email OTP.");
-          onClose();
-          setFullName(""); setEmail(""); setTitle("");
+          try {
+            await createUser({ full_name: fullName, email, title, role });
+            toast("success", "User created", "OTP-only — they sign in with domain-email OTP.");
+            onClose();
+            setFullName(""); setEmail(""); setTitle("");
+          } catch (err) {
+            toast("error", "Failed to create user", err instanceof Error ? err.message : "Check the email address and try again");
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <div className="grid grid-cols-2 gap-3">

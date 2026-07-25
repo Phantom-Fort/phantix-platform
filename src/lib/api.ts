@@ -80,21 +80,27 @@ async function request<T>(
     body = JSON.stringify(opts.body);
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { method, headers, body });
-  if (!res.ok) {
-    let detail: unknown = res.statusText;
-    try {
-      detail = (await res.json()).detail;
-    } catch { /* non-JSON */ }
-    if (res.status === 401) {
-      tokens.platform = null;
-      tokens.orgUser = null;
-      tokens.email = null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { method, headers, body, signal: controller.signal });
+    if (!res.ok) {
+      let detail: unknown = res.statusText;
+      try {
+        detail = (await res.json()).detail;
+      } catch { /* non-JSON */ }
+      if (res.status === 401) {
+        tokens.platform = null;
+        tokens.orgUser = null;
+        tokens.email = null;
+      }
+      throw new ApiError(res.status, detail);
     }
-    throw new ApiError(res.status, detail);
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
 }
 
 /** Multipart upload — do not set Content-Type (browser sets boundary). */
