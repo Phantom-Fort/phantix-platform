@@ -26,6 +26,7 @@ export default function Alerts() {
   const { state, operate, requireDualControl, sendTestAlert, updateAlertSettings, toast } = useStore();
   const [tab, setTab] = useState("log");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [channelsOpen, setChannelsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const { alerts, alertSettings } = state;
 
@@ -147,17 +148,20 @@ export default function Alerts() {
                 <div className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                   <div>
                     <p className="text-sm font-medium text-slate-200">WhatsApp</p>
-                    <p className="text-xs text-slate-500">{alertSettings.whatsapp.enabled ? `${alertSettings.whatsapp.recipients.length} recipient(s)` : "Not configured"}</p>
+                    <p className="text-xs text-slate-500">{alertSettings.whatsapp.enabled && alertSettings.whatsapp.recipients.length > 0 ? alertSettings.whatsapp.recipients.join(", ") : "Not configured"}</p>
                   </div>
                   <StatusBadge status={alertSettings.whatsapp.enabled ? "active" : "draft"} />
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                   <div>
                     <p className="text-sm font-medium text-slate-200">Telegram</p>
-                    <p className="text-xs text-slate-500">{alertSettings.telegram.enabled ? `${alertSettings.telegram.recipients.length} recipient(s)` : "Not configured"}</p>
+                    <p className="text-xs text-slate-500">{alertSettings.telegram.enabled && alertSettings.telegram.recipients.length > 0 ? alertSettings.telegram.recipients.join(", ") : "Not configured"}</p>
                   </div>
                   <StatusBadge status={alertSettings.telegram.enabled ? "active" : "draft"} />
                 </div>
+                <button className="btn-secondary w-full" onClick={() => setChannelsOpen(true)}>
+                  <Settings size={14} /> Configure Channels
+                </button>
               </div>
             </Card>
           </div>
@@ -186,29 +190,180 @@ export default function Alerts() {
         </motion.div>
       )}
 
-      <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title="SMTP Configuration">
-        <div className="space-y-4">
-          <div className="rounded-xl border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-slate-400">
-            <AlertTriangle size={12} className="inline mr-1 text-severity-medium" />
-            SMTP settings are managed on the Phantix Platform backend. Contact support to configure your organization's email relay.
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl bg-phantix-950/60 border border-phantix-700/40 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Host</p>
-              <p className="mt-1 font-mono text-slate-200">{alertSettings.smtp.host || "—"}</p>
-            </div>
-            <div className="rounded-xl bg-phantix-950/60 border border-phantix-700/40 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Port</p>
-              <p className="mt-1 font-mono text-slate-200">{alertSettings.smtp.port || "—"}</p>
-            </div>
-            <div className="col-span-2 rounded-xl bg-phantix-950/60 border border-phantix-700/40 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">From</p>
-              <p className="mt-1 text-slate-200">{alertSettings.smtp.from_name ? `${alertSettings.smtp.from_name} <${alertSettings.smtp.from_email}>` : "—"}</p>
-            </div>
-          </div>
-          <button className="btn-secondary w-full" onClick={() => setSettingsOpen(false)}>Close</button>
-        </div>
+      <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Configure SMTP">
+        <SMTPForm
+          initial={alertSettings}
+          onSave={async (form) => {
+            if (!operate.unlocked && !(await requireDualControl("Updating SMTP settings requires dual-control."))) return;
+            setBusy(true);
+            try {
+              await updateAlertSettings({
+                smtp: {
+                  ...alertSettings.smtp,
+                  enabled: true,
+                  host: form.host,
+                  port: form.port,
+                  from_email: form.from_email,
+                  from_name: form.from_name,
+                  use_tls: form.use_tls,
+                },
+                email_recipients: form.recipients.split(",").map((s: string) => s.trim()).filter(Boolean),
+              });
+              toast("success", "SMTP updated");
+              setSettingsOpen(false);
+            } catch (err) {
+              toast("error", "Save failed", err instanceof Error ? err.message : "");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          busy={busy}
+        />
       </Modal>
+
+      <Modal open={channelsOpen} onClose={() => setChannelsOpen(false)} title="Configure Alert Channels">
+        <ChannelsForm
+          initial={alertSettings}
+          onSave={async (form) => {
+            if (!operate.unlocked && !(await requireDualControl("Updating channel settings requires dual-control."))) return;
+            setBusy(true);
+            try {
+              await updateAlertSettings({
+                whatsapp: {
+                  ...alertSettings.whatsapp,
+                  enabled: form.waEnabled,
+                  provider: form.waEnabled ? (alertSettings.whatsapp.provider || "whatsapp_business") : alertSettings.whatsapp.provider,
+                  recipients: form.waRecipients.split(",").map((s: string) => s.trim()).filter(Boolean),
+                },
+                telegram: {
+                  ...alertSettings.telegram,
+                  enabled: form.tgEnabled,
+                  provider: form.tgEnabled ? (alertSettings.telegram.provider || "telegram_bot") : alertSettings.telegram.provider,
+                  recipients: form.tgRecipients.split(",").map((s: string) => s.trim()).filter(Boolean),
+                },
+              });
+              toast("success", "Channels updated");
+              setChannelsOpen(false);
+            } catch (err) {
+              toast("error", "Save failed", err instanceof Error ? err.message : "");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          busy={busy}
+        />
+      </Modal>
+    </div>
+  );
+}
+
+// ── SMTP Configuration Form ────────────────────────────────────────────────────
+function SMTPForm({
+  initial, onSave, busy,
+}: {
+  initial: { smtp: { enabled: boolean; host: string; port: number; from_email: string; from_name: string; use_tls: boolean }; email_recipients: string[] };
+  onSave: (form: { host: string; port: number; from_email: string; from_name: string; use_tls: boolean; recipients: string }) => Promise<void>;
+  busy: boolean;
+}) {
+  const [host, setHost] = useState(initial.smtp.host || "");
+  const [port, setPort] = useState(initial.smtp.port || 587);
+  const [fromEmail, setFromEmail] = useState(initial.smtp.from_email || "");
+  const [fromName, setFromName] = useState(initial.smtp.from_name || "");
+  const [useTls, setUseTls] = useState(initial.smtp.use_tls !== false);
+  const [recipients, setRecipients] = useState((initial.email_recipients || []).join(", "));
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-phantix-600/30 bg-phantix-800/30 p-3 text-xs text-slate-400">
+        Configure your organization's outbound SMTP relay for alert delivery. Credentials are encrypted at rest.
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">SMTP Host</label>
+          <input className="input font-mono text-sm" value={host} onChange={(e) => setHost(e.target.value)} placeholder="smtp-relay.brevo.com" />
+        </div>
+        <div>
+          <label className="label">Port</label>
+          <input className="input font-mono text-sm" type="number" value={port} onChange={(e) => setPort(Number(e.target.value))} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">From Name</label>
+          <input className="input text-sm" value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="Phantix Application" />
+        </div>
+        <div>
+          <label className="label">From Email</label>
+          <input className="input text-sm" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} placeholder="support@phantix.site" />
+        </div>
+      </div>
+      <div>
+        <label className="label">Alert Recipients (comma-separated)</label>
+        <input className="input text-sm" value={recipients} onChange={(e) => setRecipients(e.target.value)} placeholder="security@acme.com, ciso@acme.com" />
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300">
+        <input type="checkbox" checked={useTls} onChange={(e) => setUseTls(e.target.checked)} className="rounded accent-gold-400" />
+        Use TLS encryption
+      </label>
+      <button className="btn-primary w-full" onClick={() => onSave({ host, port, from_email: fromEmail, from_name: fromName, use_tls: useTls, recipients })} disabled={busy || !host}>
+        {busy ? "Saving…" : "Save SMTP Settings"}
+      </button>
+    </div>
+  );
+}
+
+// ── Channels Configuration Form ────────────────────────────────────────────────
+function ChannelsForm({
+  initial, onSave, busy,
+}: {
+  initial: { whatsapp: { enabled: boolean; provider: string; recipients: string[] }; telegram: { enabled: boolean; provider: string; recipients: string[] } };
+  onSave: (form: { waEnabled: boolean; waRecipients: string; tgEnabled: boolean; tgRecipients: string }) => Promise<void>;
+  busy: boolean;
+}) {
+  const [waEnabled, setWaEnabled] = useState(initial.whatsapp.enabled);
+  const [waRecipients, setWaRecipients] = useState((initial.whatsapp.recipients || []).join(", "));
+  const [tgEnabled, setTgEnabled] = useState(initial.telegram.enabled);
+  const [tgRecipients, setTgRecipients] = useState((initial.telegram.recipients || []).join(", "));
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-200">WhatsApp</p>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={waEnabled} onChange={(e) => setWaEnabled(e.target.checked)} className="rounded accent-gold-400" />
+            <span className="text-xs text-slate-400">{waEnabled ? "Enabled" : "Disabled"}</span>
+          </label>
+        </div>
+        {waEnabled && (
+          <div>
+            <label className="label">Recipients (phone numbers, comma-separated)</label>
+            <input className="input text-sm font-mono" value={waRecipients} onChange={(e) => setWaRecipients(e.target.value)} placeholder="+2348012345678, +2348098765432" />
+            <p className="text-[10px] text-slate-500 mt-1">International format. Phone must be opted in to receive WhatsApp messages.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-200">Telegram</p>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={tgEnabled} onChange={(e) => setTgEnabled(e.target.checked)} className="rounded accent-gold-400" />
+            <span className="text-xs text-slate-400">{tgEnabled ? "Enabled" : "Disabled"}</span>
+          </label>
+        </div>
+        {tgEnabled && (
+          <div>
+            <label className="label">Recipients (chat IDs or @usernames, comma-separated)</label>
+            <input className="input text-sm font-mono" value={tgRecipients} onChange={(e) => setTgRecipients(e.target.value)} placeholder="@phantix_security, 123456789" />
+            <p className="text-[10px] text-slate-500 mt-1">Start the bot first to get chat IDs. @ usernames must include the prefix.</p>
+          </div>
+        )}
+      </div>
+
+      <button className="btn-primary w-full" onClick={() => onSave({ waEnabled, waRecipients, tgEnabled, tgRecipients })} disabled={busy}>
+        {busy ? "Saving…" : "Save Channel Settings"}
+      </button>
     </div>
   );
 }
