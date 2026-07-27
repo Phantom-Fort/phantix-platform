@@ -1929,7 +1929,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(400);
       return;
     }
-    await api.post("/alerts/test", {}, { dualControl: true });
+    await api.post("/alerts/test", {
+      channel: "email",
+      subject: "[TEST] Phantix Alert Configuration Test",
+      message: "This is a test alert sent to verify your Phantix alert configuration is working correctly. If you received this, your SMTP settings are properly configured. No security incident has occurred."
+    }, { dualControl: true });
   }, []);
 
   const updateAlertSettings = useCallback(async (settings: Partial<AlertSettings>) => {
