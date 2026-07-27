@@ -438,7 +438,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   });
   const [operate, setOperate] = useState<OperateState>(() =>
     DEMO_MODE && tokens.dualControl
-      ? { unlocked: true, actingUser: "Operate user", actingRole: "initiator", expiresAt: Date.now() + 3 * 60_000 }
+      ? { unlocked: true, actingUser: "Operate user", actingRole: "initiator", expiresAt: Date.now() + 30 * 60_000 }
       : { unlocked: false, actingUser: null, actingRole: null, expiresAt: null },
   );
   const [dualControlPrompt, setDualControlPrompt] = useState<{ open: boolean; reason: string }>({ open: false, reason: "" });
@@ -1291,7 +1291,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const user = state.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
       const isInitiator = user ? state.dualControl.initiator_user_id === user.id : true;
       const isAuthorizer = user ? state.dualControl.authorizer_user_id === user.id : false;
-      let expiresAt = Date.now() + 3 * 60_000;
+      let expiresAt = Date.now() + 30 * 60_000;
       if (payload.inactivity_expires_at) {
         const t = Date.parse(payload.inactivity_expires_at);
         if (!Number.isNaN(t)) expiresAt = t;
@@ -1330,7 +1330,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           unlocked: true,
           actingUser: user.full_name,
           actingRole: isInitiator ? "initiator" : isAuthorizer ? "authorizer" : "initiator",
-          expiresAt: Date.now() + 3 * 60_000,
+          expiresAt: Date.now() + 30 * 60_000,
         });
         persist((s) => ({ ...s, users: s.users.map((u) => (u.id === user.id ? { ...u, last_login_at: new Date().toISOString() } : u)) }));
         return;
@@ -1455,7 +1455,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             user && state.dualControl.authorizer_user_id === user.id && state.dualControl.initiator_user_id !== user.id
               ? "authorizer"
               : "initiator",
-          expiresAt: Date.now() + 3 * 60_000,
+          expiresAt: Date.now() + 30 * 60_000,
         });
         return { deviceRequired: false };
       }
@@ -1492,7 +1492,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           unlocked: true,
           actingUser: dcEmail.current || "Operate user",
           actingRole: "initiator",
-          expiresAt: Date.now() + 3 * 60_000,
+          expiresAt: Date.now() + 30 * 60_000,
         });
         return;
       }

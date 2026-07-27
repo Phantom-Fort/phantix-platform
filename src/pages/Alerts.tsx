@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { BellRing, Send, Settings, ShieldCheck, AlertTriangle } from "lucide-react";
+import { BellRing, Send, Settings, ShieldCheck } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Tabs, Modal } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo, cx } from "@/lib/utils";
@@ -143,21 +143,41 @@ export default function Alerts() {
             </Card>
 
             <Card>
-              <CardHeader title="Channels" subtitle="WhatsApp & Telegram delivery" />
+              <CardHeader title="Channels" subtitle="WhatsApp (Meta Cloud) & Telegram (Bot API)" />
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                   <div>
                     <p className="text-sm font-medium text-slate-200">WhatsApp</p>
-                    <p className="text-xs text-slate-500">{alertSettings.whatsapp.enabled && alertSettings.whatsapp.recipients.length > 0 ? alertSettings.whatsapp.recipients.join(", ") : "Not configured"}</p>
+                    <p className="text-xs text-slate-500">
+                      {(alertSettings.whatsapp as any).delivery_live
+                        ? <span className="text-emerald-400">Live via Meta Cloud API</span>
+                        : alertSettings.whatsapp.enabled
+                          ? <span className="text-severity-medium">Enabled — provider not live</span>
+                          : "Not configured"
+                      }
+                      {alertSettings.whatsapp.enabled && alertSettings.whatsapp.recipients.length > 0 && (
+                        <span className="block text-slate-500">{alertSettings.whatsapp.recipients.join(", ")}</span>
+                      )}
+                    </p>
                   </div>
-                  <StatusBadge status={alertSettings.whatsapp.enabled ? "active" : "draft"} />
+                  <StatusBadge status={(alertSettings.whatsapp as any).delivery_live ? "active" : alertSettings.whatsapp.enabled ? "queued" : "draft"} />
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                   <div>
                     <p className="text-sm font-medium text-slate-200">Telegram</p>
-                    <p className="text-xs text-slate-500">{alertSettings.telegram.enabled && alertSettings.telegram.recipients.length > 0 ? alertSettings.telegram.recipients.join(", ") : "Not configured"}</p>
+                    <p className="text-xs text-slate-500">
+                      {(alertSettings.telegram as any).delivery_live
+                        ? <span className="text-emerald-400">Live via Bot API</span>
+                        : alertSettings.telegram.enabled
+                          ? <span className="text-severity-medium">Enabled — provider not live</span>
+                          : "Not configured"
+                      }
+                      {alertSettings.telegram.enabled && alertSettings.telegram.recipients.length > 0 && (
+                        <span className="block text-slate-500">{alertSettings.telegram.recipients.join(", ")}</span>
+                      )}
+                    </p>
                   </div>
-                  <StatusBadge status={alertSettings.telegram.enabled ? "active" : "draft"} />
+                  <StatusBadge status={(alertSettings.telegram as any).delivery_live ? "active" : alertSettings.telegram.enabled ? "queued" : "draft"} />
                 </div>
                 <button className="btn-secondary w-full" onClick={() => setChannelsOpen(true)}>
                   <Settings size={14} /> Configure Channels
@@ -167,21 +187,27 @@ export default function Alerts() {
           </div>
 
           <Card className="mt-5">
-            <CardHeader title="Notification rules" subtitle={`Toggle which severities trigger alerts`} />
+            <CardHeader title="Notification rules" subtitle="Toggle which events trigger alerts" />
             <div className="flex flex-wrap gap-3">
-              {(["critical", "high", "medium", "low", "info"] as Severity[]).map((s) => {
-                const on = alertSettings.notify[s] !== false;
+              {[
+                { key: "scan_completed", label: "Scan complete" },
+                { key: "scan_failed", label: "Scan failed" },
+                { key: "risk_created", label: "Risk created" },
+                { key: "risk_critical", label: "Risk critical" },
+                { key: "treatment_events", label: "Treatment events" },
+              ].map(({ key, label }) => {
+                const on = (alertSettings.notify as any)?.[key] !== false;
                 return (
                   <button
-                    key={s}
+                    key={key}
                     onClick={async () => {
                       if (!operate.unlocked && !(await requireDualControl("Updating alert settings requires dual-control."))) return;
-                      await updateAlertSettings({ notify: { ...alertSettings.notify, [s]: !on } });
-                      toast("success", on ? `${s} alerts disabled` : `${s} alerts enabled`);
+                      await updateAlertSettings({ notify: { ...alertSettings.notify, [key]: !on } } as any);
+                      toast("success", on ? `${label} disabled` : `${label} enabled`);
                     }}
                     className={cx("chip cursor-pointer capitalize", on ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-phantix-700/50 text-slate-500")}
                   >
-                    <BellRing size={12} /> {s}
+                    <BellRing size={12} /> {label}
                   </button>
                 );
               })}
@@ -231,19 +257,21 @@ export default function Alerts() {
             if (!operate.unlocked && !(await requireDualControl("Updating channel settings requires dual-control."))) return;
             setBusy(true);
             try {
+              const tgUpdate: Record<string, unknown> = {
+                ...alertSettings.telegram,
+                enabled: form.tgEnabled,
+                provider: form.tgEnabled ? (alertSettings.telegram.provider || "auto") : alertSettings.telegram.provider,
+                recipients: form.tgRecipients.split(",").map((s: string) => s.trim()).filter(Boolean),
+              };
+              if (form.tgBotToken) tgUpdate.bot_token = form.tgBotToken;
               await updateAlertSettings({
                 whatsapp: {
                   ...alertSettings.whatsapp,
                   enabled: form.waEnabled,
-                  provider: form.waEnabled ? (alertSettings.whatsapp.provider || "whatsapp_business") : alertSettings.whatsapp.provider,
+                  provider: form.waEnabled ? (alertSettings.whatsapp.provider || "auto") : alertSettings.whatsapp.provider,
                   recipients: form.waRecipients.split(",").map((s: string) => s.trim()).filter(Boolean),
-                },
-                telegram: {
-                  ...alertSettings.telegram,
-                  enabled: form.tgEnabled,
-                  provider: form.tgEnabled ? (alertSettings.telegram.provider || "telegram_bot") : alertSettings.telegram.provider,
-                  recipients: form.tgRecipients.split(",").map((s: string) => s.trim()).filter(Boolean),
-                },
+                } as any,
+                telegram: tgUpdate as any,
               });
               toast("success", "Channels updated");
               setChannelsOpen(false);
@@ -332,20 +360,25 @@ function SMTPForm({
 function ChannelsForm({
   initial, onSave, busy,
 }: {
-  initial: { whatsapp: { enabled: boolean; provider: string; recipients: string[] }; telegram: { enabled: boolean; provider: string; recipients: string[] } };
-  onSave: (form: { waEnabled: boolean; waRecipients: string; tgEnabled: boolean; tgRecipients: string }) => Promise<void>;
+  initial: { whatsapp: { enabled: boolean; provider: string; recipients: string[] }; telegram: { enabled: boolean; provider: string; recipients: string[]; bot_token?: string } };
+  onSave: (form: { waEnabled: boolean; waRecipients: string; tgEnabled: boolean; tgRecipients: string; tgBotToken: string }) => Promise<void>;
   busy: boolean;
 }) {
   const [waEnabled, setWaEnabled] = useState(initial.whatsapp.enabled);
   const [waRecipients, setWaRecipients] = useState((initial.whatsapp.recipients || []).join(", "));
   const [tgEnabled, setTgEnabled] = useState(initial.telegram.enabled);
   const [tgRecipients, setTgRecipients] = useState((initial.telegram.recipients || []).join(", "));
+  const [tgBotToken, setTgBotToken] = useState((initial.telegram as any).bot_token || "");
 
   return (
     <div className="space-y-5">
+      {/* WhatsApp (Meta Cloud API) */}
       <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-200">WhatsApp</p>
+          <div>
+            <p className="text-sm font-semibold text-slate-200">WhatsApp</p>
+            <p className="text-[10px] text-slate-500">Meta Cloud API</p>
+          </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={waEnabled} onChange={(e) => setWaEnabled(e.target.checked)} className="rounded accent-gold-400" />
             <span className="text-xs text-slate-400">{waEnabled ? "Enabled" : "Disabled"}</span>
@@ -353,31 +386,42 @@ function ChannelsForm({
         </div>
         {waEnabled && (
           <div>
-            <label className="label">Recipients (phone numbers, comma-separated)</label>
+            <label className="label">Recipients (E.164 phone numbers)</label>
             <input className="input text-sm font-mono" value={waRecipients} onChange={(e) => setWaRecipients(e.target.value)} placeholder="+2348012345678, +2348098765432" />
-            <p className="text-[10px] text-slate-500 mt-1">International format. Phone must be opted in to receive WhatsApp messages.</p>
+            <p className="text-[10px] text-slate-500 mt-1">International format. Requires a Meta-approved utility template for business-initiated messages.</p>
           </div>
         )}
       </div>
 
+      {/* Telegram Bot API */}
       <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-200">Telegram</p>
+          <div>
+            <p className="text-sm font-semibold text-slate-200">Telegram</p>
+            <p className="text-[10px] text-slate-500">Bot API</p>
+          </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={tgEnabled} onChange={(e) => setTgEnabled(e.target.checked)} className="rounded accent-gold-400" />
             <span className="text-xs text-slate-400">{tgEnabled ? "Enabled" : "Disabled"}</span>
           </label>
         </div>
         {tgEnabled && (
-          <div>
-            <label className="label">Recipients (chat IDs or @usernames, comma-separated)</label>
-            <input className="input text-sm font-mono" value={tgRecipients} onChange={(e) => setTgRecipients(e.target.value)} placeholder="@phantix_security, 123456789" />
-            <p className="text-[10px] text-slate-500 mt-1">Start the bot first to get chat IDs. @ usernames must include the prefix.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="label">Bot Token</label>
+              <input className="input text-sm font-mono" type="password" value={tgBotToken} onChange={(e) => setTgBotToken(e.target.value)} placeholder="123456:ABC-DEF…" />
+              <p className="text-[10px] text-slate-500 mt-1">Leave blank to use platform default. Create with @BotFather.</p>
+            </div>
+            <div>
+              <label className="label">Recipients (chat IDs / group IDs / @usernames)</label>
+              <input className="input text-sm font-mono" value={tgRecipients} onChange={(e) => setTgRecipients(e.target.value)} placeholder="-1001234567890, @phantix_security" />
+              <p className="text-[10px] text-slate-500 mt-1">Start the bot first. Group IDs start with -100. @usernames must include prefix.</p>
+            </div>
           </div>
         )}
       </div>
 
-      <button className="btn-primary w-full" onClick={() => onSave({ waEnabled, waRecipients, tgEnabled, tgRecipients })} disabled={busy}>
+      <button className="btn-primary w-full" onClick={() => onSave({ waEnabled, waRecipients, tgEnabled, tgRecipients, tgBotToken })} disabled={busy}>
         {busy ? "Saving…" : "Save Channel Settings"}
       </button>
     </div>
