@@ -1929,7 +1929,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(400);
       return;
     }
-    await api.post("/alerts/test", undefined, { dualControl: true });
+    await api.post("/alerts/test", {}, { dualControl: true });
   }, []);
 
   const updateAlertSettings = useCallback(async (settings: Partial<AlertSettings>) => {
