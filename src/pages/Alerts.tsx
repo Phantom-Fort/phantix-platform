@@ -197,18 +197,21 @@ export default function Alerts() {
             if (!operate.unlocked && !(await requireDualControl("Updating SMTP settings requires dual-control."))) return;
             setBusy(true);
             try {
+              const smtpUpdate: Record<string, unknown> = {
+                ...alertSettings.smtp,
+                enabled: true,
+                host: form.host,
+                port: form.port,
+                from_email: form.from_email,
+                from_name: form.from_name,
+                use_tls: form.use_tls,
+              };
+              if (form.username) smtpUpdate.username = form.username;
+              if (form.password) smtpUpdate.password = form.password;
               await updateAlertSettings({
-                smtp: {
-                  ...alertSettings.smtp,
-                  enabled: true,
-                  host: form.host,
-                  port: form.port,
-                  from_email: form.from_email,
-                  from_name: form.from_name,
-                  use_tls: form.use_tls,
-                },
+                smtp: smtpUpdate,
                 email_recipients: form.recipients.split(",").map((s: string) => s.trim()).filter(Boolean),
-              });
+              } as any);
               toast("success", "SMTP updated");
               setSettingsOpen(false);
             } catch (err) {
@@ -261,12 +264,14 @@ export default function Alerts() {
 function SMTPForm({
   initial, onSave, busy,
 }: {
-  initial: { smtp: { enabled: boolean; host: string; port: number; from_email: string; from_name: string; use_tls: boolean }; email_recipients: string[] };
-  onSave: (form: { host: string; port: number; from_email: string; from_name: string; use_tls: boolean; recipients: string }) => Promise<void>;
+  initial: { smtp: { enabled: boolean; host: string; port: number; from_email: string; from_name: string; use_tls: boolean; username?: string; password?: string }; email_recipients: string[] };
+  onSave: (form: { host: string; port: number; from_email: string; from_name: string; use_tls: boolean; username: string; password: string; recipients: string }) => Promise<void>;
   busy: boolean;
 }) {
   const [host, setHost] = useState(initial.smtp.host || "");
   const [port, setPort] = useState(initial.smtp.port || 587);
+  const [username, setUsername] = useState((initial.smtp as any).username || "");
+  const [password, setPassword] = useState("");
   const [fromEmail, setFromEmail] = useState(initial.smtp.from_email || "");
   const [fromName, setFromName] = useState(initial.smtp.from_name || "");
   const [useTls, setUseTls] = useState(initial.smtp.use_tls !== false);
@@ -289,6 +294,17 @@ function SMTPForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
+          <label className="label">SMTP Username</label>
+          <input className="input font-mono text-sm" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="user@smtp-provider.com" />
+        </div>
+        <div>
+          <label className="label">SMTP Password</label>
+          <input className="input font-mono text-sm" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Leave blank to keep existing" />
+          <p className="text-[10px] text-slate-500 mt-1">Password is encrypted at rest. Leave empty to keep current password unchanged.</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
           <label className="label">From Name</label>
           <input className="input text-sm" value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="Phantix Application" />
         </div>
@@ -305,7 +321,7 @@ function SMTPForm({
         <input type="checkbox" checked={useTls} onChange={(e) => setUseTls(e.target.checked)} className="rounded accent-gold-400" />
         Use TLS encryption
       </label>
-      <button className="btn-primary w-full" onClick={() => onSave({ host, port, from_email: fromEmail, from_name: fromName, use_tls: useTls, recipients })} disabled={busy || !host}>
+      <button className="btn-primary w-full" onClick={() => onSave({ host, port, from_email: fromEmail, from_name: fromName, use_tls: useTls, username, password, recipients })} disabled={busy || !host}>
         {busy ? "Saving…" : "Save SMTP Settings"}
       </button>
     </div>
