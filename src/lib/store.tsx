@@ -336,7 +336,7 @@ type Store = {
   operate: OperateState;
   securityDbReady: boolean;
   // auth
-  register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<void>;
+  register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<{ mfaRequired: boolean }>;
   login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
   verifyMfa: (code: string) => Promise<void>;
   logout: () => void;
@@ -657,16 +657,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         tokens.platform = "demo.company.jwt";
         tokens.email = email;
         setSession({ authenticated: true, email });
-        return;
+        return { mfaRequired: false };
       }
       await api.post("/organizations/register", { name, email, password: _password, country, slug, industry, secondary_email, primary_contact });
       const res = await api.postForm<{
-        access_token: string;
+        access_token?: string;
+        mfa_required?: boolean;
+        mfa_token?: string;
         organization_id?: number;
         organization_slug?: string;
         experience?: { organization_name?: string };
       }>("/organizations/login", { username: email, password: _password });
-      tokens.platform = res.access_token;
+
+      if (res.mfa_required && res.mfa_token) {
+        sessionStorage.setItem("mfa_token", res.mfa_token);
+        persist((s) => ({
+          ...s,
+          org: { ...s.org, name, email, primary_email: email, country, slug, industry },
+        }));
+        return { mfaRequired: true };
+      }
+
+      tokens.platform = res.access_token!;
       tokens.orgUser = null;
       tokens.email = email;
       setState(emptyState());
@@ -685,6 +697,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setup: emptySetup(),
       }));
       await hydrateSession(email);
+      return { mfaRequired: false };
     },
     [persist, hydrateSession],
   );

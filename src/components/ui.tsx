@@ -138,6 +138,25 @@ export function ProgressBar({ value, color = "#E8B54D" }: { value: number; color
   );
 }
 
+export function TableSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="space-y-2.5 p-4">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="skeleton h-11 rounded" style={{ opacity: 1 - i * 0.14 }} />
+      ))}
+    </div>
+  );
+}
+
+export function SkeletonCard({ className }: { className?: string }) {
+  return (
+    <div className={cx("card animate-pulse border-phantix-700/40 bg-phantix-900/50 p-5", className)}>
+      <div className="skeleton mb-3 h-4 w-3/4 rounded" />
+      <div className="skeleton h-3 w-1/2 rounded" />
+    </div>
+  );
+}
+
 export function CopyChip({ value, label }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
