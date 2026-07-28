@@ -1,4 +1,4 @@
-// ── Platform surface types (platform.phantix.site) ───────────────────────────
+﻿// ── Platform surface types (platform.phantix.site) ───────────────────────────
 
 export interface OrgContact {
   title: string | null;
@@ -9,7 +9,7 @@ export interface OrgContact {
   telegram_username: string | null;
 }
 
-/** Full company profile — mirrors GET/PUT /organizations/me */
+/** Full company profile --- mirrors GET/PUT /organizations/me */
 export interface Organization {
   id: number;
   name: string;

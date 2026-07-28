@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 import { Wrench, CheckCircle2, Plus } from "lucide-react";
 import { PageHeader, Card, StatusBadge } from "@/components/ui";
@@ -12,7 +12,7 @@ export default function Tools() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
         title="Tool catalog"
-        description="Scanner tooling subscriptions — separate from platform membership. Staff curate the catalog; you subscribe per company."
+        description="Scanner tooling subscriptions --- separate from platform membership. Staff curate the catalog; you subscribe per company."
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {state.tools.map((t, i) => (
@@ -47,7 +47,7 @@ export default function Tools() {
         ))}
       </div>
       <p className="mt-5 text-xs text-slate-500">
-        Missing a tool? Request it via <span className="font-mono">POST /tools/request</span> — staff review and
+        Missing a tool? Request it via <span className="font-mono">POST /tools/request</span> --- staff review and
         provision it to your organization.
       </p>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { LifeBuoy, Plus, MessageSquare } from "lucide-react";
 import { PageHeader, Card, StatusBadge, Modal, EmptyState } from "@/components/ui";
@@ -26,7 +26,7 @@ export default function Support() {
           <EmptyState
             icon={<LifeBuoy size={22} />}
             title="No tickets yet"
-            body="We're here when you need us — setup help, connection issues, or billing questions."
+            body="We're here when you need us --- setup help, connection issues, or billing questions."
             action={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> Open your first ticket</button>}
           />
         </Card>
@@ -80,9 +80,9 @@ export default function Support() {
           </div>
           <div>
             <label className="label">Details</label>
-            <textarea className="input min-h-[110px] resize-none" value={body} onChange={(e) => setBody(e.target.value)} placeholder={`Tenant #${state.org.id} (${state.org.slug})\n\nWhat happened, what you expected…`} required />
+            <textarea className="input min-h-[110px] resize-none" value={body} onChange={(e) => setBody(e.target.value)} placeholder={`Tenant #${state.org.id} (${state.org.slug})\n\nWhat happened, what you expected...`} required />
           </div>
-          <button className="btn-primary w-full" disabled={busy}>{busy ? "Submitting…" : "Submit ticket"}</button>
+          <button className="btn-primary w-full" disabled={busy}>{busy ? "Submitting..." : "Submit ticket"}</button>
         </form>
       </Modal>
     </div>

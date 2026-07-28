@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Database, Plus, ShieldCheck, AlertTriangle, Loader2, Trash2, Zap, Info } from "lucide-react";
 import { PageHeader, Card, StatusBadge, Modal, EmptyState } from "@/components/ui";
@@ -35,7 +35,7 @@ export default function Connections() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
         title="Security database"
-        description="BYO dedicated database — the bootstrap gate for scans, VAPT and findings. Config-inspection connections read security metadata only, never business rows."
+        description="BYO dedicated database --- the bootstrap gate for scans, VAPT and findings. Config-inspection connections read security metadata only, never business rows."
         actions={
           <button className="btn-primary" onClick={async () => { if (await guard()) setCreateOpen(true); }}>
             <Plus size={15} /> Add connection
@@ -55,9 +55,9 @@ export default function Connections() {
         {securityDbReady ? <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-400" /> : <AlertTriangle size={16} className="mt-0.5 shrink-0 text-severity-medium" />}
         <p className="text-xs leading-5 text-slate-400">
           {securityDbReady ? (
-            <><strong className="text-emerald-300">Bootstrap gate: ready.</strong> The primary security store is on schema v1.4.2 — scans, VAPT and findings are unblocked.</>
+            <><strong className="text-emerald-300">Bootstrap gate: ready.</strong> The primary security store is on schema v1.4.2 --- scans, VAPT and findings are unblocked.</>
           ) : (
-            <><strong className="text-severity-medium">Bootstrap gate: blocked.</strong> Create a security_data_storage connection, test it, then bootstrap. Until then the backend refuses scans and VAPT — this is not just a UI state.</>
+            <><strong className="text-severity-medium">Bootstrap gate: blocked.</strong> Create a security_data_storage connection, test it, then bootstrap. Until then the backend refuses scans and VAPT --- this is not just a UI state.</>
           )}
         </p>
       </motion.div>
@@ -92,8 +92,8 @@ export default function Connections() {
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-600">
                       {c.connection_purpose === "security_data_storage"
-                        ? "security_data_storage — full CRUD inside the phantix schema only"
-                        : "config_inspection — roles, privileges, policies; never business rows"}
+                        ? "security_data_storage --- full CRUD inside the phantix schema only"
+                        : "config_inspection --- roles, privileges, policies; never business rows"}
                       {c.last_test_at && ` · last test ${c.last_test_ok ? "passed" : "failed"} ${timeAgo(c.last_test_at)}`}
                     </p>
                   </div>
@@ -125,7 +125,7 @@ export default function Connections() {
                           setBusyId(c.id);
                           try {
                             await bootstrapConnection(c.id);
-                            toast("success", "Schema bootstrapped", "phantix schema ready — assets, scans, findings, risks, evidence.");
+                            toast("success", "Schema bootstrapped", "phantix schema ready --- assets, scans, findings, risks, evidence.");
                           } catch (err) {
                             toast("error", "Bootstrap failed", err instanceof Error ? err.message : "Bootstrap failed");
                           } finally {
@@ -182,7 +182,7 @@ export default function Connections() {
           </div>
           <p className="mt-3 text-[11px] leading-4 text-slate-500">
             Credentials can be stored encrypted without the optional driver; live tests need the package. Connections
-            need more than username+password — see connection-option-hints (ssl_mode, search_path, odbc_driver…).
+            need more than username+password --- see connection-option-hints (ssl_mode, search_path, odbc_driver...).
           </p>
         </Card>
       </motion.div>
@@ -212,11 +212,11 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           return ipv4;
         }
       }
-      // No A record found — pass original host (backend may handle it)
-      toast("warning", "No IPv4 record", `${host} could not be resolved — passing as-is`);
+      // No A record found --- pass original host (backend may handle it)
+      toast("warning", "No IPv4 record", `${host} could not be resolved --- passing as-is`);
       return host;
     } catch {
-      toast("warning", "DNS lookup failed", `Could not resolve ${host} — passing as-is`);
+      toast("warning", "DNS lookup failed", `Could not resolve ${host} --- passing as-is`);
       return host;
     } finally {
       setResolvingHost(null);
@@ -273,8 +273,8 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
           <div className="col-span-2 grid grid-cols-2 gap-2">
             {([
-              ["security_data_storage", "Security data storage", "Phantix writes findings, assets, evidence — phantix schema only"],
-              ["config_inspection", "Config inspection", "Read-only security posture — never business rows"],
+              ["security_data_storage", "Security data storage", "Phantix writes findings, assets, evidence --- phantix schema only"],
+              ["config_inspection", "Config inspection", "Read-only security posture --- never business rows"],
             ] as const).map(([v, label, desc]) => (
               <button
                 type="button"
@@ -341,9 +341,9 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
         </div>
         <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">
           Least privilege: the storage role needs CONNECT, CREATE (or schema ownership), USAGE and DML on the
-          phantix schema only — never access to application tables.
+          phantix schema only --- never access to application tables.
         </div>
-        <button className="btn-primary w-full" disabled={busy}>{resolvingHost ? "Resolving DNS…" : busy ? "Saving…" : "Save connection"}</button>
+        <button className="btn-primary w-full" disabled={busy}>{resolvingHost ? "Resolving DNS..." : busy ? "Saving..." : "Save connection"}</button>
       </form>
     </Modal>
   );

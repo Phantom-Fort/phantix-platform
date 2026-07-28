@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
+﻿import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
 import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken } from "./api";
@@ -53,7 +53,7 @@ const emptySetup = (): SetupState => ({
   steps: [],
 });
 
-/** Demo-only seed catalog — never used when VITE_API_BASE is set. */
+/** Demo-only seed catalog --- never used when VITE_API_BASE is set. */
 const demoTools: ToolItem[] = [
   { id: 1, key: "nmap", name: "Nmap", category: "Discovery", description: "Port & service scanning with admin-pinned flags", subscribed: true, price_note: "Included" },
   { id: 2, key: "nuclei", name: "Nuclei", category: "Vulnerability", description: "Template-driven CVE & misconfiguration engine", subscribed: true, price_note: "Included" },
@@ -456,7 +456,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const check = () => {
       if (session?.authenticated && !tokens.platform) {
-        // Don't redirect during setup — polling refreshSetup may hit transient 401s
+        // Don't redirect during setup --- polling refreshSetup may hit transient 401s
         if (window.location.pathname === "/setup") return;
         tokens.orgUser = null;
         tokens.email = null;
@@ -527,7 +527,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const k = keyObj as Record<string, unknown>;
           serviceKey = {
             id: Number(k.id ?? 0),
-            prefix: String(k.prefix ?? k.key_prefix ?? "pk_live_…"),
+            prefix: String(k.prefix ?? k.key_prefix ?? "pk_live_..."),
             active: k.active !== false,
             created_at: String(k.created_at ?? ""),
             last_used_at: (k.last_used_at as string) ?? null,
@@ -970,7 +970,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (DEMO_MODE) {
         await delay(650);
         const expected = sessionStorage.getItem("dev_otp");
-        if (expected && code !== expected) throw new Error("That code isn't right — check the email and try again");
+        if (expected && code !== expected) throw new Error("That code isn't right --- check the email and try again");
         persist((s) => ({
           ...s,
           setup: {
@@ -1083,7 +1083,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const verified = pickBool(res.verified, res.company_verified);
       const dns = flags.dns || (verified && method !== "http");
       const http = flags.http || (verified && method !== "dns");
-      const message = pickStr(res.message) || (dns || http ? "Domain verified" : "Not verified yet — check DNS/HTTP and try again");
+      const message = pickStr(res.message) || (dns || http ? "Domain verified" : "Not verified yet --- check DNS/HTTP and try again");
       persist((s) => ({
         ...s,
         setup: {
@@ -1102,7 +1102,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }));
       await refreshSetup();
       if (!dns && !http && !verified) {
-        // soft fail — still return so UI can show message
+        // soft fail --- still return so UI can show message
       }
       return { dns: dns || false, http: http || false, message };
     },
@@ -1274,7 +1274,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const authObj = d.authorizer as { id?: number } | undefined;
         if (!configured || !initObj?.id || !authObj?.id) {
           throw new Error(
-            "Dual control setup failed — the backend did not confirm the assignment. " +
+            "Dual control setup failed --- the backend did not confirm the assignment. " +
             "Make sure both users exist with organization-domain emails (your company email, not personal). " +
             "If the issue persists, contact support.",
           );
@@ -1383,7 +1383,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         device_id: deviceId(),
       });
       if (mfaRes.device_verification_required && mfaRes.device_token) {
-        throw new Error("Device verification required — use the dual-control overlay");
+        throw new Error("Device verification required --- use the dual-control overlay");
       }
       applyOperateSession(mfaRes);
     },
@@ -1568,7 +1568,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         needsDc ? { dualControl: true } : undefined,
       );
       const url = res?.login_url ?? res?.url ?? res?.login_link ?? "";
-      if (!url) throw new Error(res?.message || "Login link was not returned — ensure you have an active operate session.");
+      if (!url) throw new Error(res?.message || "Login link was not returned --- ensure you have an active operate session.");
       const user = state.users.find((u) => u.id === userId);
       persist((s) => ({
         ...s,
@@ -1624,7 +1624,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const k = keyObj as Record<string, unknown>;
           const svcKey: ServiceKeyMeta = {
             id: Number(k.id ?? 0),
-            prefix: String(k.prefix ?? k.key_prefix ?? "pk_live_…"),
+            prefix: String(k.prefix ?? k.key_prefix ?? "pk_live_..."),
             active: k.active !== false,
             created_at: String(k.created_at ?? ""),
             last_used_at: (k.last_used_at as string) ?? null,
@@ -1806,11 +1806,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await delay(600);
         const secret = `pk_live_${crypto.randomUUID().replace(/-/g, "")}`;
         if (companyId) {
-          persist((s) => ({ ...s, companies: s.companies.map((c) => (c.id === companyId ? { ...c, key_prefix: `${secret.slice(0, 12)}…` } : c)) }));
+          persist((s) => ({ ...s, companies: s.companies.map((c) => (c.id === companyId ? { ...c, key_prefix: `${secret.slice(0, 12)}...` } : c)) }));
         } else {
           persist((s) => ({
             ...s,
-            serviceKey: { id: s.nextId, prefix: `${secret.slice(0, 12)}…`, active: true, created_at: new Date().toISOString(), last_used_at: null },
+            serviceKey: { id: s.nextId, prefix: `${secret.slice(0, 12)}...`, active: true, created_at: new Date().toISOString(), last_used_at: null },
             nextId: s.nextId + 1,
           }));
         }
@@ -1829,7 +1829,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       );
       const secret = res?.api_key ?? res?.secret ?? res?.key ?? res?.service_key ?? "";
       if (!secret) throw new Error("Service key was not returned by the backend");
-      const prefix = res?.key_prefix ?? (secret.includes("_") ? `${secret.slice(0, secret.indexOf("_") + 13)}…` : `${secret.slice(0, 12)}…`);
+      const prefix = res?.key_prefix ?? (secret.includes("_") ? `${secret.slice(0, secret.indexOf("_") + 13)}...` : `${secret.slice(0, 12)}...`);
       if (companyId) {
         persist((s) => ({ ...s, companies: s.companies.map((c) => (c.id === companyId ? { ...c, key_prefix: prefix } : c)) }));
       } else {

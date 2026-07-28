@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 import { CreditCard, CheckCircle2, Download } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge } from "@/components/ui";
@@ -12,7 +12,7 @@ export default function Billing() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
         title="Billing"
-        description="Plan and payments bind to the company (organization_id) — all users and keys share the org bucket. Rate limits lift with plan upgrades, no token changes needed."
+        description="Plan and payments bind to the company (organization_id) --- all users and keys share the org bucket. Rate limits lift with plan upgrades, no token changes needed."
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -33,8 +33,8 @@ export default function Billing() {
                 ))}
               </ul>
               <div className="mt-5 flex gap-2.5">
-                <button className="btn-primary flex-1" onClick={() => toast("info", "Plan change", "POST /billing/subscribe — proration applies.")}>Change plan</button>
-                <button className="btn-ghost" onClick={() => toast("warning", "Cancel subscription", "POST /billing/subscription/cancel — access continues to period end.")}>Cancel</button>
+                <button className="btn-primary flex-1" onClick={() => toast("info", "Plan change", "POST /billing/subscribe --- proration applies.")}>Change plan</button>
+                <button className="btn-ghost" onClick={() => toast("warning", "Cancel subscription", "POST /billing/subscription/cancel --- access continues to period end.")}>Cancel</button>
               </div>
             </div>
           </Card>
@@ -60,7 +60,7 @@ export default function Billing() {
             </div>
             <p className="mt-4 text-[11px] leading-4 text-slate-500">
               Staff set the monthly list price in Naira; yearly is auto-calculated. Renewals run via the cron-friendly
-              admin job — you're notified before any charge.
+              admin job --- you're notified before any charge.
             </p>
           </Card>
         </motion.div>

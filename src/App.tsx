@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
@@ -29,7 +29,7 @@ function RequireManagement({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-phantix-500 border-t-gold-400" />
-          <p className="mt-3 text-sm text-slate-400">Restoring session…</p>
+          <p className="mt-3 text-sm text-slate-400">Restoring session...</p>
         </div>
       </div>
     );

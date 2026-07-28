@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2, KeyRound, RefreshCw, ImagePlus, AlertTriangle, CheckCircle2, Layers, Save, User,
@@ -80,7 +80,7 @@ export default function Identity() {
     setLogoBusy(true);
     try {
       await uploadLogo(file);
-      toast("success", "Logo uploaded", "POST /organizations/me/logo — used on report covers and footers.");
+      toast("success", "Logo uploaded", "POST /organizations/me/logo --- used on report covers and footers.");
     } catch (err) {
       toast("error", "Upload failed", err instanceof Error ? err.message : "Could not upload logo");
     } finally {
@@ -164,7 +164,7 @@ export default function Identity() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
         title="Identity & profile"
-        description="Company tenant profile from GET /organizations/me — identity, contacts, security posture, branding, and service key."
+        description="Company tenant profile from GET /organizations/me --- identity, contacts, security posture, branding, and service key."
       />
 
       <Tabs
@@ -188,11 +188,11 @@ export default function Identity() {
                   ["Organization", state.org.name],
                   ["Tenant ID", `#${state.org.id}`],
                   ["Slug", state.org.slug],
-                  ["Primary email", state.org.email || state.org.primary_email || "—"],
-                  ["Secondary email", state.org.secondary_email || "—"],
-                  ["Country", state.org.country || "—"],
-                  ["Industry", state.org.industry || "—"],
-                  ["Plan", state.org.plan || "—"],
+                  ["Primary email", state.org.email || state.org.primary_email || "---"],
+                  ["Secondary email", state.org.secondary_email || "---"],
+                  ["Country", state.org.country || "---"],
+                  ["Industry", state.org.industry || "---"],
+                  ["Plan", state.org.plan || "---"],
                 ].map(([k, v]) => (
                   <div key={k} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                     <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{k}</span>
@@ -228,20 +228,20 @@ export default function Identity() {
                   {state.org.primary_contact.phone && <p className="text-xs text-slate-500">{state.org.primary_contact.phone}</p>}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">No primary contact on file — edit Company profile.</p>
+                <p className="text-sm text-slate-500">No primary contact on file --- edit Company profile.</p>
               )}
               <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3">
                   <p className="text-slate-500">Website</p>
-                  <p className="mt-1 truncate text-slate-200">{state.org.website || "—"}</p>
+                  <p className="mt-1 truncate text-slate-200">{state.org.website || "---"}</p>
                 </div>
                 <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3">
                   <p className="text-slate-500">Phone</p>
-                  <p className="mt-1 text-slate-200">{state.org.phone || "—"}</p>
+                  <p className="mt-1 text-slate-200">{state.org.phone || "---"}</p>
                 </div>
                 <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3 col-span-2">
                   <p className="text-slate-500">Legal name</p>
-                  <p className="mt-1 text-slate-200">{state.org.legal_name || "—"}</p>
+                  <p className="mt-1 text-slate-200">{state.org.legal_name || "---"}</p>
                 </div>
               </div>
               <button className="btn-secondary mt-4 w-full" onClick={() => setTab("profile")}>Edit full profile</button>
@@ -261,7 +261,7 @@ export default function Identity() {
               <Field label="Tax ID"><input className="input" value={form.tax_id ?? ""} onChange={(e) => set("tax_id", e.target.value || null)} /></Field>
               <Field label="Company type">
                 <select className="input" value={form.company_type ?? ""} onChange={(e) => set("company_type", e.target.value || null)}>
-                  <option value="">—</option>
+                  <option value="">---</option>
                   {companyTypes.filter(Boolean).map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </Field>
@@ -274,13 +274,13 @@ export default function Identity() {
               <Field label="Sub-industry"><input className="input" value={form.sub_industry ?? ""} onChange={(e) => set("sub_industry", e.target.value || null)} /></Field>
               <Field label="Employees">
                 <select className="input" value={form.employee_count_range ?? ""} onChange={(e) => set("employee_count_range", e.target.value || null)}>
-                  <option value="">—</option>
+                  <option value="">---</option>
                   {employeeRanges.filter(Boolean).map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </Field>
               <Field label="Annual revenue">
                 <select className="input" value={form.annual_revenue_range ?? ""} onChange={(e) => set("annual_revenue_range", e.target.value || null)}>
-                  <option value="">—</option>
+                  <option value="">---</option>
                   {revenueRanges.filter(Boolean).map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </Field>
@@ -332,7 +332,7 @@ export default function Identity() {
           </Card>
 
           <button className="btn-primary" disabled={busy} onClick={() => void saveProfile()}>
-            <Save size={15} /> {busy ? "Saving…" : "Save company profile"}
+            <Save size={15} /> {busy ? "Saving..." : "Save company profile"}
           </button>
         </motion.div>
       )}
@@ -345,7 +345,7 @@ export default function Identity() {
               <Field label="Security mailbox"><input className="input" value={form.security_mailbox ?? ""} onChange={(e) => set("security_mailbox", e.target.value || null)} /></Field>
               <Field label="Security maturity">
                 <select className="input" value={form.security_maturity ?? ""} onChange={(e) => set("security_maturity", e.target.value || null)}>
-                  <option value="">—</option>
+                  <option value="">---</option>
                   {maturityLevels.filter(Boolean).map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </Field>
@@ -394,7 +394,7 @@ export default function Identity() {
             />
           </Card>
           <button className="btn-primary" disabled={busy} onClick={() => void saveProfile()}>
-            <Save size={15} /> {busy ? "Saving…" : "Save security posture"}
+            <Save size={15} /> {busy ? "Saving..." : "Save security posture"}
           </button>
         </motion.div>
       )}
@@ -403,14 +403,14 @@ export default function Identity() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
-              <CardHeader title="Service key" subtitle="Exactly one active key per company — X-Org-Api-Key" action={<KeyRound size={16} className="text-slate-500" />} />
+              <CardHeader title="Service key" subtitle="Exactly one active key per company --- X-Org-Api-Key" action={<KeyRound size={16} className="text-slate-500" />} />
               {key ? (
                 <>
                   <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-mono text-sm text-slate-200">{key.prefix}</span>
-                        <p className="mt-0.5 text-[10px] text-slate-600">De-identified — the full key was shown only at creation</p>
+                        <p className="mt-0.5 text-[10px] text-slate-600">De-identified --- the full key was shown only at creation</p>
                       </div>
                       <StatusBadge status="active" />
                     </div>
@@ -447,7 +447,7 @@ export default function Identity() {
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <Card>
-              <CardHeader title="Report branding" subtitle="POST/DELETE /organizations/me/logo — PNG/JPEG/WebP/SVG, max 2MB" action={<ImagePlus size={16} className="text-slate-500" />} />
+              <CardHeader title="Report branding" subtitle="POST/DELETE /organizations/me/logo --- PNG/JPEG/WebP/SVG, max 2MB" action={<ImagePlus size={16} className="text-slate-500" />} />
               <div className="flex items-center gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
                 <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-phantix-800/70">
                   {state.org.logo_url ? (
@@ -473,7 +473,7 @@ export default function Identity() {
                       disabled={logoBusy}
                       onClick={() => logoInputRef.current?.click()}
                     >
-                      {logoBusy ? "Working…" : "Upload logo"}
+                      {logoBusy ? "Working..." : "Upload logo"}
                     </button>
                     {state.org.logo_url && (
                       <button type="button" className="btn-ghost !py-2 !text-xs" disabled={logoBusy} onClick={() => void onLogoRemove()}>
@@ -536,7 +536,7 @@ export default function Identity() {
         <div className="space-y-4">
           <div className="flex items-start gap-3 rounded-xl border border-severity-medium/30 bg-severity-medium/10 px-4 py-3">
             <AlertTriangle size={16} className="mt-0.5 shrink-0 text-severity-medium" />
-            <p className="text-xs leading-5 text-slate-300">Copy now — the full secret is shown once.</p>
+            <p className="text-xs leading-5 text-slate-300">Copy now --- the full secret is shown once.</p>
           </div>
           <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-sm text-gold-300 break-all">{keyModal}</div>
           <button

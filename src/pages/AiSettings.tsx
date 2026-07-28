@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, CheckCircle2, Loader2 } from "lucide-react";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
@@ -75,7 +75,7 @@ export default function AiSettings() {
   if (loading || !ai) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-400">
-        <Loader2 className="h-5 w-5 animate-spin" /> Loading AI settings…
+        <Loader2 className="h-5 w-5 animate-spin" /> Loading AI settings...
       </div>
     );
   }
@@ -84,7 +84,7 @@ export default function AiSettings() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
         title="AI governance"
-        description="Org AI settings and usage. Narratives only — AI never determines security facts or scores. GET /ai/settings · GET /ai/usage"
+        description="Org AI settings and usage. Narratives only --- AI never determines security facts or scores. GET /ai/settings · GET /ai/usage"
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -94,8 +94,8 @@ export default function AiSettings() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 ["Status", ai.enabled ? "Enabled" : "Disabled"],
-                ["Default provider", ai.default_provider || "—"],
-                ["Mode", ai.mode || "—"],
+                ["Default provider", ai.default_provider || "---"],
+                ["Mode", ai.mode || "---"],
                 ["Pentest AI", ai.ai_pentest_ready ? "Ready" : "Gated"],
               ].map(([k, v]) => (
                 <div key={k} className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
@@ -131,7 +131,7 @@ export default function AiSettings() {
               onClick={() =>
                 void (async () => {
                   if (!(await requireDualControl("Updating AI settings requires a dual-control operate session."))) return;
-                  toast("info", "AI settings", "PUT /ai/settings — mode, budget, consensus.");
+                  toast("info", "AI settings", "PUT /ai/settings --- mode, budget, consensus.");
                 })()
               }
             >
@@ -142,7 +142,7 @@ export default function AiSettings() {
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
           <Card>
-            <CardHeader title="Usage this month" subtitle="Cost visibility — every call audited with prompt version + model" />
+            <CardHeader title="Usage this month" subtitle="Cost visibility --- every call audited with prompt version + model" />
             <div className="flex items-end gap-8">
               <div>
                 <p className="font-display text-3xl font-bold text-white">{ai.monthly_tokens.toLocaleString()}</p>

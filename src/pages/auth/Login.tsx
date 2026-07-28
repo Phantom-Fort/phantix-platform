@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Mail, KeyRound, ArrowRight } from "lucide-react";
@@ -74,7 +74,7 @@ export default function Login() {
                 </div>
                 {error && <p className="text-sm text-severity-critical">{error}</p>}
                 <button className="btn-primary w-full !py-3" disabled={busy}>
-                  {busy ? "Checking…" : "Continue"} <ArrowRight size={15} />
+                  {busy ? "Checking..." : "Continue"} <ArrowRight size={15} />
                 </button>
                 <p className="text-center text-xs text-slate-500">
                   New tenant?{" "}
@@ -97,7 +97,7 @@ export default function Login() {
                 />
                 {error && <p className="text-sm text-severity-critical">{error}</p>}
                 <button className="btn-primary w-full !py-3" disabled={busy || code.length !== 6}>
-                  {busy ? "Verifying…" : "Verify & sign in"}
+                  {busy ? "Verifying..." : "Verify & sign in"}
                 </button>
                 <button type="button" onClick={() => setStage("password")} className="w-full text-center text-xs text-slate-500 hover:text-slate-300">
                   ← Use a different account
@@ -109,7 +109,7 @@ export default function Login() {
 
         {DEMO_MODE && (
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-5 rounded-xl border border-gold-400/20 bg-gold-400/6 px-4 py-3 text-center text-xs leading-5 text-gold-300/80">
-            <strong>Demo mode</strong> — any email and any 6-digit code works. Set{" "}
+            <strong>Demo mode</strong> --- any email and any 6-digit code works. Set{" "}
             <span className="font-mono">VITE_API_BASE</span> for a live API.
           </motion.p>
         )}

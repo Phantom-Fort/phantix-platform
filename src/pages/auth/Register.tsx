@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Building2, ShieldCheck, Database, EyeOff, CheckCircle2, Mail, ArrowLeft } from "lucide-react";
@@ -93,13 +93,13 @@ export default function Register() {
             Stand up your security tenant in minutes
           </h1>
           <p className="mt-4 max-w-md text-[15px] leading-7 text-slate-400">
-            Register the company, accept the privacy model, verify your email — then connect your own
+            Register the company, accept the privacy model, verify your email --- then connect your own
             security database and invite your operators.
           </p>
           <div className="mt-8 space-y-3.5">
             {[
               { icon: <ShieldCheck size={16} />, text: "Privacy-first: security data lives only in your dedicated database" },
-              { icon: <Database size={16} />, text: "You bring the database — Phantix writes nothing anywhere else" },
+              { icon: <Database size={16} />, text: "You bring the database --- Phantix writes nothing anywhere else" },
               { icon: <EyeOff size={16} />, text: "Production business data is never read, copied, or stored" },
             ].map((f) => (
               <div key={f.text} className="flex items-center gap-3 text-sm text-slate-300">
@@ -140,7 +140,7 @@ export default function Register() {
                   <div>
                     <label className="label">Primary sign-in email</label>
                     <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@yourcompany.com" />
-                    <p className="mt-1.5 text-[11px] text-slate-500">Verified by email OTP during setup — phone OTP is not used.</p>
+                    <p className="mt-1.5 text-[11px] text-slate-500">Verified by email OTP during setup --- phone OTP is not used.</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -188,7 +188,7 @@ export default function Register() {
                   </div>
                   {error && <p className="text-sm text-severity-critical">{error}</p>}
                   <button className="btn-primary w-full !py-3" disabled={busy}>
-                    {busy ? "Creating tenant…" : "Create organization"} <ArrowRight size={15} />
+                    {busy ? "Creating tenant..." : "Create organization"} <ArrowRight size={15} />
                   </button>
                   <p className="text-center text-xs text-slate-500">
                     Already registered? <Link to="/login" className="text-gold-400 hover:text-gold-300">Sign in</Link>
@@ -222,7 +222,7 @@ export default function Register() {
                   </div>
                   {error && <p className="text-center text-sm text-severity-critical">{error}</p>}
                   <button className="btn-primary w-full !py-3" onClick={submitOtp} disabled={busy}>
-                    {busy ? "Verifying…" : "Verify & continue"} <CheckCircle2 size={16} />
+                    {busy ? "Verifying..." : "Verify & continue"} <CheckCircle2 size={16} />
                   </button>
                   <button className="btn-ghost w-full !py-2 text-xs" onClick={() => setStep("details")} type="button">
                     <ArrowLeft size={12} /> Back to company details

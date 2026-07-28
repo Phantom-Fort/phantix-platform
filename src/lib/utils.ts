@@ -1,9 +1,9 @@
-export function cx(...parts: (string | false | null | undefined)[]): string {
+﻿export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
 }
 
 export function timeAgo(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "---";
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "just now";
@@ -16,7 +16,7 @@ export function timeAgo(iso: string | null): string {
 }
 
 export function formatDateTime(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "---";
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 

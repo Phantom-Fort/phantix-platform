@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -64,7 +64,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Auto-logout after inactivity — uses backend's inactivity_expires_at if set, else 20 min
+  // Auto-logout after inactivity --- uses backend's inactivity_expires_at if set, else 20 min
   useEffect(() => {
     if (!session?.authenticated || DEMO_MODE) return;
     const getTimeoutMs = () => operate.expiresAt ? Math.max(20 * 60 * 1000, operate.expiresAt - Date.now()) : 20 * 60 * 1000;
@@ -187,7 +187,7 @@ export default function Layout() {
                   </>
                 ) : (
                   <>
-                    <p className="text-[11px] leading-4 text-slate-500">Not configured — bootstrap required</p>
+                    <p className="text-[11px] leading-4 text-slate-500">Not configured --- bootstrap required</p>
                     <button onClick={() => navigate("/users")} className="btn-secondary mt-2 w-full !px-3 !py-1.5 !text-[11px]">
                       <ShieldCheck size={12} /> Set up dual control
                     </button>
@@ -245,7 +245,7 @@ export default function Layout() {
                       <button
                         onClick={() => {
                           resetDemo();
-                          toast("info", "Demo reset", "Tenant state cleared — start the journey again.");
+                          toast("info", "Demo reset", "Tenant state cleared --- start the journey again.");
                           setUserMenu(false);
                           navigate("/dashboard");
                         }}
@@ -276,7 +276,7 @@ export default function Layout() {
         </main>
 
         <footer className="border-t border-phantix-700/30 px-8 py-4 text-[11px] text-slate-600 flex items-center justify-between">
-          <span>Phantix Platform · organization management — keys and people live here; product operations live in the Command Centre</span>
+          <span>Phantix Platform · organization management --- keys and people live here; product operations live in the Command Centre</span>
           <span className="font-mono">api/v1 · tenant #{state.org.id}</span>
         </footer>
       </div>

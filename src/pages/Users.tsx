@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -30,7 +30,7 @@ export default function People() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
         title="People & dual control"
-        description="Named users sign in with domain-email OTP. Writes require the initiator or authorizer slot plus a live operate session — roles alone grant no writes."
+        description="Named users sign in with domain-email OTP. Writes require the initiator or authorizer slot plus a live operate session --- roles alone grant no writes."
         actions={
           <>
             {dc.configured && !operate.unlocked && (
@@ -78,7 +78,7 @@ export default function People() {
           {/* Assignment card */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
             <Card className="border-gold-400/25">
-              <CardHeader title="Dual-control assignment" subtitle="Two different people — one proposes, one approves" action={<ShieldCheck size={17} className="text-gold-400" />} />
+              <CardHeader title="Dual-control assignment" subtitle="Two different people --- one proposes, one approves" action={<ShieldCheck size={17} className="text-gold-400" />} />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {[
                   { slot: "Initiator", user: initiator, desc: "Proposes and executes mutations with an operate session" },
@@ -103,7 +103,7 @@ export default function People() {
                 <AlertTriangle size={14} className="mt-0.5 shrink-0 text-gold-400" />
                 <div className="min-w-0 flex-1">
                 <p className="text-[11px] leading-4 text-slate-500">
-                  Reassign here using your company JWT — no operate session needed.
+                  Reassign here using your company JWT --- no operate session needed.
                   After reassigning, the new initiator must login with purpose=dual_control to get a session token.
                   Use organization-domain emails (allowed domains) or registration contact emails only.
                 </p>
@@ -134,7 +134,7 @@ export default function People() {
   );
 }
 
-// ── Bootstrap wizard (Phases 0–3 from DUAL_CONTROL_SETUP_FE.md) ──────────────
+// ── Bootstrap wizard (Phases 0---3 from DUAL_CONTROL_SETUP_FE.md) ──────────────
 function BootstrapWizard() {
   const { state, createUser, assignDualControl, toast } = useStore();
   const users = state.users;
@@ -178,7 +178,7 @@ function BootstrapWizard() {
                   <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
                     Phantix protects every mutation with <strong className="text-slate-200">dual control</strong>:
                     one person <strong className="text-gold-300">initiates</strong>, a different person{" "}
-                    <strong className="text-gold-300">authorizes</strong>. You'll create both users now — bootstrap
+                    <strong className="text-gold-300">authorizes</strong>. You'll create both users now --- bootstrap
                     uses your company JWT; after assignment, mutations need a live operate session.
                   </p>
                   <div className="mt-4 grid max-w-xl grid-cols-2 gap-3">
@@ -219,9 +219,9 @@ function BootstrapWizard() {
                       setAuthorizer(user);
                       setPhase("review");
                     }
-                    toast("success", `${form.full_name} created`, "OTP-only user — they sign in with domain-email OTP.");
+                    toast("success", `${form.full_name} created`, "OTP-only user --- they sign in with domain-email OTP.");
                   } catch (err: any) {
-                    // 409 = email already exists — find existing user and reuse
+                    // 409 = email already exists --- find existing user and reuse
                     if (err?.status === 409 || String(err?.message || "").toLowerCase().includes("already exists") || String(err?.message || "").toLowerCase().includes("duplicate")) {
                       const existing = users.find((u) => u.email.toLowerCase() === form.email.toLowerCase());
                       if (existing) {
@@ -252,7 +252,7 @@ function BootstrapWizard() {
             <motion.div key="review" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <h2 className="font-display text-xl font-bold text-white">Review the assignment</h2>
               <p className="mt-1.5 text-sm text-slate-400">
-                PUT /org-users/dual-control — the last bootstrap call. After this, mutations require an operate session.
+                PUT /org-users/dual-control --- the last bootstrap call. After this, mutations require an operate session.
               </p>
               <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {[
@@ -283,7 +283,7 @@ function BootstrapWizard() {
                     }
                   }}
                 >
-                  {busy ? "Assigning…" : "Assign dual control"} <ShieldCheck size={15} />
+                  {busy ? "Assigning..." : "Assign dual control"} <ShieldCheck size={15} />
                 </button>
                 <button className="btn-ghost" onClick={() => setPhase("authorizer")}><ArrowLeft size={15} /> Back</button>
               </div>
@@ -314,7 +314,7 @@ function PersonForm({
     <div>
       <h2 className="font-display text-xl font-bold text-white">Create the {slot.toLowerCase()}</h2>
       <p className="mt-1.5 text-sm text-slate-400">
-        A named person with domain-email OTP sign-in. The role sets view/report scope only — the slot is assigned next.
+        A named person with domain-email OTP sign-in. The role sets view/report scope only --- the slot is assigned next.
       </p>
       <form
         className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2"
@@ -344,12 +344,12 @@ function PersonForm({
           <label className="label">Work email</label>
           <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required autoComplete="email" />
           <p className="mt-1.5 text-[11px] text-slate-500">
-            OTP-only (no password) — recommended. Free-mail is rejected unless it matches a registration contact.
+            OTP-only (no password) --- recommended. Free-mail is rejected unless it matches a registration contact.
           </p>
         </div>
         {error && <p className="sm:col-span-2 text-sm text-severity-critical">{error}</p>}
         <div className="flex gap-3 sm:col-span-2">
-          <button className="btn-primary flex-1 !py-3" disabled={busy}>{busy ? "Creating…" : `Create ${slot.toLowerCase()}`}</button>
+          <button className="btn-primary flex-1 !py-3" disabled={busy}>{busy ? "Creating..." : `Create ${slot.toLowerCase()}`}</button>
           <button type="button" onClick={onBack} className="btn-ghost"><ArrowLeft size={15} /> Back</button>
         </div>
       </form>
@@ -404,7 +404,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                   ) : dc.authorizer_user_id === u.id ? (
                     <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">Authorizer</span>
                   ) : (
-                    <span className="text-xs text-slate-600">—</span>
+                    <span className="text-xs text-slate-600">---</span>
                   )}
                 </td>
                 <td className="td">
@@ -419,7 +419,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                   <div className="flex justify-end gap-1.5">
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
-                      title={!state.serviceKey ? "App access requires an active service key — create one on the Identity page" : "Generate a one-time app sign-in URL"}
+                      title={!state.serviceKey ? "App access requires an active service key --- create one on the Identity page" : "Generate a one-time app sign-in URL"}
                       disabled={!state.serviceKey || linkingId === u.id}
                       onClick={async () => {
                         if (!operate.unlocked) { onUnlock(); return; }
@@ -435,7 +435,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                       }}
                     >
                       {linkingId === u.id ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
-                      {linkingId === u.id ? "Generating…" : "Login link"}
+                      {linkingId === u.id ? "Generating..." : "Login link"}
                     </button>
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
@@ -468,8 +468,8 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
       <Modal open={!!link} onClose={() => setLink(null)} title="Application login link">
         <div className="space-y-4">
           <div className="rounded-xl border border-gold-400/25 bg-gold-400/5 p-3.5 text-xs leading-5 text-slate-400">
-            <strong className="text-gold-300">app.phantix.site</strong> — the Command Centre where scans, campaigns and reports live.
-            Share this with {link?.user || "the user"}. They visit the link, verify via email OTP, and get direct access — no platform login needed.
+            <strong className="text-gold-300">app.phantix.site</strong> --- the Command Centre where scans, campaigns and reports live.
+            Share this with {link?.user || "the user"}. They visit the link, verify via email OTP, and get direct access --- no platform login needed.
           </div>
           <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3.5 text-xs leading-5 text-slate-400">
             <strong>Shown once.</strong> The platform stores no secrets. Rotating the service key does not invalidate this link.
@@ -481,7 +481,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
             className="btn-primary w-full"
             onClick={() => {
               navigator.clipboard?.writeText(link?.url ?? "").catch(() => {});
-              toast("success", "Link copied", "Share this with the user — they sign in on app.phantix.site.");
+              toast("success", "Link copied", "Share this with the user --- they sign in on app.phantix.site.");
               setLink(null);
             }}
           >
@@ -500,7 +500,7 @@ function LoginLinks() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="mt-5">
       <Card>
-        <CardHeader title="Issued login links" subtitle="No secrets stored here — status only (GET /organizations/me/login-links)" />
+        <CardHeader title="Issued login links" subtitle="No secrets stored here --- status only (GET /organizations/me/login-links)" />
         <div className="space-y-2">
           {state.loginLinks.map((l) => (
             <div key={l.id} className="flex items-center gap-3 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
@@ -563,7 +563,7 @@ function ReassignModal({
             <option value="" disabled>Select initiator</option>
             {activeUsers.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.full_name} — {u.email} ({u.role})
+                {u.full_name} --- {u.email} ({u.role})
               </option>
             ))}
           </select>
@@ -578,7 +578,7 @@ function ReassignModal({
             <option value="" disabled>Select authorizer</option>
             {activeUsers.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.full_name} — {u.email} ({u.role})
+                {u.full_name} --- {u.email} ({u.role})
               </option>
             ))}
           </select>
@@ -601,7 +601,7 @@ function ReassignModal({
             }
           }}
         >
-          {busy ? "Updating…" : "Save changes"}
+          {busy ? "Updating..." : "Save changes"}
         </button>
       </div>
     </Modal>
@@ -627,7 +627,7 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
           setBusy(true);
           try {
             await createUser({ full_name: fullName, email, title, role });
-            toast("success", "User created", "OTP-only — they sign in with domain-email OTP.");
+            toast("success", "User created", "OTP-only --- they sign in with domain-email OTP.");
             onClose();
             setFullName(""); setEmail(""); setTitle("");
           } catch (err) {
@@ -660,7 +660,7 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
             <option value="security_admin">security_admin</option>
           </select>
         </div>
-        <button className="btn-primary w-full" disabled={busy}>{busy ? "Creating…" : "Create user"}</button>
+        <button className="btn-primary w-full" disabled={busy}>{busy ? "Creating..." : "Create user"}</button>
       </form>
     </Modal>
   );

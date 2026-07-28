@@ -1,4 +1,4 @@
-// ── Platform API client ───────────────────────────────────────────────────────
+﻿// ── Platform API client ───────────────────────────────────────────────────────
 // Token model (per frontend/02_PLATFORM_IMPLEMENTATION.md):
 //   platform_access_token    company JWT (type=access)
 //   platform_org_user_token  org-user identity JWT (type=org_user)
@@ -103,7 +103,7 @@ async function request<T>(
   }
 }
 
-/** Multipart upload — do not set Content-Type (browser sets boundary). */
+/** Multipart upload --- do not set Content-Type (browser sets boundary). */
 async function requestMultipart<T>(
   method: string,
   path: string,
@@ -143,6 +143,27 @@ export const api = {
   /** multipart/form-data (e.g. logo upload field name `file`) */
   postMultipart: <T>(path: string, formData: FormData, opts?: { dualControl?: boolean }) =>
     requestMultipart<T>("POST", path, formData, opts),
+
+  async download(path: string): Promise<Blob> {
+    const headers: Record<string, string> = {};
+    headers["X-Device-Id"] = deviceId();
+    const bearer = tokens.orgUser ?? tokens.platform;
+    if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
+    if (tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl;
+    const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
+    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    return res.blob();
+  },
+
+  async fetchText(path: string): Promise<string> {
+    const headers: Record<string, string> = {};
+    headers["X-Device-Id"] = deviceId();
+    const bearer = tokens.orgUser ?? tokens.platform;
+    if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
+    const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
+    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    return res.text();
+  },
 };
 
 export const delay = (ms = 420) => new Promise((r) => setTimeout(r, ms));

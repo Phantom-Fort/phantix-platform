@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { BellRing, Send, Settings, ShieldCheck } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Tabs, Modal } from "@/components/ui";
@@ -47,10 +47,10 @@ export default function Alerts() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
         title="Alerts"
-        description="Delivery log and channel configuration — SMTP, WhatsApp, Telegram"
+        description="Delivery log and channel configuration --- SMTP, WhatsApp, Telegram"
         actions={
           <button className="btn-primary" onClick={handleTest} disabled={busy}>
-            <Send size={15} /> {busy ? "Sending…" : "Send test alert"}
+            <Send size={15} /> {busy ? "Sending..." : "Send test alert"}
           </button>
         }
       />
@@ -134,7 +134,7 @@ export default function Alerts() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-xs text-slate-500">SMTP not configured — alerts use the platform default.</p>
+                  <p className="text-xs text-slate-500">SMTP not configured --- alerts use the platform default.</p>
                 )}
                 <button className="btn-secondary w-full" onClick={() => setSettingsOpen(true)}>
                   <Settings size={14} /> Configure SMTP
@@ -152,7 +152,7 @@ export default function Alerts() {
                       {(alertSettings.whatsapp as any).delivery_live
                         ? <span className="text-emerald-400">Live via Meta Cloud API</span>
                         : alertSettings.whatsapp.enabled
-                          ? <span className="text-severity-medium">Enabled — provider not live</span>
+                          ? <span className="text-severity-medium">Enabled --- provider not live</span>
                           : "Not configured"
                       }
                       {alertSettings.whatsapp.enabled && alertSettings.whatsapp.recipients.length > 0 && (
@@ -169,7 +169,7 @@ export default function Alerts() {
                       {(alertSettings.telegram as any).delivery_live
                         ? <span className="text-emerald-400">Live via Bot API</span>
                         : alertSettings.telegram.enabled
-                          ? <span className="text-severity-medium">Enabled — provider not live</span>
+                          ? <span className="text-severity-medium">Enabled --- provider not live</span>
                           : "Not configured"
                       }
                       {alertSettings.telegram.enabled && alertSettings.telegram.recipients.length > 0 && (
@@ -350,7 +350,7 @@ function SMTPForm({
         Use TLS encryption
       </label>
       <button className="btn-primary w-full" onClick={() => onSave({ host, port, from_email: fromEmail, from_name: fromName, use_tls: useTls, username, password, recipients })} disabled={busy || !host}>
-        {busy ? "Saving…" : "Save SMTP Settings"}
+        {busy ? "Saving..." : "Save SMTP Settings"}
       </button>
     </div>
   );
@@ -409,7 +409,7 @@ function ChannelsForm({
           <div className="space-y-3">
             <div>
               <label className="label">Bot Token</label>
-              <input className="input text-sm font-mono" type="password" value={tgBotToken} onChange={(e) => setTgBotToken(e.target.value)} placeholder="123456:ABC-DEF…" />
+              <input className="input text-sm font-mono" type="password" value={tgBotToken} onChange={(e) => setTgBotToken(e.target.value)} placeholder="123456:ABC-DEF..." />
               <p className="text-[10px] text-slate-500 mt-1">Leave blank to use platform default. Create with @BotFather.</p>
             </div>
             <div>
@@ -422,7 +422,7 @@ function ChannelsForm({
       </div>
 
       <button className="btn-primary w-full" onClick={() => onSave({ waEnabled, waRecipients, tgEnabled, tgRecipients, tgBotToken })} disabled={busy}>
-        {busy ? "Saving…" : "Save Channel Settings"}
+        {busy ? "Saving..." : "Save Channel Settings"}
       </button>
     </div>
   );

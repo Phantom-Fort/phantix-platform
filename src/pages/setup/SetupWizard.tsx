@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -18,7 +18,7 @@ const stepsMeta = [
   { id: 5, key: "complete", label: "Complete", icon: <PartyPopper size={16} /> },
 ];
 
-/** Map server next_step → wizard step index (1–5). */
+/** Map server next_step → wizard step index (1---5). */
 function stepFromSetup(s: {
   privacy_accepted: boolean;
   identity_verified: boolean;
@@ -55,7 +55,7 @@ export default function SetupWizard() {
       setPrivacyNotice({
         version: s.privacy_notice_version || "2026-07-10",
         title: "How Phantix handles your organization's data",
-        summary: "Demo privacy notice — connect VITE_API_BASE for live copy from GET /organizations/privacy.",
+        summary: "Demo privacy notice --- connect VITE_API_BASE for live copy from GET /organizations/privacy.",
         highlights: [
           { id: "1", label: "Security data", text: "Findings and assets live only in your dedicated security database." },
           { id: "2", label: "Platform data", text: "We store account, billing, and setup state only." },
@@ -72,7 +72,7 @@ export default function SetupWizard() {
         const p = (Array.isArray(items) ? items[0] : raw) as Record<string, unknown> | null;
         setPrivacyNotice(p ?? raw);
       } catch {
-        // keep null — PrivacyStep will show its own error
+        // keep null --- PrivacyStep will show its own error
       }
     })();
   }, [s.privacy_notice_version]);
@@ -309,7 +309,7 @@ function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown>
             </ul>
           </>
         )}
-        {!pn && !summary && <p className="text-slate-500">Loading privacy notice…</p>}
+        {!pn && !summary && <p className="text-slate-500">Loading privacy notice...</p>}
       </div>
       {version && <p className="mt-2 text-[11px] text-slate-600">Notice version: {version}</p>}
       <label
@@ -349,7 +349,7 @@ function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown>
           }
         }}
       >
-        {busy ? "Recording…" : "Accept & continue"} <ArrowRight size={15} />
+        {busy ? "Recording..." : "Accept & continue"} <ArrowRight size={15} />
       </button>
     </div>
   );
@@ -412,13 +412,13 @@ function IdentityStep({ onSkip, onDone, privacyNotice }: { onSkip: () => void; o
           </div>
           <div>
             <label className="label">Company phone</label>
-            <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234 …" />
+            <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234 ..." />
           </div>
         </div>
         {error && <p className="text-sm text-severity-critical">{error}</p>}
         <div className="flex gap-3">
           <button type="submit" className="btn-primary flex-1 !py-3" disabled={busy}>
-            {busy ? "Saving…" : "Save & continue"}
+            {busy ? "Saving..." : "Save & continue"}
           </button>
           <button type="button" onClick={onSkip} className="btn-ghost">
             Skip for now
@@ -498,18 +498,18 @@ function OtpStep({ privacyNotice }: { privacyNotice: Record<string, unknown> | n
     <div className="card p-7">
       <StepTitle icon={<MailCheck size={18} />} kicker="Step 3 of 5 · required" title="Verify your sign-in email" />
       <p className="mt-2 text-sm text-slate-400">
-        We'll email a one-time code to <strong className="text-slate-200">{displayDest}</strong>. Email OTP only — phone verification is not supported.
+        We'll email a one-time code to <strong className="text-slate-200">{displayDest}</strong>. Email OTP only --- phone verification is not supported.
       </p>
 
       {!s.email_otp_sent ? (
         <button type="button" className="btn-primary mt-6 w-full !py-3" onClick={() => void send()} disabled={busy}>
-          {busy ? "Sending…" : "Send verification code"}
+          {busy ? "Sending..." : "Send verification code"}
         </button>
       ) : (
         <div className="mt-6 space-y-4">
           {devOtp && import.meta.env.DEV && (
             <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3.5 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-gold-400/80">Dev mode — your code</p>
+              <p className="text-[10px] uppercase tracking-wider text-gold-400/80">Dev mode --- your code</p>
               <p className="mt-1 font-mono text-2xl font-bold tracking-[0.4em] text-gold-300">{devOtp}</p>
             </div>
           )}
@@ -541,7 +541,7 @@ function OtpStep({ privacyNotice }: { privacyNotice: Record<string, unknown> | n
               }
             }}
           >
-            {busy ? "Verifying…" : "Verify email"}
+            {busy ? "Verifying..." : "Verify email"}
           </button>
           <button type="button" onClick={() => void send()} disabled={cooldown > 0 || busy} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">
             {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
@@ -593,7 +593,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
       <div className="card p-7">
         <StepTitle icon={<Globe size={18} />} kicker="Step 4 of 5 · optional" title="Prove company control" />
         <p className="mt-2 text-sm text-slate-400">
-          Any <strong>one</strong> mode marks the company as verified. You can skip — only privacy + email OTP are required to complete setup.
+          Any <strong>one</strong> mode marks the company as verified. You can skip --- only privacy + email OTP are required to complete setup.
         </p>
 
         {verified && (
@@ -662,7 +662,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                         }
                       }}
                     >
-                      {busy ? "Issuing…" : "Start"}
+                      {busy ? "Issuing..." : "Start"}
                     </button>
                   </div>
                 ) : (
@@ -672,7 +672,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                     </p>
                     <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option A — DNS TXT</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option A --- DNS TXT</p>
                         {s.domain_dns_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
                       </div>
                       {dnsTxt ? (
@@ -694,7 +694,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                     </div>
                     <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option B — HTTP well-known</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option B --- HTTP well-known</p>
                         {s.domain_http_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
                       </div>
                       {httpUrl ? (
@@ -708,7 +708,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                           <p className="mt-1.5 text-[10px] text-slate-500">{instr.http?.content_type ? `${instr.http.content_type}` : ""}{instr.http?.hint && <span className="block mt-0.5">{instr.http.hint}</span>}</p>
                           {httpBody && (
                             <>
-                              <p className="mt-1.5 text-[11px] text-slate-500">File body must be exactly: <code className="font-mono text-gold-300 text-[11px]">{httpBody.slice(0, 50)}{httpBody.length > 50 ? "…" : ""}</code></p>
+                              <p className="mt-1.5 text-[11px] text-slate-500">File body must be exactly: <code className="font-mono text-gold-300 text-[11px]">{httpBody.slice(0, 50)}{httpBody.length > 50 ? "..." : ""}</code></p>
                               <button type="button" className="mt-1 text-xs text-gold-400 hover:text-gold-300" onClick={() => copy(httpBody, "Token body")}>
                                 Copy token body
                               </button>
@@ -818,7 +818,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                           }
                         }}
                       >
-                        {busy ? "Submitting…" : "Submit details"}
+                        {busy ? "Submitting..." : "Submit details"}
                       </button>
                       <button
                         type="button"
@@ -843,7 +843,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                 {s.manual_review === "pending" ? (
                   <div className="flex items-center gap-3 text-sm text-slate-300">
                     <Loader2 size={16} className="animate-spin text-severity-medium" />
-                    Awaiting staff review — this screen refreshes automatically.
+                    Awaiting staff review --- this screen refreshes automatically.
                     <button type="button" className="btn-ghost !py-1 !text-xs" onClick={() => void refreshSetup()}>
                       Refresh now
                     </button>
@@ -858,7 +858,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                   <div className="space-y-3">
                     <div>
                       <label className="label">Notes for staff (optional)</label>
-                      <textarea className="input min-h-[72px]" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. DNS not available on CDN…" />
+                      <textarea className="input min-h-[72px]" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. DNS not available on CDN..." />
                     </div>
                     <button
                       type="button"
@@ -876,7 +876,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                         }
                       }}
                     >
-                      {busy ? "Requesting…" : "Request staff review"}
+                      {busy ? "Requesting..." : "Request staff review"}
                     </button>
                   </div>
                 )}
@@ -961,7 +961,7 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
       </div>
       {!canComplete && (
         <p className="mt-4 rounded-xl border border-severity-critical/30 bg-severity-critical/8 p-3.5 text-xs leading-5 text-severity-critical">
-          Privacy acceptance and email OTP are required. Complete those steps first — the API returns 400 otherwise.
+          Privacy acceptance and email OTP are required. Complete those steps first --- the API returns 400 otherwise.
         </p>
       )}
       {error && <p className="mt-3 text-sm text-severity-critical">{error}</p>}
@@ -976,13 +976,13 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
             await completeSetup();
             toast("success", "Organization setup complete", "Welcome to Phantix Platform.");
           } catch (err) {
-            setError(err instanceof Error ? err.message : "Complete failed — check privacy and email OTP");
+            setError(err instanceof Error ? err.message : "Complete failed --- check privacy and email OTP");
           } finally {
             setBusy(false);
           }
         }}
       >
-        {busy ? "Completing…" : "Complete setup"} <CheckCircle2 size={15} />
+        {busy ? "Completing..." : "Complete setup"} <CheckCircle2 size={15} />
       </button>
       <PrivacyRef notice={privacyNotice} />
     </div>
@@ -1022,7 +1022,7 @@ function PrivacyRef({ notice }: { notice: Record<string, unknown> | null }) {
       {summary && <p className="mt-0.5 line-clamp-2">{summary}</p>}
       <p className="mt-1 text-[10px] text-slate-600">
         This privacy model applies to all organization data stored by Phantix.
-        <span className="ml-1">Your data lives in your dedicated security database — we never store business rows.</span>
+        <span className="ml-1">Your data lives in your dedicated security database --- we never store business rows.</span>
       </p>
     </div>
   );

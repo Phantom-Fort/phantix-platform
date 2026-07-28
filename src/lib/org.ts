@@ -1,4 +1,4 @@
-import type { DbConnection, OrgContact, Organization } from "./types";
+﻿import type { DbConnection, OrgContact, Organization } from "./types";
 
 function asRecord(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
@@ -236,7 +236,7 @@ export function isSecurityDbReady(connections: DbConnection[], primary?: unknown
   return false;
 }
 
-/** Body for PUT /organizations/me — only editable profile fields. */
+/** Body for PUT /organizations/me --- only editable profile fields. */
 export function orgToUpdateBody(org: Partial<Organization>): Record<string, unknown> {
   const contact = (c: OrgContact | null | undefined) =>
     c

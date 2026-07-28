@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ShieldCheck, Mail, KeyRound, Smartphone, Loader2, X, Lock } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -195,7 +195,7 @@ export default function DualControlOverlay() {
                   <button className="btn-primary w-full !py-3" disabled={busy} onClick={() => void sendCode()}>
                     {busy ? (
                       <>
-                        <Loader2 size={15} className="animate-spin" /> Sending code…
+                        <Loader2 size={15} className="animate-spin" /> Sending code...
                       </>
                     ) : (
                       <>
@@ -231,7 +231,7 @@ export default function DualControlOverlay() {
                   <button className="btn-primary w-full !py-3" disabled={busy || code.length !== 6} onClick={() => void verifyOtp()}>
                     {busy ? (
                       <>
-                        <Loader2 size={15} className="animate-spin" /> Unlocking…
+                        <Loader2 size={15} className="animate-spin" /> Unlocking...
                       </>
                     ) : (
                       "Unlock operate session"
@@ -265,7 +265,7 @@ export default function DualControlOverlay() {
                   <button className="btn-primary w-full !py-3" disabled={busy || deviceCode.length !== 6} onClick={() => void verifyDevice()}>
                     {busy ? (
                       <>
-                        <Loader2 size={15} className="animate-spin" /> Confirming…
+                        <Loader2 size={15} className="animate-spin" /> Confirming...
                       </>
                     ) : (
                       "Confirm device & unlock"

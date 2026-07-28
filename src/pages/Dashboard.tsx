@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -29,7 +29,7 @@ export default function Dashboard() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">{state.org.name}</p>
         <h1 className="mt-1 font-display text-[26px] font-bold tracking-tight text-white">Tenant overview</h1>
-        <p className="mt-1 text-sm text-slate-400">Management home — keys, people and connections. Product operations live in the Command Centre.</p>
+        <p className="mt-1 text-sm text-slate-400">Management home --- keys, people and connections. Product operations live in the Command Centre.</p>
       </motion.div>
 
       {/* Security DB gate */}
@@ -163,8 +163,8 @@ export default function Dashboard() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm leading-6 text-slate-300">
                   {securityDbReady
-                    ? "Your security database is ready — the Command Centre is unblocked."
-                    : "Connect and bootstrap your security database first — the backend blocks scans and VAPT without it."}
+                    ? "Your security database is ready --- the Command Centre is unblocked."
+                    : "Connect and bootstrap your security database first --- the backend blocks scans and VAPT without it."}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <StatusBadge status={securityDbReady ? "ready" : "pending"} />

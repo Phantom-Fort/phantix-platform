@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 import { Download, ArrowRight } from "lucide-react";
 import { PageHeader, Card, StatusBadge } from "@/components/ui";
@@ -14,7 +14,7 @@ export default function Audit() {
         title="Audit trail"
         description="Immutable platform-DB trail. Once dual control is active, completed actions carry initiator and authorizer name + title snapshots for compliance export."
         actions={
-          <button className="btn-secondary" onClick={() => toast("info", "Export", "GET /audit/export?format=csv — both names on every row.")}>
+          <button className="btn-secondary" onClick={() => toast("info", "Export", "GET /audit/export?format=csv --- both names on every row.")}>
             <Download size={15} /> Export CSV
           </button>
         }
@@ -73,7 +73,7 @@ export default function Audit() {
       </motion.div>
 
       <p className="mt-4 text-xs text-slate-500">
-        Dual-control audit lives on the platform DB per organization — it is never written into your customer
+        Dual-control audit lives on the platform DB per organization --- it is never written into your customer
         security database. Asset-level change history lives there instead (asset_history).
       </p>
     </div>
