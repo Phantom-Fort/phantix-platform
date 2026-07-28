@@ -5,7 +5,8 @@ import {
   Users, UserPlus, ShieldCheck, Link2, KeyRound, ArrowRight, ArrowLeft,
   CheckCircle2, Copy, Unlock, Smartphone, AlertTriangle, Info, RefreshCw, Loader2,
 } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState, Spinner } from "@/components/ui";
+import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { timeAgo, maskEmail, cx } from "@/lib/utils";
 import type { OrgUser } from "@/lib/types";
@@ -45,9 +46,19 @@ export default function People() {
               <button
                 className="btn-secondary"
                 onClick={async () => {
-                  if (operate.unlocked || (await requireDualControl("Creating users post-bootstrap needs an initiator/authorizer session."))) {
-                    setAddOpen(true);
-                  }
+                  if (dc.configured && !operate.unlocked && !(await requireDualControl("Creating users post-bootstrap needs an initiator/authorizer session."))) return;
+                  try {
+                    if (!DEMO_MODE) {
+                      const ent = await api.get<any>("/billing/entitlements").catch(() => null);
+                      const remaining = ent?.org_users_remaining_free;
+                      const isPremium = ent?.premium_active;
+                      if (remaining !== undefined && remaining <= 0 && !isPremium) {
+                        toast("warning", "User limit reached", `Free plan includes ${ent?.billing_enforcement?.free_org_user_cap ?? 2} users. Upgrade to Premium for more.`);
+                        return;
+                      }
+                    }
+                  } catch {} 
+                  setAddOpen(true);
                 }}
               >
                 <UserPlus size={15} /> Add user

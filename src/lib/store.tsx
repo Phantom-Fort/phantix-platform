@@ -336,6 +336,7 @@ type Store = {
   operate: OperateState;
   securityDbReady: boolean;
   sessionLoading: boolean;
+  billingEntitlements: Record<string, any> | null;
   // auth
   register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<{ mfaRequired: boolean }>;
   login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
@@ -451,6 +452,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const toastId = useRef(0);
   const hydrating = useRef(false);
   const [sessionLoading, setSessionLoading] = useState(!!(tokens.platform && !DEMO_MODE));
+  const [billingEntitlements, setBillingEnts] = useState<Record<string, any> | null>(null);
 
   // Auto-redirect to login when token expires (401 clears tokens via api client)
   useEffect(() => {
@@ -493,7 +495,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const resolvedEmail = email || emailFromToken() || tokens.email || "";
       if (resolvedEmail) tokens.email = resolvedEmail;
 
-      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes, alertsRes, alertSettingsRes, auditRes, pendingRes] = await Promise.all([
+      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes, alertsRes, alertSettingsRes, auditRes, pendingRes, entRes] = await Promise.all([
         api.get<unknown>("/organizations/me").catch(() => null),
         api.get<SetupApi>("/organizations/me/setup").catch(() => null),
         api.get<unknown>("/db-connections").catch(() => null),
@@ -507,7 +509,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         api.get<unknown>("/alerts/settings").catch(() => null),
         api.get<unknown>("/audit/events").catch(() => null),
         api.get<unknown>("/audit/pending").catch(() => null),
+        api.get<unknown>("/billing/entitlements").catch(() => null),
       ]);
+
+      if (entRes) setBillingEnts(entRes as Record<string, any>);
 
       const org = meRes
         ? mapOrgFromApi(meRes, resolvedEmail)
@@ -1988,7 +1993,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Store>(
     () => ({
-      session, state, operate, securityDbReady, sessionLoading,
+      session, state, operate, securityDbReady, sessionLoading, billingEntitlements,
       register, login, verifyMfa, logout, hydrateSession,
       acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
