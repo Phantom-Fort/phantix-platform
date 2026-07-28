@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Database, Plus, ShieldCheck, AlertTriangle, Loader2, Trash2, Zap, Info } from "lucide-react";
 import { PageHeader, Card, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
+import { DEMO_MODE } from "@/lib/api";
 import { timeAgo, cx } from "@/lib/utils";
 
 export default function Connections() {
@@ -14,9 +15,11 @@ export default function Connections() {
   const [busyId, setBusyId] = useState<number | null>(null);
 
   React.useEffect(() => {
-    void refreshConnections();
-    void hydrateSession();
-  }, [refreshConnections, hydrateSession]);
+    if (!DEMO_MODE) {
+      void refreshConnections();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** Dual control must be set up before managing DB connections. */
   const guard = async () => {
