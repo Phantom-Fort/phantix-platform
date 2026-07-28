@@ -7,6 +7,7 @@ import {
   RotateCcw, ShieldCheck, Sparkles, BellRing,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { DEMO_MODE } from "@/lib/api";
 import { APP_URL } from "@/lib/links";
 import { cx } from "@/lib/utils";
 
@@ -62,6 +63,45 @@ export default function Layout() {
   const [userMenu, setUserMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Auto-logout after inactivity — timeout driven by backend's inactivity_expires_at (fallback 20 min)
+  useEffect(() => {
+    if (!session?.authenticated || DEMO_MODE) return;
+    const DEFAULT_MS = 20 * 60 * 1000;
+    const WARNING_BEFORE_MS = 5 * 60 * 1000;
+    let lastActivity = Date.now();
+    let warned = false;
+
+    const getTimeoutMs = () => operate.expiresAt ? (operate.expiresAt - Date.now()) : DEFAULT_MS;
+    const getWarningMs = () => getTimeoutMs() - WARNING_BEFORE_MS;
+
+    const markActivity = () => { lastActivity = Date.now(); warned = false; };
+    const events = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"];
+    events.forEach((e) => window.addEventListener(e, markActivity, { passive: true }));
+
+    const check = () => {
+      if (!session?.authenticated) return;
+      const idle = Date.now() - lastActivity;
+      const timeoutMs = getTimeoutMs();
+      if (idle >= timeoutMs) {
+        toast("warning", "Session expired", "You have been logged out due to a long period of inactivity. Please sign in again.");
+        logout();
+      } else if (idle >= getWarningMs() && !warned) {
+        warned = true;
+        toast("info", "Session expiring soon", "You will be logged out in 5 minutes due to inactivity.");
+      }
+    };
+
+    const interval = window.setInterval(check, 10000);
+    const onVisible = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, markActivity));
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [session?.authenticated, operate.expiresAt, logout, toast]);
 
   const dc = state.dualControl;
   const initiator = state.users.find((u) => u.id === dc.initiator_user_id);

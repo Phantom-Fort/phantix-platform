@@ -335,6 +335,7 @@ type Store = {
   state: PersistedState;
   operate: OperateState;
   securityDbReady: boolean;
+  sessionLoading: boolean;
   // auth
   register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<{ mfaRequired: boolean }>;
   login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
@@ -449,6 +450,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const hydrating = useRef(false);
+  const [sessionLoading, setSessionLoading] = useState(!!(tokens.platform && !DEMO_MODE));
 
   // Auto-redirect to login when token expires (401 clears tokens via api client)
   useEffect(() => {
@@ -486,6 +488,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const hydrateSession = useCallback(async (email = "") => {
     if (DEMO_MODE || !tokens.platform || hydrating.current) return;
     hydrating.current = true;
+    setSessionLoading(true);
     try {
       const resolvedEmail = email || emailFromToken() || tokens.email || "";
       if (resolvedEmail) tokens.email = resolvedEmail;
@@ -617,6 +620,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       hydrating.current = false;
+      setSessionLoading(false);
     }
   }, [persist]);
 
@@ -1984,7 +1988,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Store>(
     () => ({
-      session, state, operate, securityDbReady,
+      session, state, operate, securityDbReady, sessionLoading,
       register, login, verifyMfa, logout, hydrateSession,
       acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,

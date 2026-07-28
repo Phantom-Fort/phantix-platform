@@ -21,9 +21,19 @@ import Alerts from "@/pages/Alerts";
 
 // Authenticated + setup-complete gate for management routes
 function RequireManagement({ children }: { children: React.ReactNode }) {
-  const { session, state } = useStore();
+  const { session, state, sessionLoading } = useStore();
   const location = useLocation();
   if (!session?.authenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (sessionLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-phantix-500 border-t-gold-400" />
+          <p className="mt-3 text-sm text-slate-400">Restoring session…</p>
+        </div>
+      </div>
+    );
+  }
   if (!state.setup.setup_complete) return <Navigate to="/setup" replace />;
   return <>{children}</>;
 }
