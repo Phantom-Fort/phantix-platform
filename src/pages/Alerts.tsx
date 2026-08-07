@@ -96,7 +96,7 @@ export default function Alerts() {
                       <td className="px-5 py-3"><span className={cx("chip capitalize", severityBadge[a.severity])}>{a.severity}</span></td>
                       <td className="px-5 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {a.channels.map((ch) => (
+                          {(a.channels ?? []).map((ch) => (
                             <span key={ch} className="chip text-xs">{ch}</span>
                           ))}
                         </div>
@@ -155,8 +155,8 @@ export default function Alerts() {
                           ? <span className="text-severity-medium">Enabled --- provider not live</span>
                           : "Not configured"
                       }
-                      {alertSettings.whatsapp.enabled && alertSettings.whatsapp.recipients.length > 0 && (
-                        <span className="block text-slate-500">{alertSettings.whatsapp.recipients.join(", ")}</span>
+                      {alertSettings.whatsapp.enabled && (alertSettings.whatsapp.recipients ?? []).length > 0 && (
+                        <span className="block text-slate-500">{(alertSettings.whatsapp.recipients ?? []).join(", ")}</span>
                       )}
                     </p>
                   </div>
@@ -172,8 +172,8 @@ export default function Alerts() {
                           ? <span className="text-severity-medium">Enabled --- provider not live</span>
                           : "Not configured"
                       }
-                      {alertSettings.telegram.enabled && alertSettings.telegram.recipients.length > 0 && (
-                        <span className="block text-slate-500">{alertSettings.telegram.recipients.join(", ")}</span>
+                      {alertSettings.telegram.enabled && (alertSettings.telegram.recipients ?? []).length > 0 && (
+                        <span className="block text-slate-500">{(alertSettings.telegram.recipients ?? []).join(", ")}</span>
                       )}
                     </p>
                   </div>

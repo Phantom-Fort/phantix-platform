@@ -53,17 +53,24 @@ export default function AiSettings() {
           api.get<Record<string, unknown>>("/ai/usage").catch(() => null),
         ]);
         if (cancelled) return;
-        const providersRaw = (settings?.providers as { id?: string; name?: string; configured?: boolean }[]) ?? [];
+        const providersRaw = Array.isArray(settings?.providers)
+          ? (settings.providers as { id?: string; name?: string; configured?: boolean }[])
+          : [];
+        const enabledProviders = Array.isArray(settings?.enabled_providers)
+          ? (settings.enabled_providers as unknown[]).map(String)
+          : [];
         setAi({
           enabled: Boolean(settings?.ai_enabled ?? settings?.enabled ?? false),
           agent_enabled: Boolean(settings?.agent_enabled ?? false),
           default_provider: String(settings?.default_provider ?? settings?.mode ?? ""),
           ai_pentest_ready: Boolean(settings?.ai_pentest_ready ?? false),
           mode: String(settings?.mode ?? "balanced"),
-          providers: providersRaw.map((p) => ({
-            id: String(p.id ?? p.name ?? "provider"),
-            configured: Boolean(p.configured),
-          })),
+          providers: providersRaw.length
+            ? providersRaw.map((p) => ({
+                id: String(p.id ?? p.name ?? "provider"),
+                configured: Boolean(p.configured),
+              }))
+            : enabledProviders.map((id) => ({ id, configured: true })),
           monthly_tokens: Number(usage?.monthly_tokens ?? settings?.monthly_tokens ?? 0),
           monthly_cost_usd: Number(usage?.monthly_cost_usd ?? settings?.monthly_cost_usd ?? 0),
         });

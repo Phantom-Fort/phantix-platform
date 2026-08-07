@@ -276,6 +276,47 @@ function mapToolsFromApi(raw: unknown): ToolItem[] {
   }));
 }
 
+/** Normalize GET /alerts/settings into a full AlertSettings (defensive defaults). */
+function normalizeAlertSettings(raw: unknown): AlertSettings {
+  const r = asRecord(raw) ?? {};
+  const smtpRaw = asRecord(r.smtp) ?? {};
+  const waRaw = asRecord(r.whatsapp) ?? {};
+  const tgRaw = asRecord(r.telegram) ?? {};
+  const notifyRaw = asRecord(r.notify) ?? {};
+  const emailRecipients = Array.isArray(r.email_recipients)
+    ? r.email_recipients.map(String)
+    : Array.isArray(smtpRaw.email_recipients)
+      ? smtpRaw.email_recipients.map(String)
+      : [];
+  const waRecipients = Array.isArray(waRaw.recipients) ? waRaw.recipients.map(String) : [];
+  const tgRecipients = Array.isArray(tgRaw.recipients) ? tgRaw.recipients.map(String) : [];
+  return {
+    alerts_enabled: r.alerts_enabled !== false,
+    smtp: {
+      enabled: smtpRaw.enabled !== false,
+      host: String(smtpRaw.host ?? ""),
+      port: Number(smtpRaw.port ?? 587),
+      from_email: String(smtpRaw.from_email ?? smtpRaw.fromEmail ?? ""),
+      from_name: String(smtpRaw.from_name ?? smtpRaw.fromName ?? "Phantix Alerts"),
+      use_tls: smtpRaw.use_tls !== false,
+    },
+    email_recipients: emailRecipients,
+    whatsapp: {
+      enabled: waRaw.enabled === true,
+      provider: String(waRaw.provider ?? "auto"),
+      recipients: waRecipients,
+    },
+    telegram: {
+      enabled: tgRaw.enabled === true,
+      provider: String(tgRaw.provider ?? "auto"),
+      recipients: tgRecipients,
+    },
+    notify: Object.fromEntries(
+      Object.entries(notifyRaw).map(([k, v]) => [k, v !== false]),
+    ) as Record<string, boolean>,
+  };
+}
+
 /** Normalize GET /support/tickets into SupportTicket[]. */
 function mapTicketsFromApi(raw: unknown): SupportTicket[] {
   const list = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] })?.items ?? []);
@@ -702,7 +743,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         loginLinks,
         companies: companies.length ? companies : s.companies,
         alerts: Array.isArray(alertsRes) ? (alertsRes as unknown as AlertEvent[]) : (((alertsRes as { items?: unknown[] })?.items ?? []) as AlertEvent[]),
-        alertSettings: (alertSettingsRes as AlertSettings) ?? s.alertSettings,
+        alertSettings: alertSettingsRes ? normalizeAlertSettings(alertSettingsRes) : s.alertSettings,
         audit: Array.isArray(auditRes) ? (auditRes as unknown as AuditEvent[]) : s.audit,
         pending: Array.isArray(pendingRes) ? (pendingRes as unknown as PendingAction[]) : s.pending,
         tools: toolsRes ? mapToolsFromApi(toolsRes) : s.tools,
