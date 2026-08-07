@@ -7,14 +7,21 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, AnimatedNumber, StatusBadge } from "@/components/ui";
 import { useStore } from "@/lib/store";
+import { useSmartPoll } from "@/lib/usePolling";
 import { APP_URL } from "@/lib/links";
 import { timeAgo, cx } from "@/lib/utils";
 
 export default function Dashboard() {
-  const { state, securityDbReady, operate, toast } = useStore();
+  const { state, securityDbReady, operate, toast, refreshSession } = useStore();
   const navigate = useNavigate();
   const dc = state.dualControl;
   const twoUsers = state.users.length >= 2;
+
+  // Smart polling: keep tenant overview fresh in the background (SWR-style).
+  // Slows to 60s when the tab is hidden; refreshes immediately on focus.
+  useSmartPoll(async () => {
+    try { await refreshSession(); } catch { /* keep last data */ }
+  }, { intervalMs: 30000, hiddenIntervalMs: 120000 });
 
   const checklist = [
     { done: state.setup.setup_complete, label: "Organization setup complete", to: "/dashboard" },

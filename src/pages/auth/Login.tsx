@@ -1,20 +1,24 @@
 ﻿import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Mail, KeyRound, ArrowRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { DEMO_MODE } from "@/lib/api";
 import { APP_DEMO_URL } from "@/lib/links";
+import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Login() {
   const { login, verifyMfa, state } = useStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [searchParams] = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [stage, setStage] = useState<"password" | "mfa">("password");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [destinationMasked, setDestinationMasked] = useState("");
 
   const destination = () => (state.setup.setup_complete ? "/dashboard" : "/setup");
 
@@ -25,7 +29,11 @@ export default function Login() {
     try {
       if (stage === "password") {
         const res = await login(email, password);
-        if (res.mfaRequired) setStage("mfa");
+        if (res.mfaRequired) {
+          // Prefer the API-masked destination when the server returns one.
+          if (res.destinationMasked) setDestinationMasked(res.destinationMasked);
+          setStage("mfa");
+        }
         else navigate(destination());
       } else {
         await verifyMfa(code);
@@ -44,10 +52,13 @@ export default function Login() {
         <div className="absolute inset-0 bg-grid-faint bg-grid [mask-image:radial-gradient(ellipse_70%_60%_at_50%_40%,black,transparent)]" />
         <div className="absolute left-1/2 top-1/3 h-[420px] w-[680px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-phantix-600/20 blur-[130px]" />
       </div>
+      <div className="absolute right-6 top-6 z-20"><ThemeToggle /></div>
 
       <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }} className="relative w-full max-w-[420px]">
         <div className="mb-8 text-center">
-          <motion.img src="/logo-white.png" alt="Phantix" className="mx-auto h-20 w-20 object-contain drop-shadow-[0_0_40px_rgba(51,85,181,0.6)]" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.7, delay: 0.1 }} />
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.7, delay: 0.1 }} className="mx-auto">
+            <BrandLogo className="mx-auto h-20 w-20 drop-shadow-[0_0_40px_rgba(51,85,181,0.6)]" />
+          </motion.div>
           <h1 className="mt-5 font-display text-2xl font-bold text-white">Phantix Platform</h1>
           <p className="mt-1.5 text-sm text-slate-400">
             Company sign-in · <span className="font-mono text-xs">type=access</span>
@@ -86,7 +97,7 @@ export default function Login() {
                 <div className="rounded-xl border border-phantix-600/40 bg-phantix-800/40 p-3.5 text-center">
                   <ShieldCheck size={22} className="mx-auto text-gold-400" />
                   <p className="mt-2 text-sm font-medium text-slate-200">Email verification</p>
-                  <p className="mt-1 text-xs text-slate-500">A 6-digit code was sent to {email.replace(/(.{2}).+(@.+)/, "$1***$2")}</p>
+                  <p className="mt-1 text-xs text-slate-500">A 6-digit code was sent to {destinationMasked || email.replace(/(.{2}).+(@.+)/, "$1***$2")}</p>
                 </div>
                 <input
                   className="input text-center font-mono !text-xl !tracking-[0.5em]"

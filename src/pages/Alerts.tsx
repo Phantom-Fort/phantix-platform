@@ -260,7 +260,7 @@ export default function Alerts() {
               const tgUpdate: Record<string, unknown> = {
                 ...alertSettings.telegram,
                 enabled: form.tgEnabled,
-                provider: form.tgEnabled ? (alertSettings.telegram.provider || "auto") : alertSettings.telegram.provider,
+                provider: form.tgEnabled ? form.tgProvider : alertSettings.telegram.provider,
                 recipients: form.tgRecipients.split(",").map((s: string) => s.trim()).filter(Boolean),
               };
               if (form.tgBotToken) tgUpdate.bot_token = form.tgBotToken;
@@ -268,7 +268,7 @@ export default function Alerts() {
                 whatsapp: {
                   ...alertSettings.whatsapp,
                   enabled: form.waEnabled,
-                  provider: form.waEnabled ? (alertSettings.whatsapp.provider || "auto") : alertSettings.whatsapp.provider,
+                  provider: form.waEnabled ? form.waProvider : alertSettings.whatsapp.provider,
                   recipients: form.waRecipients.split(",").map((s: string) => s.trim()).filter(Boolean),
                 } as any,
                 telegram: tgUpdate as any,
@@ -361,14 +361,29 @@ function ChannelsForm({
   initial, onSave, busy,
 }: {
   initial: { whatsapp: { enabled: boolean; provider: string; recipients: string[] }; telegram: { enabled: boolean; provider: string; recipients: string[]; bot_token?: string } };
-  onSave: (form: { waEnabled: boolean; waRecipients: string; tgEnabled: boolean; tgRecipients: string; tgBotToken: string }) => Promise<void>;
+  onSave: (form: { waEnabled: boolean; waProvider: string; waRecipients: string; tgEnabled: boolean; tgProvider: string; tgRecipients: string; tgBotToken: string }) => Promise<void>;
   busy: boolean;
 }) {
   const [waEnabled, setWaEnabled] = useState(initial.whatsapp.enabled);
+  const [waProvider, setWaProvider] = useState(initial.whatsapp.provider || "auto");
   const [waRecipients, setWaRecipients] = useState((initial.whatsapp.recipients || []).join(", "));
   const [tgEnabled, setTgEnabled] = useState(initial.telegram.enabled);
+  const [tgProvider, setTgProvider] = useState(initial.telegram.provider || "auto");
   const [tgRecipients, setTgRecipients] = useState((initial.telegram.recipients || []).join(", "));
   const [tgBotToken, setTgBotToken] = useState((initial.telegram as any).bot_token || "");
+  const [error, setError] = useState<string | null>(null);
+
+  const E164 = /^\+[1-9]\d{7,14}$/;
+
+  const save = () => {
+    setError(null);
+    const wa = waRecipients.split(",").map((s: string) => s.trim()).filter(Boolean);
+    if (waEnabled && wa.some((r) => !E164.test(r))) {
+      setError("WhatsApp recipients must be E.164 (e.g. +2348012345678).");
+      return;
+    }
+    void onSave({ waEnabled, waProvider, waRecipients, tgEnabled, tgProvider, tgRecipients, tgBotToken });
+  };
 
   return (
     <div className="space-y-5">
@@ -385,10 +400,20 @@ function ChannelsForm({
           </label>
         </div>
         {waEnabled && (
-          <div>
-            <label className="label">Recipients (E.164 phone numbers)</label>
-            <input className="input text-sm font-mono" value={waRecipients} onChange={(e) => setWaRecipients(e.target.value)} placeholder="+2348012345678, +2348098765432" />
-            <p className="text-[10px] text-slate-500 mt-1">International format. Requires a Meta-approved utility template for business-initiated messages.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="label">Provider</label>
+              <select className="input text-sm" value={waProvider} onChange={(e) => setWaProvider(e.target.value)}>
+                <option value="auto">Auto (recommended)</option>
+                <option value="meta">Meta Cloud API</option>
+                <option value="log">Log mode (dev)</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Recipients (E.164 phone numbers)</label>
+              <input className="input text-sm font-mono" value={waRecipients} onChange={(e) => setWaRecipients(e.target.value)} placeholder="+2348012345678, +2348098765432" />
+              <p className="text-[10px] text-slate-500 mt-1">International format (+[country][number]). Requires a Meta-approved utility template for business-initiated messages.</p>
+            </div>
           </div>
         )}
       </div>
@@ -408,6 +433,14 @@ function ChannelsForm({
         {tgEnabled && (
           <div className="space-y-3">
             <div>
+              <label className="label">Provider</label>
+              <select className="input text-sm" value={tgProvider} onChange={(e) => setTgProvider(e.target.value)}>
+                <option value="auto">Auto (recommended)</option>
+                <option value="telegram_bot">Telegram Bot</option>
+                <option value="log">Log mode (dev)</option>
+              </select>
+            </div>
+            <div>
               <label className="label">Bot Token</label>
               <input className="input text-sm font-mono" type="password" value={tgBotToken} onChange={(e) => setTgBotToken(e.target.value)} placeholder="123456:ABC-DEF..." />
               <p className="text-[10px] text-slate-500 mt-1">Leave blank to use platform default. Create with @BotFather.</p>
@@ -421,7 +454,9 @@ function ChannelsForm({
         )}
       </div>
 
-      <button className="btn-primary w-full" onClick={() => onSave({ waEnabled, waRecipients, tgEnabled, tgRecipients, tgBotToken })} disabled={busy}>
+      {error && <p className="text-sm text-severity-critical">{error}</p>}
+
+      <button className="btn-primary w-full" onClick={save} disabled={busy}>
         {busy ? "Saving..." : "Save Channel Settings"}
       </button>
     </div>

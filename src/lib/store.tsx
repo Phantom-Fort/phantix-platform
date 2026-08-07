@@ -61,6 +61,7 @@ const demoTools: ToolItem[] = [
   { id: 4, key: "katana", name: "Katana", category: "Recon", description: "Web crawling for the web_scan pipeline", subscribed: false, price_note: "Add-on" },
   { id: 5, key: "sqlmap", name: "SQLMap", category: "Exploitation", description: "Parameterized SQLi confirmation", subscribed: false, price_note: "Add-on" },
   { id: 6, key: "gowitness", name: "Gowitness", category: "Evidence", description: "Screenshot capture for report evidence", subscribed: false, price_note: "Add-on" },
+  { id: 7, key: "caido", name: "Caido Advanced Proxy", category: "Vulnerability", description: "Advanced deep web/API analysis via Caido — proxy history, Replay, findings, workflows. The primary advanced path (replaces Burp).", subscribed: false, price_note: "Add-on" },
 ];
 
 const demoPayments: Payment[] = [
@@ -120,6 +121,7 @@ interface PersistedState {
   companies: ChildCompany[];
   serviceKey: ServiceKeyMeta | null;
   loginLinks: LoginLink[];
+  identity: { id: number; slug: string; creator_user_id: number };
   audit: AuditEvent[];
   pending: PendingAction[];
   tools: ToolItem[];
@@ -151,6 +153,7 @@ const emptyState = (): PersistedState => ({
   companies: [],
   serviceKey: null,
   loginLinks: [],
+  identity: { id: 0, slug: "", creator_user_id: 0 },
   audit: [],
   pending: [],
   tools: [],
@@ -170,6 +173,7 @@ const demoState = (): PersistedState => ({
   companies: [],
   serviceKey: null,
   loginLinks: [],
+  identity: { id: 11, slug: "demo-financial", creator_user_id: 1 },
   audit: demoAudit(),
   pending: [],
   tools: demoTools,
@@ -257,6 +261,40 @@ function parseDomainFlags(raw: unknown): { dns: boolean; http: boolean; domain: 
   };
 }
 
+/** Normalize GET /tools/catalog + /tools/my-tools into ToolItem[]. */
+function mapToolsFromApi(raw: unknown): ToolItem[] {
+  const list = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] })?.items ?? []);
+  const items = list as Record<string, unknown>[];
+  return items.map((t, i) => ({
+    id: Number(t.id ?? i + 1),
+    key: String(t.tool_key ?? t.key ?? ""),
+    name: String(t.name ?? t.tool_name ?? t.key ?? ""),
+    category: String(t.category ?? "tooling"),
+    description: String(t.description ?? ""),
+    subscribed: t.subscription_status === "active" || t.provision_status === "active" || t.subscribed === true,
+    price_note: String(t.pricing_model ?? (t.eligible ? "Included" : "Add-on")),
+  }));
+}
+
+/** Normalize GET /support/tickets into SupportTicket[]. */
+function mapTicketsFromApi(raw: unknown): SupportTicket[] {
+  const list = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] })?.items ?? []);
+  return (list as Record<string, unknown>[]).map((t) => ({
+    id: Number(t.id ?? 0),
+    subject: String(t.subject ?? ""),
+    status: (["open", "pending", "closed"].includes(String(t.status ?? "open")) ? t.status : "open") as SupportTicket["status"],
+    priority: String(t.priority ?? "normal"),
+    created_at: String(t.created_at ?? new Date().toISOString()),
+    messages: Array.isArray(t.messages)
+      ? (t.messages as Record<string, unknown>[]).map((m) => ({
+          from: String(m.submitter_name ?? m.from ?? "You"),
+          body: String(m.body ?? m.message ?? ""),
+          at: String(m.created_at ?? m.at ?? new Date().toISOString()),
+        }))
+      : [],
+  }));
+}
+
 function mapSetupFromApi(api: SetupApi, emailFallback = ""): { org: Partial<Organization>; setup: SetupState } {
   const privacy = asRecord(api.privacy) || {};
   const identity = asRecord(api.identity) || {};
@@ -339,7 +377,7 @@ type Store = {
   billingEntitlements: Record<string, any> | null;
   // auth
   register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<{ mfaRequired: boolean }>;
-  login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
+  login: (email: string, password: string) => Promise<{ mfaRequired: boolean; destinationMasked?: string }>;
   verifyMfa: (code: string) => Promise<void>;
   logout: () => void;
   hydrateSession: (email?: string) => Promise<void>;
@@ -373,6 +411,8 @@ type Store = {
   completeSetup: () => Promise<void>;
   /** Fresh GET /organizations/me/setup only (lighter than full hydrate). */
   refreshSetup: () => Promise<void>;
+  /** Full re-hydrate of org state from the API (SWR-style background refresh). */
+  refreshSession: () => Promise<void>;
   // users & dual control
   createUser: (u: { full_name: string; email: string; title: string; role: string }) => Promise<OrgUser>;
   assignDualControl: (initiatorId: number, authorizerId: number) => Promise<void>;
@@ -411,7 +451,7 @@ type Store = {
   /** DELETE /organizations/me/logo */
   deleteLogo: () => Promise<void>;
   // misc
-  toggleTool: (id: number) => Promise<void>;
+  toggleTool: (tool: ToolItem) => Promise<void>;
   createTicket: (subject: string, priority: string, body: string) => Promise<void>;
   decidePending: (id: number, approve: boolean) => Promise<void>;
   sendTestAlert: () => Promise<void>;
@@ -495,7 +535,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const resolvedEmail = email || emailFromToken() || tokens.email || "";
       if (resolvedEmail) tokens.email = resolvedEmail;
 
-      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes, alertsRes, alertSettingsRes, auditRes, pendingRes, entRes] = await Promise.all([
+      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes, alertsRes, alertSettingsRes, auditRes, pendingRes, entRes, identityRes, loginLinksRes, companiesRes, toolsRes, ticketsRes] = await Promise.all([
         api.get<unknown>("/organizations/me").catch(() => null),
         api.get<SetupApi>("/organizations/me/setup").catch(() => null),
         api.get<unknown>("/db-connections").catch(() => null),
@@ -510,6 +550,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         api.get<unknown>("/audit/events").catch(() => null),
         api.get<unknown>("/audit/pending").catch(() => null),
         api.get<unknown>("/billing/entitlements").catch(() => null),
+        api.get<unknown>("/organizations/me/identity").catch(() => null),
+        api.get<unknown>("/organizations/me/login-links").catch(() => null),
+        api.get<unknown>("/organizations/me/companies").catch(() => null),
+        api.get<unknown>("/tools/catalog").catch(() => null),
+        api.get<unknown>("/support/tickets").catch(() => null),
       ]);
 
       if (entRes) setBillingEnts(entRes as Record<string, any>);
@@ -581,6 +626,49 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
 
       const displayEmail = resolvedEmail || org.email || "";
+
+      // Identity chips (org id / slug / creator) --- doc 02 §3.1
+      let identity: { id: number; slug: string; creator_user_id: number } = { id: org.id ?? 0, slug: org.slug ?? "", creator_user_id: 0 };
+      if (identityRes && typeof identityRes === "object") {
+        const idObj = identityRes as Record<string, unknown>;
+        identity = {
+          id: Number(idObj.id ?? idObj.organization_id ?? org.id ?? 0),
+          slug: String(idObj.slug ?? org.slug ?? ""),
+          creator_user_id: Number(idObj.creator_user_id ?? 0),
+        };
+      }
+
+      // Login links history --- doc 02 §3.4
+      let loginLinks: LoginLink[] = [];
+      if (loginLinksRes) {
+        const rawLinks = Array.isArray(loginLinksRes) ? loginLinksRes : ((loginLinksRes as { items?: unknown[] })?.items ?? []);
+        loginLinks = (rawLinks as Record<string, unknown>[]).map((l) => ({
+          id: Number(l.id ?? 0),
+          user_id: Number(l.user_id ?? 0),
+          user_name: String(l.user_name ?? l.full_name ?? ""),
+          created_at: String(l.created_at ?? new Date().toISOString()),
+          used_at: (l.used_at as string) ?? null,
+          status: ["active", "used", "expired"].includes(String(l.status ?? "active"))
+            ? (l.status as LoginLink["status"])
+            : "active",
+        }));
+      }
+
+      // Child companies --- doc 02 §3.2
+      let companies: ChildCompany[] = [];
+      if (companiesRes) {
+        const rawCompanies = Array.isArray(companiesRes) ? companiesRes : ((companiesRes as { items?: unknown[] })?.items ?? []);
+        companies = (rawCompanies as Record<string, unknown>[]).map((c) => ({
+          id: Number(c.id ?? 0),
+          name: String(c.name ?? ""),
+          slug: String(c.slug ?? ""),
+          industry: String(c.industry ?? ""),
+          country: String(c.country ?? ""),
+          key_prefix: (c.key_prefix as string) ?? null,
+          created_at: String(c.created_at ?? new Date().toISOString()),
+        }));
+      }
+
       persist((s) => ({
         ...s,
         org: {
@@ -610,10 +698,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         serviceKey: serviceKey ?? s.serviceKey,
         users: users.length ? users : s.users,
         dualControl: dualControl.configured ? dualControl : s.dualControl,
+        identity,
+        loginLinks,
+        companies: companies.length ? companies : s.companies,
         alerts: Array.isArray(alertsRes) ? (alertsRes as unknown as AlertEvent[]) : (((alertsRes as { items?: unknown[] })?.items ?? []) as AlertEvent[]),
         alertSettings: (alertSettingsRes as AlertSettings) ?? s.alertSettings,
         audit: Array.isArray(auditRes) ? (auditRes as unknown as AuditEvent[]) : s.audit,
         pending: Array.isArray(pendingRes) ? (pendingRes as unknown as PendingAction[]) : s.pending,
+        tools: toolsRes ? mapToolsFromApi(toolsRes) : s.tools,
+        tickets: ticketsRes ? mapTicketsFromApi(ticketsRes) : s.tickets,
       }));
       setSession({ authenticated: true, email: displayEmail });
     } catch {
@@ -669,43 +762,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return { mfaRequired: false };
       }
       await api.post("/organizations/register", { name, email, password: _password, country, slug, industry, secondary_email, primary_contact });
-      const res = await api.postForm<{
-        access_token?: string;
-        mfa_required?: boolean;
-        mfa_token?: string;
-        organization_id?: number;
-        organization_slug?: string;
-        experience?: { organization_name?: string };
-      }>("/organizations/login", { username: email, password: _password });
-
-      if (res.mfa_required && res.mfa_token) {
-        sessionStorage.setItem("mfa_token", res.mfa_token);
-        persist((s) => ({
-          ...s,
-          org: { ...s.org, name, email, primary_email: email, country, slug, industry },
-        }));
-        return { mfaRequired: true };
-      }
-
-      tokens.platform = res.access_token!;
-      tokens.orgUser = null;
-      tokens.email = email;
-      setState(emptyState());
-      setSession({ authenticated: true, email });
+      // Per 01_ORG_SETUP_IMPLEMENTATION.md §3.1: register returns 201 + org profile, NO JWT.
+      // Do NOT auto-login --- the user signs in on /login (email prefilled).
       persist((s) => ({
         ...s,
-        org: {
-          ...s.org,
-          id: res.organization_id ?? 0,
-          name: res.experience?.organization_name || name,
-          slug: res.organization_slug || slug,
-          primary_email: email,
-          country,
-          industry,
-        },
-        setup: emptySetup(),
+        org: { ...s.org, name, email, primary_email: email, country, slug, industry },
       }));
-      await hydrateSession(email);
       return { mfaRequired: false };
     },
     [persist, hydrateSession],
@@ -716,12 +778,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(650);
       if (!email.includes("@")) throw new Error("Enter a valid company email");
       sessionStorage.setItem("mfa_token", "demo-mfa");
-      return { mfaRequired: true };
+      return { mfaRequired: true, destinationMasked: "" };
     }
     const res = await api.postForm<{
       access_token?: string;
       mfa_required?: boolean;
       mfa_token?: string;
+      destination_masked?: string;
       organization_id?: number;
       organization_slug?: string;
       experience?: { organization_name?: string };
@@ -745,10 +808,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setup: emptySetup(),
       }));
       await hydrateSession(email);
-      return { mfaRequired: false };
+      return { mfaRequired: false, destinationMasked: "" };
     }
     sessionStorage.setItem("mfa_token", res.mfa_token ?? "");
-    return { mfaRequired: true };
+    return { mfaRequired: true, destinationMasked: res.destination_masked || "" };
   }, [persist, hydrateSession]);
 
   const verifyMfa = useCallback(async (code: string) => {
@@ -838,6 +901,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }));
     } catch { /* keep */ }
   }, [persist]);
+
+  const refreshSession = useCallback(async () => {
+    if (DEMO_MODE || !tokens.platform) return;
+    const email = session?.email || emailFromToken() || tokens.email || "";
+    if (email) tokens.email = email;
+    await hydrateSession(email);
+  }, [hydrateSession, session?.email]);
 
   const saveIdentity = useCallback(
     async (fields: {
@@ -1693,7 +1763,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           target_schema: c.target_schema || "phantix",
           is_primary: c.is_primary,
           environment: c.environment || "production",
-          auto_bootstrap: false,
         },
         needsDc ? { dualControl: true } : undefined,
       );
@@ -1714,10 +1783,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const needsDc = !!tokens.dualControl;
-      await api.post(`/db-connections/${id}/test?auto_bootstrap=false`, undefined, needsDc ? { dualControl: true } : undefined);
+      // Per 01_ORG_SETUP_IMPLEMENTATION.md §7.1 / 02_PLATFORM §4: test?auto_bootstrap=true
+      // probes connectivity AND applies the security schema in one call.
+      const res = await api.post<Record<string, unknown>>(`/db-connections/${id}/test?auto_bootstrap=true`, undefined, needsDc ? { dualControl: true } : undefined);
+      const row = mapConnectionFromApi(res);
       persist((s) => ({
         ...s,
-        connections: s.connections.map((c) => (c.id === id ? { ...c, last_test_at: new Date().toISOString(), last_test_ok: true } : c)),
+        connections: s.connections.map((c) =>
+          c.id === id
+            ? row && row.bootstrap_status === "ready"
+              ? { ...c, ...row, last_test_at: new Date().toISOString(), last_test_ok: true }
+              : { ...c, last_test_at: new Date().toISOString(), last_test_ok: true }
+            : c,
+        ),
       }));
       await refreshConnections();
     },
@@ -1905,9 +1983,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Misc ─────────────────────────────────────────────────────────────────
   const toggleTool = useCallback(
-    async (id: number) => {
-      await delay(350);
-      persist((s) => ({ ...s, tools: s.tools.map((t) => (t.id === id ? { ...t, subscribed: !t.subscribed } : t)) }));
+    async (tool: ToolItem) => {
+      if (DEMO_MODE) {
+        await delay(350);
+        persist((s) => ({ ...s, tools: s.tools.map((t) => (t.id === tool.id ? { ...t, subscribed: !t.subscribed } : t)) }));
+        return;
+      }
+      const needsDc = !!tokens.dualControl;
+      const nextSubscribed = !tool.subscribed;
+      // Optimistic update: flip the toggle immediately; roll back on failure.
+      persist((s) => ({ ...s, tools: s.tools.map((t) => (t.id === tool.id ? { ...t, subscribed: nextSubscribed } : t)) }));
+      try {
+        if (nextSubscribed) {
+          try {
+            await api.post("/tools/subscribe", { tool_key: tool.key, billing_cycle: "monthly" }, needsDc ? { dualControl: true } : undefined);
+          } catch {
+            await api.post("/tools/request", { tool_key: tool.key }, needsDc ? { dualControl: true } : undefined);
+          }
+        }
+      } catch {
+        // Roll back on failure
+        persist((s) => ({ ...s, tools: s.tools.map((t) => (t.id === tool.id ? { ...t, subscribed: tool.subscribed } : t)) }));
+        throw new Error("Tool update failed");
+      }
     },
     [persist],
   );
@@ -1951,10 +2049,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(400);
       return;
     }
+    // Per app-pages/alerts.md: test with severity critical → hits email + WA + Telegram
+    // when enabled and live; medium → email only.
     await api.post("/alerts/test", {
-      channel: "email",
-      subject: "[TEST] Phantix Alert Configuration Test",
-      message: "This is a test alert sent to verify your Phantix alert configuration is working correctly. If you received this, your SMTP settings are properly configured. No security incident has occurred."
+      severity: "critical",
+      title: "[TEST] Phantix Critical Alert",
+      body: "This is a test critical alert. If you received this, your email, WhatsApp, and Telegram channels are configured correctly."
     }, { dualControl: true });
   }, []);
 
@@ -1971,7 +2071,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const exportAuditCsv = useCallback(async () => {
     if (DEMO_MODE) return;
-    await api.get("/audit/export?format=csv");
+    const blob = await api.download("/audit/export?format=csv");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `phantix-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }, []);
 
   const resetDemo = useCallback(() => {
@@ -1994,7 +2102,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       session, state, operate, securityDbReady, sessionLoading, billingEntitlements,
-      register, login, verifyMfa, logout, hydrateSession,
+      register, login, verifyMfa, logout, hydrateSession, refreshSession,
       acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
@@ -2006,7 +2114,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
-      register, login, verifyMfa, logout, hydrateSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
+      register, login, verifyMfa, logout, hydrateSession, refreshSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
       startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,

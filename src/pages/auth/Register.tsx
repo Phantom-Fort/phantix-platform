@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Building2, ShieldCheck, Database, EyeOff, CheckCircle2, Mail, ArrowLeft } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
+import { DEMO_MODE } from "@/lib/api";
 
 const slide = { initial: { opacity: 0, x: 30 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -30 }, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } };
 
@@ -44,8 +45,12 @@ export default function Register() {
       const result = await register(name.trim(), email.trim(), password, country, slug.trim(), industry, secondaryEmail.trim(), primaryContact);
       if (result.mfaRequired) {
         setStep("otp");
-      } else {
+      } else if (DEMO_MODE) {
         navigate("/setup");
+      } else {
+        // Per 01_ORG_SETUP_IMPLEMENTATION.md §3.1: register returns no JWT ---
+        // redirect to login with the primary email prefilled.
+        navigate(`/login?email=${encodeURIComponent(email.trim())}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");

@@ -95,6 +95,10 @@ async function request<T>(
         tokens.orgUser = null;
         tokens.email = null;
       }
+      if (res.status === 402) {
+        const msg = typeof detail === "string" ? detail : "Upgrade required";
+        window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: msg }));
+      }
       throw new ApiError(res.status, detail);
     }
     if (res.status === 204) return undefined as T;
@@ -117,19 +121,23 @@ async function requestMultipart<T>(
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   if (opts.dualControl && tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
 
-  const res = await fetch(`${API_BASE}${path}`, { method, headers, body: formData });
-  if (!res.ok) {
-    let detail: unknown = res.statusText;
-    try {
-      detail = (await res.json()).detail;
-    } catch { /* non-JSON */ }
-    if (res.status === 401) {
-      tokens.platform = null;
-      tokens.orgUser = null;
-      tokens.email = null;
+    const res = await fetch(`${API_BASE}${path}`, { method, headers, body: formData });
+    if (!res.ok) {
+      let detail: unknown = res.statusText;
+      try {
+        detail = (await res.json()).detail;
+      } catch { /* non-JSON */ }
+      if (res.status === 401) {
+        tokens.platform = null;
+        tokens.orgUser = null;
+        tokens.email = null;
+      }
+      if (res.status === 402) {
+        const msg = typeof detail === "string" ? detail : "Upgrade required";
+        window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: msg }));
+      }
+      throw new ApiError(res.status, detail);
     }
-    throw new ApiError(res.status, detail);
-  }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }

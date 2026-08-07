@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, CheckCircle2, Loader2 } from "lucide-react";
+import { Sparkles, CheckCircle2, Loader2, Bot, ToggleLeft, ToggleRight } from "lucide-react";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -8,6 +8,7 @@ import { cx } from "@/lib/utils";
 
 type AiStatus = {
   enabled: boolean;
+  agent_enabled: boolean;
   default_provider: string;
   ai_pentest_ready: boolean;
   mode: string;
@@ -18,6 +19,7 @@ type AiStatus = {
 
 const demoAi: AiStatus = {
   enabled: true,
+  agent_enabled: true,
   default_provider: "deepseek",
   ai_pentest_ready: true,
   mode: "balanced",
@@ -34,6 +36,7 @@ export default function AiSettings() {
   const { toast, requireDualControl } = useStore();
   const [ai, setAi] = useState<AiStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [agentSaving, setAgentSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +56,7 @@ export default function AiSettings() {
         const providersRaw = (settings?.providers as { id?: string; name?: string; configured?: boolean }[]) ?? [];
         setAi({
           enabled: Boolean(settings?.ai_enabled ?? settings?.enabled ?? false),
+          agent_enabled: Boolean(settings?.agent_enabled ?? false),
           default_provider: String(settings?.default_provider ?? settings?.mode ?? ""),
           ai_pentest_ready: Boolean(settings?.ai_pentest_ready ?? false),
           mode: String(settings?.mode ?? "balanced"),
@@ -71,6 +75,36 @@ export default function AiSettings() {
       cancelled = true;
     };
   }, []);
+
+  const toggleAgent = async () => {
+    if (!(await requireDualControl("Turning the Phantix Agent on/off requires a dual-control operate session."))) return;
+    setAgentSaving(true);
+    const next = !ai!.agent_enabled;
+    try {
+      if (DEMO_MODE) { await delay(300); }
+      else { await api.put("/ai/settings", { agent_enabled: next }); }
+      setAi((a) => a ? { ...a, agent_enabled: next } : a);
+      toast("success", next ? "Phantix Agent enabled" : "Phantix Agent disabled", next ? "Operators can use the agent in the Command Centre." : "The agent is hidden from the Command Centre.");
+    } catch (e) {
+      toast("error", "Update failed", e instanceof Error ? e.message : "");
+    } finally {
+      setAgentSaving(false);
+    }
+  };
+
+  const [modeSaving, setModeSaving] = useState(false);
+  const saveMode = async () => {
+    if (!(await requireDualControl("Changing AI mode requires a dual-control operate session."))) return;
+    setModeSaving(true);
+    try {
+      if (!DEMO_MODE) await api.put("/ai/settings", { mode: ai!.mode });
+      toast("success", "AI mode updated", ai!.mode);
+    } catch (e) {
+      toast("error", "Update failed", e instanceof Error ? e.message : "");
+    } finally {
+      setModeSaving(false);
+    }
+  };
 
   if (loading || !ai) {
     return (
@@ -126,21 +160,29 @@ export default function AiSettings() {
                 )}
               </div>
             </div>
+            <div className="mt-4">
+              <label className="label">AI mode</label>
+              <select
+                className="input"
+                value={ai.mode}
+                onChange={(e) => setAi((a) => (a ? { ...a, mode: e.target.value } : a))}
+              >
+                <option value="economy">Economy</option>
+                <option value="balanced">Balanced</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </div>
             <button
               className="btn-secondary mt-5 w-full"
-              onClick={() =>
-                void (async () => {
-                  if (!(await requireDualControl("Updating AI settings requires a dual-control operate session."))) return;
-                  toast("info", "AI settings", "PUT /ai/settings --- mode, budget, consensus.");
-                })()
-              }
+              onClick={() => void saveMode()}
+              disabled={modeSaving}
             >
-              Update AI settings
+              {modeSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Save AI mode
             </button>
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="space-y-5">
           <Card>
             <CardHeader title="Usage this month" subtitle="Cost visibility --- every call audited with prompt version + model" />
             <div className="flex items-end gap-8">
@@ -158,6 +200,24 @@ export default function AiSettings() {
               <p>· Hallucination heuristics + cost/budget gates on every request</p>
               <p>· AI pentesting activates only when a DeepSeek key is configured</p>
               <p>· Finding explanations and executive summaries land in reports via the bus</p>
+            </div>
+          </Card>
+
+          {/* Phantix Agent toggle */}
+          <Card className="border-gold-400/25">
+            <CardHeader title="Phantix Agent" subtitle="Conversational security assistant for the Command Centre" action={<Bot size={16} className="text-gold-400" />} />
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-200">{ai.agent_enabled ? "Enabled" : "Disabled"}</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                  {ai.agent_enabled
+                    ? "Operators can chat with Phantix Agent from the Command Centre sidebar."
+                    : "The agent is hidden from the Command Centre. Toggle on to let operators use it."}
+                </p>
+              </div>
+              <button onClick={toggleAgent} disabled={agentSaving} className="shrink-0" aria-label="Toggle Phantix Agent">
+                {agentSaving ? <Loader2 size={22} className="animate-spin text-gold-400" /> : ai.agent_enabled ? <ToggleRight size={26} className="text-emerald-400" /> : <ToggleLeft size={26} className="text-slate-500" />}
+              </button>
             </div>
           </Card>
         </motion.div>

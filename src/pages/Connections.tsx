@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Database, Plus, ShieldCheck, AlertTriangle, Loader2, Trash2, Zap, Info } from "lucide-react";
 import { PageHeader, Card, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
-import { DEMO_MODE } from "@/lib/api";
+import { api, DEMO_MODE } from "@/lib/api";
 import { timeAgo, cx } from "@/lib/utils";
 
 export default function Connections() {
@@ -13,10 +13,17 @@ export default function Connections() {
   } = useStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [drivers, setDrivers] = useState<{ db_type: string; live: boolean; note?: string }[]>([]);
 
   React.useEffect(() => {
     if (!DEMO_MODE) {
       void refreshConnections();
+      api.get<any>("/db-connections/drivers")
+        .then((r) => {
+          const items = Array.isArray(r) ? r : (r?.items ?? []);
+          setDrivers(items.map((d: any) => ({ db_type: String(d.db_type ?? d.engine ?? ""), live: Boolean(d.live ?? d.live_probe ?? d.installed ?? false), note: d.note ? String(d.note) : undefined })));
+        })
+        .catch(() => { /* keep empty */ });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -167,18 +174,18 @@ export default function Connections() {
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Driver availability (GET /db-connections/drivers)</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {[
-              ["postgresql / supabase", true],
-              ["sqlite", true],
-              ["mysql / mariadb", true],
-              ["mssql", false],
-              ["mongodb", false],
-              ["firestore", false],
-            ].map(([name, ok]) => (
-              <span key={String(name)} className={cx("chip", ok ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-phantix-700/50 bg-phantix-900/50 text-slate-500")}>
-                {String(name)} {ok ? "· live" : "· optional"}
-              </span>
-            ))}
+            {(() => {
+              const list = DEMO_MODE
+                ? [["postgresql / supabase", true], ["sqlite", true], ["mysql / mariadb", true], ["mssql", false], ["mongodb", false], ["firestore", false]] as [string, boolean][]
+                : drivers.length
+                  ? drivers.map((d) => [d.db_type, d.live] as [string, boolean])
+                  : [["loading drivers...", false] as [string, boolean]];
+              return list.map(([name, ok]) => (
+                <span key={String(name)} className={cx("chip", ok ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-phantix-700/50 bg-phantix-900/50 text-slate-500")}>
+                  {String(name)} {ok ? "· live" : "· optional"}
+                </span>
+              ));
+            })()}
           </div>
           <p className="mt-3 text-[11px] leading-4 text-slate-500">
             Credentials can be stored encrypted without the optional driver; live tests need the package. Connections

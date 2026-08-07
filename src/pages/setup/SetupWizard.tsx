@@ -9,6 +9,8 @@ import {
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE, emailFromToken } from "@/lib/api";
 import { cx, maskEmail } from "@/lib/utils";
+import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const stepsMeta = [
   { id: 1, key: "privacy", label: "Privacy notice", icon: <ShieldCheck size={16} /> },
@@ -111,11 +113,12 @@ export default function SetupWizard() {
 
       <aside className="relative hidden w-[320px] shrink-0 flex-col border-r border-phantix-700/40 bg-phantix-950/70 p-8 backdrop-blur-xl lg:flex">
         <div className="flex items-center gap-3">
-          <img src="/logo-white.png" alt="Phantix" className="h-10 w-10 object-contain" />
-          <div>
+          <BrandLogo className="h-10 w-10" />
+          <div className="min-w-0 flex-1">
             <p className="font-display text-[15px] font-bold text-white">Organization setup</p>
             <p className="text-[10px] uppercase tracking-[0.18em] text-gold-400">{state.org.name || "Your organization"}</p>
           </div>
+          <ThemeToggle />
         </div>
 
         <div className="mt-6">

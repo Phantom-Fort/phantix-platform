@@ -4,12 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
-  RotateCcw, ShieldCheck, Sparkles, BellRing,
+  RotateCcw, ShieldCheck, Sparkles, BellRing, Github,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { DEMO_MODE } from "@/lib/api";
 import { APP_URL } from "@/lib/links";
 import { cx } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navSections: { label: string; items: { to: string; label: string; icon: React.ReactNode }[] }[] = [
   {
@@ -23,6 +24,7 @@ const navSections: { label: string; items: { to: string; label: string; icon: Re
       { to: "/companies", label: "Companies", icon: <Building2 size={17} /> },
       { to: "/users", label: "People & Control", icon: <Users size={17} /> },
       { to: "/connections", label: "Security Database", icon: <Database size={17} /> },
+      { to: "/github", label: "GitHub", icon: <Github size={17} /> },
     ],
   },
   {
@@ -99,6 +101,16 @@ export default function Layout() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [session?.authenticated, operate.expiresAt, logout, toast]);
+
+  // Catch billing-required 402 responses and show upgrade prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent).detail as string;
+      toast("warning", "Upgrade required", `${msg} --- visit Billing to subscribe or redeem a code.`);
+    };
+    window.addEventListener("phantix:billing-required", handler);
+    return () => window.removeEventListener("phantix:billing-required", handler);
+  }, [toast]);
 
   const dc = state.dualControl;
   const initiator = state.users.find((u) => u.id === dc.initiator_user_id);
@@ -208,6 +220,7 @@ export default function Layout() {
           </div>
 
           <div className="ml-auto flex items-center gap-2.5">
+            <ThemeToggle />
             {securityDbReady ? (
               <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
                 <Database size={12} /> Security DB · ready

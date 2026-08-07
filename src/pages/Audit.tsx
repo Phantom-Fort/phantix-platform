@@ -1,12 +1,25 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Download, ArrowRight } from "lucide-react";
+import { Download, ArrowRight, Loader2 } from "lucide-react";
 import { PageHeader, Card, StatusBadge } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/utils";
 
 export default function Audit() {
-  const { state, toast } = useStore();
+  const { state, toast, exportAuditCsv } = useStore();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportAuditCsv();
+      toast("success", "Export ready", "Audit CSV downloaded --- every row carries initiator and authorizer names.");
+    } catch (err) {
+      toast("error", "Export failed", err instanceof Error ? err.message : "Could not download the audit trail");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -14,8 +27,8 @@ export default function Audit() {
         title="Audit trail"
         description="Immutable platform-DB trail. Once dual control is active, completed actions carry initiator and authorizer name + title snapshots for compliance export."
         actions={
-          <button className="btn-secondary" onClick={() => toast("info", "Export", "GET /audit/export?format=csv --- both names on every row.")}>
-            <Download size={15} /> Export CSV
+          <button className="btn-secondary" onClick={() => void handleExport()} disabled={exporting}>
+            {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export CSV
           </button>
         }
       />

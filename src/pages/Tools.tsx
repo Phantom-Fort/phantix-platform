@@ -35,8 +35,12 @@ export default function Tools() {
                     if (!t.subscribed && !operate.unlocked) {
                       if (!(await requireDualControl("Tool subscription changes require a dual-control operate session."))) return;
                     }
-                    await toggleTool(t.id);
-                    toast("success", t.subscribed ? "Unsubscribed" : `${t.name} subscribed`, t.subscribed ? undefined : "POST /tools/subscribe");
+                    try {
+                      await toggleTool(t);
+                      toast("success", t.subscribed ? "Unsubscribed" : `${t.name} ${t.price_note === "Included" ? "enabled" : "subscribed"}`, t.subscribed ? undefined : "Subscription request sent");
+                    } catch (err) {
+                      toast("error", "Action failed", err instanceof Error ? err.message : "Could not update tool subscription");
+                    }
                   }}
                 >
                   {t.subscribed ? "Unsubscribe" : <><Plus size={12} /> Subscribe</>}

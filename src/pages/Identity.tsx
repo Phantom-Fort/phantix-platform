@@ -182,12 +182,13 @@ export default function Identity() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
-              <CardHeader title="Tenant identity" subtitle="GET /organizations/me" action={<Building2 size={16} className="text-slate-500" />} />
+              <CardHeader title="Tenant identity" subtitle="GET /organizations/me/identity" action={<Building2 size={16} className="text-slate-500" />} />
               <div className="space-y-2.5">
                 {[
                   ["Organization", state.org.name],
-                  ["Tenant ID", `#${state.org.id}`],
-                  ["Slug", state.org.slug],
+                  ["Tenant ID", `#${state.identity?.id ?? state.org.id}`],
+                  ["Slug", state.identity?.slug || state.org.slug],
+                  ["Creator user ID", state.identity?.creator_user_id ? `#${state.identity.creator_user_id}` : "---"],
                   ["Primary email", state.org.email || state.org.primary_email || "---"],
                   ["Secondary email", state.org.secondary_email || "---"],
                   ["Country", state.org.country || "---"],

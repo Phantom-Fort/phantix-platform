@@ -6,7 +6,7 @@ import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { formatNaira, timeAgo, cx } from "@/lib/utils";
 
-interface Entitlements { billing_enforcement: { enabled: boolean; mode: string; environment: string }; premium_active: boolean; full_access_coupon: any; subscription: any; packs: any[]; message: string; }
+interface Entitlements { billing_enforcement: { enabled: boolean; mode: string; environment: string; free_asset_cap?: number; free_org_user_cap?: number; free_report_formats?: string[] }; premium_active: boolean; full_access_coupon: any; subscription: any; packs: any[]; message: string; }
 interface PricingInfo { monthly_list_price_ngn: number; first_month_price_ngn: number; subsequent_monthly_price_ngn: number; yearly_price_ngn: number; first_month_discount_percent: number; }
 interface SubscriptionInfo { id: number; status: string; billing_cycle: string; grant_source: string; current_period_start: string; current_period_end: string; }
 interface PaymentInfo { id: number; reference: string; amount_due_ngn: number; status: string; purpose: string; discount_percent: number; created_at: string; }
@@ -87,6 +87,19 @@ export default function Billing() {
   const expiringSoon = isPremium && daysUntilEnd !== null && daysUntilEnd <= 5 && daysUntilEnd >= 0;
   const isCoupon = subscription?.grant_source === "coupon";
   const price = pricing?.monthly_list_price_ngn ?? 100000;
+
+  // Free report formats come from entitlements (json/csv/markdown/md free; pdf/docx/xlsx premium).
+  const enforcementOn = entitlements?.billing_enforcement?.enabled === true;
+  const freeFormats = new Set((entitlements?.billing_enforcement?.free_report_formats ?? ["json", "csv", "markdown", "md"]).map(f => f.toLowerCase()));
+  const reportFormats: { fmt: string; label: string; free: boolean }[] = [
+    { fmt: "json", label: "JSON", free: freeFormats.has("json") },
+    { fmt: "csv", label: "CSV", free: freeFormats.has("csv") },
+    { fmt: "markdown", label: "Markdown", free: freeFormats.has("markdown") || freeFormats.has("md") },
+    { fmt: "pdf", label: "PDF", free: false },
+    { fmt: "docx", label: "DOCX", free: false },
+    { fmt: "xlsx", label: "XLSX", free: false },
+  ];
+  const canDownload = (fmt: string) => !enforcementOn || isPremium || freeFormats.has(fmt.toLowerCase());
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -180,6 +193,27 @@ export default function Billing() {
           </Card>
         </motion.div>
       )}
+
+      {/* Report formats */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-5">
+        <Card>
+          <CardHeader title="Report export formats" subtitle="Which report formats your plan can download" />
+          <div className="flex flex-wrap gap-2">
+            {reportFormats.map((r) => (
+              <span key={r.fmt} className={cx("chip text-xs", canDownload(r.fmt) ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/40 bg-slate-500/10 text-slate-500")}>
+                <Download size={11} className="inline mr-1" />
+                {r.label}
+                {!canDownload(r.fmt) && <span className="ml-1 opacity-70">(Premium)</span>}
+              </span>
+            ))}
+          </div>
+          {enforcementOn && !isPremium && (
+            <p className="mt-2 text-xs text-slate-500">
+              JSON, CSV and Markdown exports stay free. Board-ready PDF/DOCX/XLSX require Premium.
+            </p>
+          )}
+        </Card>
+      </motion.div>
 
       {/* Coupon modal */}
       <Modal open={showCoupon} onClose={() => setShowCoupon(false)} title="Redeem beta code">

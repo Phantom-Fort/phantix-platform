@@ -1,10 +1,41 @@
-﻿import React from "react";
+﻿import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ShieldCheck, Database, EyeOff, KeyRound, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Database, EyeOff, KeyRound, CheckCircle2, FileText } from "lucide-react";
+import { api, DEMO_MODE } from "@/lib/api";
 
-// Mirrors GET /api/v1/organizations/privacy (public, no auth)
+interface PrivacyNotice {
+  version?: string;
+  title?: string;
+  summary?: string;
+  highlights?: { id?: string; label?: string; text?: string }[];
+  phantix_stores?: { category?: string; items?: string[] }[];
+  notice_text?: string;
+  text?: string;
+  body?: string;
+}
+
+// Fetches GET /api/v1/organizations/privacy (public, no auth); keeps the static
+// narrative below as a graceful fallback when the endpoint is unavailable.
 export default function Privacy() {
+  const [notice, setNotice] = useState<PrivacyNotice | null>(null);
+
+  useEffect(() => {
+    if (DEMO_MODE) return;
+    (async () => {
+      try {
+        const raw = await api.get<unknown>("/organizations/privacy");
+        const items = (raw as { items?: unknown[] })?.items;
+        const n = (Array.isArray(items) ? items[0] : raw) as PrivacyNotice | null;
+        setNotice(n);
+      } catch { /* keep static copy */ }
+    })();
+  }, []);
+
+  const highlights = notice?.highlights ?? [];
+  const stores = notice?.phantix_stores ?? [];
+  const noticeText = notice?.notice_text || notice?.text || notice?.body;
+
   return (
     <div className="relative min-h-screen px-4 py-12">
       <div className="pointer-events-none absolute inset-0 bg-grid-faint bg-grid [mask-image:radial-gradient(ellipse_70%_50%_at_50%_0%,black,transparent)]" />
@@ -17,11 +48,62 @@ export default function Privacy() {
           <div className="flex items-center gap-4">
             <img src="/logo-transparent.png" alt="" className="h-14 w-14 object-contain" />
             <div>
-              <h1 className="font-display text-3xl font-bold text-white">Privacy notice</h1>
-              <p className="text-sm text-slate-500">How Phantix handles your data --- the short, honest version</p>
+              <h1 className="font-display text-3xl font-bold text-white">{notice?.title || "Privacy notice"}</h1>
+              <p className="text-sm text-slate-500">{notice?.summary || "How Phantix handles your data --- the short, honest version"}</p>
+              {notice?.version && <p className="mt-1 text-[11px] font-mono text-slate-600">version {notice.version}</p>}
             </div>
           </div>
         </motion.div>
+
+        {noticeText && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-6">
+            <div className="card p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400/15 text-gold-400"><FileText size={18} /></span>
+                <h2 className="font-display text-lg font-semibold text-white">Privacy notice</h2>
+              </div>
+              <div className="mt-4 space-y-3 whitespace-pre-line text-sm leading-6 text-slate-300">{noticeText}</div>
+            </div>
+          </motion.div>
+        )}
+
+        {highlights.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-6">
+            <div className="card p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-700/50 text-phantix-300"><ShieldCheck size={18} /></span>
+                <h2 className="font-display text-lg font-semibold text-white">Highlights</h2>
+              </div>
+              <ul className="mt-4 space-y-2.5">
+                {highlights.map((h, i) => (
+                  <li key={h.id ?? i} className="flex items-start gap-2.5 text-sm text-slate-300">
+                    <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-400" />
+                    <span><strong className="text-slate-200">{h.label}</strong>{h.text ? ` — ${h.text}` : ""}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        )}
+
+        {stores.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-6">
+            <div className="card p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-700/50 text-phantix-300"><Database size={18} /></span>
+                <h2 className="font-display text-lg font-semibold text-white">Data we store</h2>
+              </div>
+              <ul className="mt-4 space-y-2.5">
+                {stores.flatMap((s) => (s.items ?? []).map((item, i) => (
+                  <li key={`${s.category}-${i}`} className="flex items-start gap-2.5 text-sm text-slate-300">
+                    <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-400" />
+                    {s.category && <strong className="text-slate-200">{s.category}:</strong>} {item}
+                  </li>
+                )))}
+              </ul>
+            </div>
+          </motion.div>
+        )}
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-8 space-y-5">
           <div className="card p-6">
