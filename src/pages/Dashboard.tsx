@@ -18,10 +18,13 @@ export default function Dashboard() {
   const twoUsers = state.users.length >= 2;
 
   // Smart polling: keep tenant overview fresh in the background (SWR-style).
-  // Slows to 60s when the tab is hidden; refreshes immediately on focus.
+  // Skip the first tick (hydrateSession runs on mount) and poll every 60s;
+  // slows to 5min when the tab is hidden.
+  const skipFirstPoll = React.useRef(true);
   useSmartPoll(async () => {
+    if (skipFirstPoll.current) { skipFirstPoll.current = false; return; }
     try { await refreshSession(); } catch { /* keep last data */ }
-  }, { intervalMs: 30000, hiddenIntervalMs: 120000 });
+  }, { intervalMs: 60000, hiddenIntervalMs: 300000 });
 
   const checklist = [
     { done: state.setup.setup_complete, label: "Organization setup complete", to: "/dashboard" },
