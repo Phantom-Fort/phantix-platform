@@ -46,7 +46,7 @@ export default function Privacy() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
           <div className="flex items-center gap-4">
-            <img src="/logo-transparent.png" alt="" className="h-14 w-14 object-contain" />
+            <img src="/logo-white.png" alt="Phantix" className="h-16 w-16 object-contain" />
             <div>
               <h1 className="font-display text-3xl font-bold text-white">{notice?.title || "Privacy notice"}</h1>
               <p className="text-sm text-slate-500">{notice?.summary || "How Phantix handles your data --- the short, honest version"}</p>

@@ -6,8 +6,13 @@
 //   phantix_device_id        stable browser UUID
 //
 // Demo mode serves a simulated tenant; set VITE_API_BASE to go live.
-
-const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
+// Normalize: tolerate "staging.phantix.site/api/v1" (missing protocol) so the
+// fetch never resolves against the page origin. Relative "/api/v1" is kept
+// for same-origin dev proxies.
+const RAW_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+const API_BASE = RAW_API_BASE
+  ? RAW_API_BASE.replace(/\/+$/, "").replace(/^(?!https?:\/\/|\/)/i, "https://")
+  : RAW_API_BASE;
 export const DEMO_MODE = !API_BASE;
 import { dedupedRequest } from "./dedupe";
 
