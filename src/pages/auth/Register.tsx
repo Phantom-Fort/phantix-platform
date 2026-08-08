@@ -95,7 +95,7 @@ export default function Register() {
         <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }} className="hidden lg:block">
           <img src="/logo-white.png" alt="Phantix" className="h-20 w-20 object-contain" />
           <h1 className="mt-6 font-display text-4xl font-bold leading-tight tracking-tight text-white">
-            Stand up your security tenant in minutes
+            Set up your security tenant in minutes
           </h1>
           <p className="mt-4 max-w-md text-[15px] leading-7 text-slate-400">
             Register the company, accept the privacy model, verify your email --- then connect your own
