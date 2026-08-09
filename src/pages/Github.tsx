@@ -1,22 +1,37 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, X, Loader2, GitBranch, ShieldCheck } from "lucide-react";
+import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, Loader2, GitBranch, ShieldCheck, Clock } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
 
 interface InstallInfo { install_url: string; state: string; configured: boolean; }
-interface Installation { connected: boolean; account_login: string; app_id: string; installation_id: string; pat_fallback: boolean; }
+interface Installation {
+  connected: boolean;
+  status: string;
+  approval_status: string | null;
+  installation_status: string | null;
+  account_login: string;
+  account_type: string;
+  installation_id: string;
+  pat_fallback: boolean;
+  can_list_repos: boolean;
+  can_analyze: boolean;
+  setup_action: string | null;
+  message: string;
+}
 interface Repo { id: number; full_name: string; name: string; private: boolean; can_analyze: boolean; requires_premium: boolean; default_branch: string; }
 
-const demoInstall: Installation = { connected: true, account_login: "acme-dev", app_id: "12345", installation_id: "987654", pat_fallback: false };
+const demoInstall: Installation = { connected: true, status: "connected", approval_status: "approved", installation_status: "active", account_login: "acme-dev", account_type: "User", installation_id: "987654", pat_fallback: false, can_list_repos: true, can_analyze: true, setup_action: "install", message: "GitHub App connected" };
 const demoRepos: Repo[] = [
   { id: 1, full_name: "acme-dev/api-gateway", name: "api-gateway", private: true, can_analyze: true, requires_premium: false, default_branch: "main" },
   { id: 2, full_name: "acme-dev/web-portal", name: "web-portal", private: false, can_analyze: true, requires_premium: false, default_branch: "main" },
   { id: 3, full_name: "acme-dev/internal-tools", name: "internal-tools", private: true, can_analyze: false, requires_premium: true, default_branch: "main" },
 ];
+
+const POLL_MS = 20000;
 
 export default function GithubIntegration() {
   const { toast, requireDualControl } = useStore();
@@ -30,21 +45,48 @@ export default function GithubIntegration() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeRepo, setUpgradeRepo] = useState<Repo | null>(null);
   const [query, setQuery] = useState("");
+  const [loadError, setLoadError] = useState("");
 
-  // OAuth callback: GitHub redirects back with ?installation_id=&setup_action=&state=
+  const mapInstall = (inst: any): Installation => ({
+    connected: Boolean(inst?.connected),
+    status: String(inst?.status ?? "not_connected"),
+    approval_status: inst?.approval_status ?? null,
+    installation_status: inst?.installation_status ?? null,
+    account_login: String(inst?.account_login ?? ""),
+    account_type: String(inst?.account_type ?? ""),
+    installation_id: String(inst?.installation_id ?? ""),
+    pat_fallback: Boolean(inst?.pat_fallback),
+    can_list_repos: inst?.can_list_repos !== false,
+    can_analyze: inst?.can_analyze !== false,
+    setup_action: inst?.setup_action ?? null,
+    message: String(inst?.message ?? ""),
+  });
+
+  // OAuth callback: GitHub redirects back with installation_id/setup_action/state (+ org hints)
   useEffect(() => {
     const installationId = searchParams.get("installation_id");
     const state = searchParams.get("state");
-    if (!installationId) return;
+    const setupAction = searchParams.get("setup_action");
+    const accountLogin = searchParams.get("account_login");
+    const accountType = searchParams.get("account_type");
+    const requestId = searchParams.get("request_id");
+    const requestedByLogin = searchParams.get("requested_by_login");
+    if (!installationId && !setupAction) return;
     setConnecting(true);
     (async () => {
       try {
         if (DEMO_MODE) { await delay(300); setInstall(demoInstall); }
         else {
-          await api.post("/github/callback", { installation_id: Number(installationId), state: state || "" });
+          await api.post("/github/callback", {
+            installation_id: installationId ? Number(installationId) : undefined,
+            state: state || "",
+            setup_action: setupAction || "",
+            account_login: accountLogin || "",
+            account_type: accountType || "",
+            request_id: requestId ? Number(requestId) : undefined,
+            requested_by_login: requestedByLogin || "",
+          });
         }
-        toast("success", "GitHub connected", "Installation recorded. Loading repositories...");
-        // Clear the callback query params so a refresh doesn't re-post the callback.
         setSearchParams({}, { replace: true });
         await load();
       } catch (e) {
@@ -58,19 +100,41 @@ export default function GithubIntegration() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       if (DEMO_MODE) { await delay(300); setInstall(demoInstall); setRepos(demoRepos); return; }
-      const [inst, reposRes] = await Promise.all([
-        api.get<any>("/github/installation").catch(() => ({ connected: false })),
-        api.get<any>("/github/repositories").catch(() => ({ items: [] })),
-      ]);
-      setInstall({ connected: Boolean(inst?.connected), account_login: String(inst?.account_login ?? inst?.login ?? ""), app_id: String(inst?.app_id ?? ""), installation_id: String(inst?.installation_id ?? ""), pat_fallback: Boolean(inst?.pat_fallback) });
-      const items = reposRes?.items ?? reposRes ?? [];
-      setRepos(items.map((r: any) => ({ id: Number(r.id ?? r.repo_id), full_name: String(r.full_name ?? ""), name: String(r.name ?? ""), private: Boolean(r.private ?? r.is_private), can_analyze: r.can_analyze !== false, requires_premium: Boolean(r.requires_premium), default_branch: String(r.default_branch ?? "main") })));
+      const inst = await api.get<any>("/github/installation?refresh=true");
+      setInstall(mapInstall(inst));
+      const status = String(inst?.status ?? "not_connected");
+      if (status === "connected" || status === "suspended") {
+        try {
+          const reposRes = await api.get<any>("/github/repositories?refresh=false");
+          const items = reposRes?.items ?? reposRes ?? [];
+          setRepos(items.map((r: any) => ({ id: Number(r.id ?? r.repo_id), full_name: String(r.full_name ?? ""), name: String(r.name ?? ""), private: Boolean(r.private ?? r.is_private), can_analyze: r.can_analyze !== false, requires_premium: Boolean(r.requires_premium), default_branch: String(r.default_branch ?? "main") })));
+        } catch (e: any) {
+          const code = e?.detail?.code ?? e?.detail?.detail?.code;
+          if (code !== "github_awaiting_approval") setRepos([]);
+          else setRepos([]);
+        }
+      } else {
+        setRepos([]);
+      }
+    } catch (e) {
+      setInstall(null);
+      setRepos([]);
+      setLoadError(e instanceof Error ? e.message : "Could not load GitHub integration");
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Poll every 20s while awaiting org approval
+  const awaiting = install?.status === "awaiting_approval";
+  useEffect(() => {
+    if (!awaiting) return;
+    const t = window.setInterval(() => { load(); }, POLL_MS);
+    return () => window.clearInterval(t);
+  }, [awaiting, load]);
 
   const connect = async () => {
     setConnecting(true);
@@ -87,7 +151,7 @@ export default function GithubIntegration() {
     if (!(await requireDualControl("Disconnecting the GitHub App requires a dual-control operate session."))) return;
     try {
       if (DEMO_MODE) { await delay(300); } else { await api.delete("/github/installation"); }
-      setInstall({ connected: false, account_login: "", app_id: "", installation_id: "", pat_fallback: false });
+      setInstall({ connected: false, status: "not_connected", approval_status: null, installation_status: null, account_login: "", account_type: "", installation_id: "", pat_fallback: false, can_list_repos: false, can_analyze: false, setup_action: null, message: "" });
       setRepos([]);
       toast("success", "Disconnected");
     } catch (e) { toast("error", "Disconnect failed"); }
@@ -128,6 +192,13 @@ export default function GithubIntegration() {
         actions={<button onClick={load} className="btn-ghost"><RefreshCw size={15} /></button>}
       />
 
+      {loadError && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-severity-critical/30 bg-severity-critical/10 px-4 py-3">
+          <p className="text-sm text-red-300">Could not load GitHub integration: {loadError}</p>
+          <button onClick={load} className="btn-ghost text-xs">Retry</button>
+        </div>
+      )}
+
       {loading ? <div className="flex min-h-[30vh] items-center justify-center"><Spinner className="h-5 w-5" /></div> : !install?.connected ? (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="text-center">
@@ -137,7 +208,49 @@ export default function GithubIntegration() {
               Install the Phantix App on GitHub to inventory repositories and run security analysis. Private repos are available on the Premium plan.
             </p>
             <button onClick={connect} disabled={connecting} className="btn-primary mt-6"><Github size={16} /> {connecting ? "Redirecting..." : "Connect GitHub"}</button>
-            {install?.pat_fallback && <p className="mt-4 text-xs text-slate-500">Using legacy PAT — migrate to the GitHub App for better coverage.</p>}
+
+            {/* Awaiting org approval */}
+            {awaiting && (
+              <div className="mx-auto mt-5 max-w-md rounded-xl border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
+                <div className="flex items-start gap-2">
+                  <Clock size={16} className="mt-0.5 shrink-0 text-amber-400" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-300">Awaiting GitHub org approval</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">
+                      Waiting for a GitHub organization owner to approve the Phantix app. This page refreshes automatically.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="btn-ghost !text-xs"><ExternalLink size={12} /> Open GitHub</a>
+                      <button onClick={load} className="btn-ghost !text-xs"><RefreshCw size={12} /> Check now</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Rejected / suspended */}
+            {install?.status === "rejected" && (
+              <div className="mx-auto mt-5 max-w-md rounded-xl border border-severity-critical/30 bg-severity-critical/10 px-4 py-3 text-left">
+                <p className="text-sm font-medium text-red-300">GitHub install request denied or cancelled</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Ask an organization owner to install the app, then connect again.</p>
+                <button onClick={connect} disabled={connecting} className="btn-primary mt-3 !text-xs">{connecting ? "Redirecting..." : "Connect again"}</button>
+              </div>
+            )}
+            {install?.status === "suspended" && (
+              <div className="mx-auto mt-5 max-w-md rounded-xl border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
+                <p className="text-sm font-medium text-amber-300">Installation suspended on GitHub</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">The GitHub App installation was suspended. Resume it in GitHub App settings to continue.</p>
+                <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="btn-ghost mt-3 !text-xs"><ExternalLink size={12} /> Open GitHub App settings</a>
+              </div>
+            )}
+
+            {/* PAT fallback */}
+            {install?.pat_fallback && (
+              <div className="mx-auto mt-5 max-w-md rounded-xl border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
+                <p className="text-xs text-amber-300">Legacy PAT is connected. Migrate to the GitHub App for private-repo analysis and better coverage.</p>
+                <button onClick={connect} disabled={connecting} className="btn-primary mt-2 !text-xs">{connecting ? "Redirecting..." : "Migrate to GitHub App"}</button>
+              </div>
+            )}
           </Card>
         </motion.div>
       ) : (
@@ -150,7 +263,7 @@ export default function GithubIntegration() {
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400"><GitBranch size={19} /></span>
                 <div>
                   <p className="font-semibold text-slate-100">{install.account_login}</p>
-                  <p className="text-xs text-slate-500">{install.app_id ? `App ${install.app_id}` : "GitHub App"} · {install.installation_id ? `install ${install.installation_id}` : ""}</p>
+                  <p className="text-xs text-slate-500">{install.account_type || "GitHub App"} · {install.installation_id ? `install ${install.installation_id}` : ""}</p>
                 </div>
               </div>
               <button onClick={disconnect} className="btn-ghost text-xs text-severity-critical">Disconnect</button>
