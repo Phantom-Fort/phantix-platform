@@ -20,7 +20,8 @@ export function formatDateTime(iso: string | null): string {
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function titleCase(s: string): string {
+export function titleCase(s: string | null | undefined): string {
+  if (!s) return "";
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

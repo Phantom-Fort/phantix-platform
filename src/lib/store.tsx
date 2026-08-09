@@ -420,6 +420,8 @@ type Store = {
   register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<{ mfaRequired: boolean }>;
   login: (email: string, password: string) => Promise<{ mfaRequired: boolean; destinationMasked?: string }>;
   verifyMfa: (code: string) => Promise<void>;
+  resendLoginOtp: (email: string, password: string) => Promise<{ destinationMasked: string }>;
+  resendRegisterOtp: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: { title: string; name: string }) => Promise<void>;
   logout: () => void;
   hydrateSession: (email?: string) => Promise<void>;
   // setup wizard
@@ -890,6 +892,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }));
     await hydrateSession(email);
   }, [state.org.primary_email, session?.email, persist, hydrateSession]);
+
+  // Re-submit email+password to trigger a fresh login MFA code.
+  const resendLoginOtp = useCallback(async (email: string, password: string): Promise<{ destinationMasked: string }> => {
+    if (DEMO_MODE) {
+      await delay(650);
+      sessionStorage.setItem("mfa_token", "demo-mfa");
+      return { destinationMasked: "" };
+    }
+    const res = await api.postForm<{
+      mfa_required?: boolean;
+      mfa_token?: string;
+      destination_masked?: string;
+      access_token?: string;
+    }>("/organizations/login", { username: email, password });
+    sessionStorage.setItem("mfa_token", res.mfa_token ?? "");
+    return { destinationMasked: res.destination_masked || "" };
+  }, []);
+
+  // Re-submit registration to trigger a fresh email verification code.
+  const resendRegisterOtp = useCallback(async (
+    name: string,
+    email: string,
+    password: string,
+    country: string,
+    slug: string,
+    industry: string,
+    secondary_email: string,
+    primary_contact: { title: string; name: string },
+  ): Promise<void> => {
+    if (DEMO_MODE) { await delay(650); sessionStorage.setItem("mfa_token", "demo-mfa"); return; }
+    await api.post("/organizations/register", { name, email, password, country, slug, industry, secondary_email, primary_contact });
+  }, []);
 
   const logout = useCallback(() => {
     tokens.platform = null;
@@ -2143,7 +2177,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       session, state, operate, securityDbReady, sessionLoading, billingEntitlements,
-      register, login, verifyMfa, logout, hydrateSession, refreshSession,
+      register, login, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession,
       acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
@@ -2155,7 +2189,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
-      register, login, verifyMfa, logout, hydrateSession, refreshSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
+      register, login, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
       startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,

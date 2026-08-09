@@ -9,7 +9,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Login() {
-  const { login, verifyMfa, state } = useStore();
+  const { login, verifyMfa, resendLoginOtp, state } = useStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
@@ -17,10 +17,27 @@ export default function Login() {
   const [code, setCode] = useState("");
   const [stage, setStage] = useState<"password" | "mfa">("password");
   const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [destinationMasked, setDestinationMasked] = useState("");
 
   const destination = () => (state.setup.setup_complete ? "/dashboard" : "/setup");
+
+  const resend = async () => {
+    if (resending) return;
+    setError(null);
+    setResending(true);
+    try {
+      const res = await resendLoginOtp(email, password);
+      setDestinationMasked(res.destinationMasked || "");
+      setCode("");
+      setError("A new code was sent. Enter the latest code.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend code");
+    } finally {
+      setResending(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +126,9 @@ export default function Login() {
                 {error && <p className="text-sm text-severity-critical">{error}</p>}
                 <button className="btn-primary w-full !py-3" disabled={busy || code.length !== 6}>
                   {busy ? "Verifying..." : "Verify & sign in"}
+                </button>
+                <button type="button" onClick={() => void resend()} disabled={resending} className="w-full text-center text-xs text-slate-500 hover:text-slate-300">
+                  {resending ? "Resending..." : "Resend code"}
                 </button>
                 <button type="button" onClick={() => setStage("password")} className="w-full text-center text-xs text-slate-500 hover:text-slate-300">
                   ← Use a different account

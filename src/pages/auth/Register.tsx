@@ -14,9 +14,10 @@ const STEPS = [
 ];
 
 export default function Register() {
-  const { register, verifyMfa } = useStore();
+  const { register, verifyMfa, resendRegisterOtp } = useStore();
   const navigate = useNavigate();
   const [step, setStep] = useState<"details" | "otp">("details");
+  const [resending, setResending] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +82,21 @@ export default function Register() {
     next[index] = value;
     setOtp(next);
     if (value && index < 5) document.getElementById(`otp-${index + 1}`)?.focus();
+  };
+
+  const resend = async () => {
+    if (resending) return;
+    setError(null);
+    setResending(true);
+    try {
+      await resendRegisterOtp(name.trim(), email.trim(), password, country, generateSlug(name.trim()), industry, secondaryEmail.trim(), primaryContact);
+      setOtp(["", "", "", "", "", ""]);
+      setError("A new verification code was sent. Enter the latest code.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend code");
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -231,7 +247,10 @@ export default function Register() {
                     <ArrowLeft size={12} /> Back to company details
                   </button>
                   <p className="text-center text-[11px] text-slate-500">
-                    Didn't receive the code? Check spam or <button type="button" className="text-gold-400 hover:text-gold-300 underline" onClick={() => { setOtp(["","","","","",""]); setError("Request a new code from your email inbox."); }}>request a new one</button>
+                    Didn't receive the code? Check spam or{" "}
+                    <button type="button" disabled={resending} className="text-gold-400 hover:text-gold-300 underline" onClick={() => void resend()}>
+                      {resending ? "Resending..." : "request a new one"}
+                    </button>
                   </p>
                 </motion.div>
               )}
