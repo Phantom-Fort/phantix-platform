@@ -21,6 +21,9 @@ const API_BASE = (() => {
 export const DEMO_MODE = !API_BASE;
 import { dedupedRequest } from "./dedupe";
 
+/** Build-time master switch — mirrors backend PHANTIX_AGI_ENABLED (default on). */
+export const AGI_ENABLED = (import.meta.env.VITE_AGI_ENABLED ?? "true") !== "false";
+
 export const tokens = {
   get platform() { return sessionStorage.getItem("platform_access_token"); },
   set platform(v: string | null) { v ? sessionStorage.setItem("platform_access_token", v) : sessionStorage.removeItem("platform_access_token"); },

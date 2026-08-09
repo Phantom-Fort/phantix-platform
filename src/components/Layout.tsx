@@ -7,7 +7,7 @@ import {
   RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { DEMO_MODE } from "@/lib/api";
+import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
 import { APP_URL } from "@/lib/links";
 import { cx } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -39,7 +39,7 @@ const navSections: { label: string; items: { to: string; label: string; icon: Re
     label: "Governance",
     items: [
       { to: "/ai", label: "AI settings", icon: <Sparkles size={17} /> },
-      { to: "/agi", label: "PHANTIX AGI", icon: <Radar size={17} /> },
+      ...(AGI_ENABLED ? [{ to: "/agi", label: "PHANTIX AGI", icon: <Radar size={17} /> }] : []),
       { to: "/alerts", label: "Alerts", icon: <BellRing size={17} /> },
       { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
     ],

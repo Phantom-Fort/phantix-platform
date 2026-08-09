@@ -17,6 +17,7 @@ import Tools from "@/pages/Tools";
 import Billing from "@/pages/Billing";
 import AiSettings from "@/pages/AiSettings";
 import AgiSettings from "@/pages/AgiSettings";
+import { AGI_ENABLED } from "@/lib/api";
 import Support from "@/pages/Support";
 import Audit from "@/pages/Audit";
 import Alerts from "@/pages/Alerts";
@@ -67,7 +68,7 @@ export default function App() {
             <Route path="/tools" element={<RequireManagement><Tools /></RequireManagement>} />
             <Route path="/billing" element={<RequireManagement><Billing /></RequireManagement>} />
             <Route path="/ai" element={<RequireManagement><AiSettings /></RequireManagement>} />
-            <Route path="/agi" element={<RequireManagement><AgiSettings /></RequireManagement>} />
+            {AGI_ENABLED && <Route path="/agi" element={<RequireManagement><AgiSettings /></RequireManagement>} />}
             <Route path="/support" element={<RequireManagement><Support /></RequireManagement>} />
             <Route path="/audit" element={<RequireManagement><Audit /></RequireManagement>} />
             <Route path="/alerts" element={<RequireManagement><Alerts /></RequireManagement>} />
