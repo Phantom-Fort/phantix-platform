@@ -39,7 +39,7 @@ const navSections: { label: string; items: { to: string; label: string; icon: Re
     label: "Governance",
     items: [
       { to: "/ai", label: "AI settings", icon: <Sparkles size={17} /> },
-      ...(AGI_ENABLED ? [{ to: "/agi", label: "PHANTIX AGI", icon: <Radar size={17} /> }] : []),
+      ...(AGI_ENABLED ? [{ to: "/agi", label: "Autonomous Agent", icon: <Radar size={17} /> }] : []),
       { to: "/alerts", label: "Alerts", icon: <BellRing size={17} /> },
       { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
     ],

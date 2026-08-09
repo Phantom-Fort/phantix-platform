@@ -113,7 +113,7 @@ export default function AgiSettings() {
         ui: res?.ui ?? null,
       });
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Could not load AGI settings");
+      setLoadError(e instanceof Error ? e.message : "Could not load Autonomous Agent settings");
       setBootstrap(null);
     } finally { setLoading(false); }
   }, []);
@@ -121,14 +121,14 @@ export default function AgiSettings() {
   useEffect(() => { void load(); }, [load]);
 
   const patchSettings = async (body: Record<string, unknown>) => {
-    if (!(await requireDualControl("Changing AGI settings requires a dual-control operate session."))) return null;
+    if (!(await requireDualControl("Changing Autonomous Agent settings requires a dual-control operate session."))) return null;
     setSaving(true);
     try {
       let res: any;
       if (DEMO_MODE) { await delay(300); res = { ...(bootstrap?.settings ?? {}), ...body }; }
       else res = await api.patch<any>("/agi/org/settings", body);
       setBootstrap((b) => b ? { ...b, settings: { ...(b.settings ?? {} as OrgSettings), ...res } } : b);
-      toast("success", "AGI settings saved");
+      toast("success", "Autonomous Agent settings saved");
       return res;
     } catch (e: any) {
       const code = e?.detail?.code;
@@ -212,14 +212,14 @@ export default function AgiSettings() {
   };
 
   if (loading) {
-    return <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-400"><Spinner className="h-5 w-5" /> Loading AGI settings...</div>;
+    return <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-400"><Spinner className="h-5 w-5" /> Loading Autonomous Agent settings...</div>;
   }
 
   if (loadError && !bootstrap) {
     return (
       <EmptyState
         icon={<Radar size={24} />}
-        title="Could not load AGI settings"
+        title="Could not load Autonomous Agent settings"
         body={loadError}
         action={<button onClick={() => void load()} className="btn-primary !text-xs"><RefreshCw size={12} className="mr-1 inline" /> Retry</button>}
       />
@@ -231,8 +231,8 @@ export default function AgiSettings() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <PageHeader
-        title="PHANTIX AGI"
-        description="Configure the Autonomous Pentest Agent for your organization: enable it, set environment defaults, and store reusable test login + registration credentials. GET /agi/org/settings/bootstrap"
+        title="Autonomous Agent"
+        description="Configure the autonomous pentest agent for your organization: enable it, set environment defaults, and store reusable test login + registration credentials. GET /agi/org/settings/bootstrap"
         actions={
           <button onClick={() => void load()} className="btn-ghost text-sm px-3 py-1.5"><RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh</button>
         }
