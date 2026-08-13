@@ -89,7 +89,7 @@ export default function AiSettings() {
     const next = !ai!.agent_enabled;
     try {
       if (DEMO_MODE) { await delay(300); }
-      else { await api.put("/ai/settings", { agent_enabled: next }); }
+      else { await api.put("/ai/settings", { agent_enabled: next }, { dualControl: true }); }
       setAi((a) => a ? { ...a, agent_enabled: next } : a);
       toast("success", next ? "Phantix Agent enabled" : "Phantix Agent disabled", next ? "Operators can use the agent in the Command Centre." : "The agent is hidden from the Command Centre.");
     } catch (e) {
@@ -104,7 +104,7 @@ export default function AiSettings() {
     if (!(await requireDualControl("Changing AI mode requires a dual-control operate session."))) return;
     setModeSaving(true);
     try {
-      if (!DEMO_MODE) await api.put("/ai/settings", { mode: ai!.mode });
+      if (!DEMO_MODE) await api.put("/ai/settings", { mode: ai!.mode }, { dualControl: true });
       toast("success", "AI mode updated", ai!.mode);
     } catch (e) {
       toast("error", "Update failed", e instanceof Error ? e.message : "");
