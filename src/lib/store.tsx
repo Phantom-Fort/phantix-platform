@@ -1549,7 +1549,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const requireDualControl = useCallback(
     (reason = "This action requires an active dual-control operate session.") => {
-      if (operate.unlocked && tokens.dualControl) return Promise.resolve(true);
+      const sessionActive =
+        operate.unlocked &&
+        !!tokens.dualControl &&
+        (operate.expiresAt == null || operate.expiresAt > Date.now());
+      if (sessionActive) return Promise.resolve(true);
       if (!state.dualControl.configured && !DEMO_MODE) {
         toast("warning", "Set up dual control first", "Assign initiator + authorizer under People & Control.");
         return Promise.resolve(false);
@@ -1559,7 +1563,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setDualControlPrompt({ open: true, reason });
       });
     },
-    [operate.unlocked, state.dualControl.configured, toast],
+    [operate.unlocked, operate.expiresAt, state.dualControl.configured, toast],
   );
 
   const requestDualControlOtp = useCallback(

@@ -126,7 +126,7 @@ export default function AgiSettings() {
     try {
       let res: any;
       if (DEMO_MODE) { await delay(300); res = { ...(bootstrap?.settings ?? {}), ...body }; }
-      else res = await api.patch<any>("/agi/org/settings", body);
+      else res = await api.patch<any>("/agi/org/settings", body, { dualControl: true });
       setBootstrap((b) => b ? { ...b, settings: { ...(b.settings ?? {} as OrgSettings), ...res } } : b);
       toast("success", "Autonomous Agent settings saved");
       return res;
@@ -181,10 +181,10 @@ export default function AgiSettings() {
         await delay(300);
         toast("success", accountModal.editing ? "Test account updated" : "Test account created", form.label);
       } else if (accountModal.editing) {
-        await api.patch(`/agi/org/test-accounts/${accountModal.editing.id}`, body);
+        await api.patch(`/agi/org/test-accounts/${accountModal.editing.id}`, body, { dualControl: true });
         toast("success", "Test account updated", form.label);
       } else {
-        await api.post("/agi/org/test-accounts", body);
+        await api.post("/agi/org/test-accounts", body, { dualControl: true });
         toast("success", "Test account created", form.label);
       }
       setAccountModal({ open: false, editing: null });
@@ -200,7 +200,7 @@ export default function AgiSettings() {
     if (!(await requireDualControl("Deleting test credentials requires a dual-control operate session."))) return;
     setBusyAccount(a.id);
     try {
-      if (!DEMO_MODE) await api.delete(`/agi/org/test-accounts/${a.id}`);
+      if (!DEMO_MODE) await api.delete(`/agi/org/test-accounts/${a.id}`, { dualControl: true });
       toast("success", "Test account deleted", a.label);
       await load();
     } catch (e) { toast("error", "Delete failed", e instanceof Error ? e.message : ""); }
