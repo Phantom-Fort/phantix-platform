@@ -105,6 +105,9 @@ export default function Login() {
                   {busy ? "Checking..." : "Continue"} <ArrowRight size={15} />
                 </button>
                 <p className="text-center text-xs text-slate-500">
+                  <Link to="/password-reset" className="text-gold-400 hover:text-gold-300">Forgot password?</Link>
+                </p>
+                <p className="text-center text-xs text-slate-500">
                   New tenant?{" "}
                   <Link to="/register" className="text-gold-400 hover:text-gold-300">Register your organization</Link>
                 </p>

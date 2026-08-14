@@ -6,6 +6,8 @@ import DualControlOverlay from "@/components/DualControlOverlay";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import Privacy from "@/pages/auth/Privacy";
+import PasswordResetRequest from "@/pages/auth/PasswordResetRequest";
+import PasswordResetComplete from "@/pages/auth/PasswordResetComplete";
 import SetupWizard from "@/pages/setup/SetupWizard";
 import Dashboard from "@/pages/Dashboard";
 import Identity from "@/pages/Identity";
@@ -57,6 +59,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/password-reset" element={<PasswordResetRequest />} />
+          <Route path="/reset-password" element={<PasswordResetComplete />} />
           <Route path="/setup" element={<SetupRoute />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<RequireManagement><Dashboard /></RequireManagement>} />
