@@ -103,14 +103,22 @@ async function request<T>(
       try {
         detail = (await res.json()).detail;
       } catch { /* non-JSON */ }
+      const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
+      const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
+      // A mutation sent without (or with a stale) dual-control session: drop the
+      // token so the next requireDualControl() re-opens the operate overlay.
+      if (/authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg)) {
+        tokens.dualControl = null;
+        window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired"));
+      }
       if (res.status === 401) {
         tokens.platform = null;
         tokens.orgUser = null;
         tokens.email = null;
       }
       if (res.status === 402) {
-        const msg = typeof detail === "string" ? detail : "Upgrade required";
-        window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: msg }));
+        const m = typeof detail === "string" ? detail : "Upgrade required";
+        window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: m }));
       }
       throw new ApiError(res.status, detail);
     }
@@ -140,14 +148,20 @@ async function requestMultipart<T>(
       try {
         detail = (await res.json()).detail;
       } catch { /* non-JSON */ }
+      const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
+      const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
+      if (/authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg)) {
+        tokens.dualControl = null;
+        window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired"));
+      }
       if (res.status === 401) {
         tokens.platform = null;
         tokens.orgUser = null;
         tokens.email = null;
       }
       if (res.status === 402) {
-        const msg = typeof detail === "string" ? detail : "Upgrade required";
-        window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: msg }));
+        const m = typeof detail === "string" ? detail : "Upgrade required";
+        window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: m }));
       }
       throw new ApiError(res.status, detail);
     }

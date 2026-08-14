@@ -12,7 +12,7 @@ import { timeAgo, maskEmail, cx } from "@/lib/utils";
 import type { OrgUser } from "@/lib/types";
 
 export default function People() {
-  const { state, operate, toast, requireDualControl } = useStore();
+  const { state, operate, toast, requireDualControl, decidePending, refreshPending } = useStore();
   const [searchParams] = useSearchParams();
   const [addOpen, setAddOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
@@ -22,6 +22,26 @@ export default function People() {
       void requireDualControl("Unlock operate mode to manage people and dual-control actions.");
     }
   }, [searchParams, requireDualControl]);
+
+  // Keep the authorizer approval queue fresh.
+  useEffect(() => { void refreshPending(); }, [refreshPending]);
+
+  const pendingItems = state.pending.filter((p) => p.status === "pending");
+  const [approvingId, setApprovingId] = useState<number | null>(null);
+
+  const approveOrReject = async (id: number, approve: boolean) => {
+    if (!(await requireDualControl("Deciding a pending action requires a dual-control operate session."))) return;
+    setApprovingId(id);
+    try {
+      await decidePending(id, approve);
+      toast("success", approve ? "Action approved" : "Action rejected", approve ? "The pending action was authorized." : "The pending action was declined.");
+      await refreshPending();
+    } catch (e) {
+      toast("error", "Decision failed", e instanceof Error ? e.message : "");
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const dc = state.dualControl;
   const initiator = state.users.find((u) => u.id === dc.initiator_user_id);
@@ -126,6 +146,51 @@ export default function People() {
                   </button>
                 </div>
               </div>
+            </Card>
+          </motion.div>
+
+          {/* Authorizer approval queue */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+            <Card>
+              <CardHeader
+                title="Pending approvals"
+                subtitle="Deletes and state-changing actions proposed by the initiator await the authorizer's sign-off"
+                action={
+                  <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">{pendingItems.length} pending</span>
+                }
+              />
+              {pendingItems.length === 0 ? (
+                <EmptyState icon={<CheckCircle2 size={22} />} title="No pending approvals" body="Actions that need dual-control sign-off will appear here for the authorizer." />
+              ) : (
+                <div className="divide-y divide-phantix-700/40">
+                  {pendingItems.map((p) => (
+                    <div key={p.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-100">{p.action_label}</p>
+                        <p className="text-[11px] text-slate-500">
+                          {p.category} · initiated by {p.initiated_by} · {timeAgo(p.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          className="btn-primary !px-3 !py-1.5 !text-xs"
+                          disabled={approvingId === p.id}
+                          onClick={() => void approveOrReject(p.id, true)}
+                        >
+                          {approvingId === p.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Approve
+                        </button>
+                        <button
+                          className="btn-ghost !px-3 !py-1.5 !text-xs text-severity-critical"
+                          disabled={approvingId === p.id}
+                          onClick={() => void approveOrReject(p.id, false)}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           </motion.div>
 

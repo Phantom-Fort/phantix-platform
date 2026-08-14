@@ -107,6 +107,38 @@ type OperateState = {
   expiresAt: number | null;
 };
 
+/** Persist operate-session metadata so a live dual-control token survives reloads. */
+const OPERATE_META_KEY = "phantix_operate_meta";
+
+function persistOperateMeta(meta: OperateState): void {
+  try {
+    sessionStorage.setItem(
+      OPERATE_META_KEY,
+      JSON.stringify({ actingUser: meta.actingUser, actingRole: meta.actingRole, expiresAt: meta.expiresAt }),
+    );
+  } catch { /* quota */ }
+}
+
+function readOperateMeta(): OperateState | null {
+  try {
+    const raw = sessionStorage.getItem(OPERATE_META_KEY);
+    if (!raw) return null;
+    const m = JSON.parse(raw) as { actingUser?: string | null; actingRole?: OperateState["actingRole"] | null; expiresAt?: number | null };
+    return {
+      unlocked: Boolean(tokens.dualControl),
+      actingUser: m.actingUser ?? null,
+      actingRole: m.actingRole ?? null,
+      expiresAt: typeof m.expiresAt === "number" ? m.expiresAt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearOperateMeta(): void {
+  try { sessionStorage.removeItem(OPERATE_META_KEY); } catch { /* ignore */ }
+}
+
 type ToastKind = "success" | "error" | "info" | "warning";
 type Toast = { id: number; kind: ToastKind; title: string; body?: string };
 
@@ -497,6 +529,7 @@ type Store = {
   toggleTool: (tool: ToolItem) => Promise<void>;
   createTicket: (subject: string, priority: string, body: string) => Promise<void>;
   decidePending: (id: number, approve: boolean) => Promise<void>;
+  refreshPending: () => Promise<void>;
   sendTestAlert: () => Promise<void>;
   updateAlertSettings: (settings: Partial<AlertSettings>) => Promise<void>;
   exportAuditCsv: () => Promise<void>;
@@ -521,11 +554,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const email = emailFromToken();
     return { authenticated: true, email };
   });
-  const [operate, setOperate] = useState<OperateState>(() =>
-    DEMO_MODE && tokens.dualControl
-      ? { unlocked: true, actingUser: "Operate user", actingRole: "initiator", expiresAt: Date.now() + 30 * 60_000 }
-      : { unlocked: false, actingUser: null, actingRole: null, expiresAt: null },
-  );
+  const [operate, setOperate] = useState<OperateState>(() => {
+    if (DEMO_MODE && tokens.dualControl) {
+      return { unlocked: true, actingUser: "Operate user", actingRole: "initiator", expiresAt: Date.now() + 30 * 60_000 };
+    }
+    // Restore an existing dual-control session token so mutations reuse it
+    // instead of re-opening the initiator/authorizer OTP flow on every page load.
+    const meta = readOperateMeta();
+    if (tokens.dualControl && meta && meta.expiresAt != null && meta.expiresAt > Date.now()) {
+      return { unlocked: true, actingUser: meta.actingUser, actingRole: meta.actingRole, expiresAt: meta.expiresAt };
+    }
+    return { unlocked: false, actingUser: null, actingRole: null, expiresAt: null };
+  });
   const [dualControlPrompt, setDualControlPrompt] = useState<{ open: boolean; reason: string }>({ open: false, reason: "" });
   const dcPromptResolve = useRef<((ok: boolean) => void) | null>(null);
   const dcMfaToken = useRef<string>("");
@@ -772,6 +812,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const dismissToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
+
+  // Backend rejected a mutation for a missing/expired dual-control session:
+  // drop the in-memory + persisted operate state so the next action re-opens
+  // the initiator/authorizer overlay instead of failing silently.
+  useEffect(() => {
+    const onDcExpired = () => {
+      clearOperateMeta();
+      setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+      toast("warning", "Operate session expired", "Re-authenticate as initiator or authorizer to continue.");
+    };
+    window.addEventListener("phantix:dual-control-session-expired", onDcExpired);
+    return () => window.removeEventListener("phantix:dual-control-session-expired", onDcExpired);
+  }, [toast]);
 
   const logAudit = useCallback(
     (event_key: string, category: string, action: string) => {
@@ -1469,6 +1522,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         actingRole: isAuthorizer && !isInitiator ? "authorizer" : "initiator",
         expiresAt,
       });
+      persistOperateMeta({
+        unlocked: true,
+        actingUser: payload.user?.full_name || user?.full_name || email || "Operate user",
+        actingRole: isAuthorizer && !isInitiator ? "authorizer" : "initiator",
+        expiresAt,
+      });
       if (user) {
         persist((s) => ({
           ...s,
@@ -1689,6 +1748,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       void api.post("/org-users/auth/logout", {}).catch(() => {});
     }
     tokens.dualControl = null;
+    clearOperateMeta();
     // keep orgUser for identity reads if needed; clear dual session only
     setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
   }, []);
@@ -2123,6 +2183,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [persist],
   );
 
+  const refreshPending = useCallback(async () => {
+    if (DEMO_MODE) return;
+    try {
+      const pendingRes = await api.get<unknown>("/audit/pending");
+      const items = Array.isArray(pendingRes)
+        ? (pendingRes as unknown as PendingAction[])
+        : (((pendingRes as { items?: unknown[] })?.items ?? []) as PendingAction[]);
+      persist((s) => ({ ...s, pending: items }));
+    } catch { /* keep current list */ }
+  }, [persist]);
+
   const sendTestAlert = useCallback(async () => {
     if (DEMO_MODE) {
       await delay(400);
@@ -2189,7 +2260,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       issueLoginLink, clearDevice,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
-      toggleTool, createTicket, decidePending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
+      toggleTool, createTicket, decidePending, refreshPending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
@@ -2200,7 +2271,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       issueLoginLink, clearDevice,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
-      toggleTool, createTicket, decidePending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
+      toggleTool, createTicket, decidePending, refreshPending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toast, dismissToast],
   );
 

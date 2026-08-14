@@ -150,7 +150,7 @@ export default function GithubIntegration() {
   const disconnect = async () => {
     if (!(await requireDualControl("Disconnecting the GitHub App requires a dual-control operate session."))) return;
     try {
-      if (DEMO_MODE) { await delay(300); } else { await api.delete("/github/installation"); }
+      if (DEMO_MODE) { await delay(300); } else { await api.delete("/github/installation", { dualControl: true }); }
       setInstall({ connected: false, status: "not_connected", approval_status: null, installation_status: null, account_login: "", account_type: "", installation_id: "", pat_fallback: false, can_list_repos: false, can_analyze: false, setup_action: null, message: "" });
       setRepos([]);
       toast("success", "Disconnected");
