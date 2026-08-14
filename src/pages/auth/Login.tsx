@@ -111,6 +111,13 @@ export default function Login() {
                   New tenant?{" "}
                   <Link to="/register" className="text-gold-400 hover:text-gold-300">Register your organization</Link>
                 </p>
+                <p className="text-center text-[11px] text-slate-600">
+                  <Link to="/terms" className="hover:text-slate-400">Terms of Service</Link>
+                  {" · "}
+                  <Link to="/aup" className="hover:text-slate-400">AUP</Link>
+                  {" · "}
+                  <Link to="/privacy" className="hover:text-slate-400">Privacy</Link>
+                </p>
               </motion.form>
             ) : (
               <motion.form key="mfa" initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 14 }} onSubmit={submit} className="space-y-4">
