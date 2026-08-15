@@ -4,6 +4,7 @@ import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
 import DualControlOverlay from "@/components/DualControlOverlay";
 import Login from "@/pages/auth/Login";
+import DeviceConfirm from "@/pages/DeviceConfirm";
 import Register from "@/pages/auth/Register";
 import Privacy from "@/pages/auth/Privacy";
 import Terms from "@/pages/auth/Terms";
@@ -59,6 +60,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/device-confirm" element={<DeviceConfirm />} />
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />

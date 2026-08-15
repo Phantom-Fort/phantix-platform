@@ -499,7 +499,7 @@ type Store = {
   closeDualControlPrompt: (success: boolean) => void;
   requestDualControlOtp: (email: string) => Promise<{ destinationMasked: string; devOtp: string }>;
   verifyDualControlOtp: (code: string) => Promise<{ deviceRequired: boolean }>;
-  confirmDualControlDevice: (code: string) => Promise<void>;
+  confirmDualControlDevice: () => Promise<{ done: boolean }>;
   issueLoginLink: (userId: number) => Promise<string>;
   clearDevice: (userId: number) => Promise<void>;
   // connections
@@ -1714,7 +1714,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const confirmDualControlDevice = useCallback(
-    async (code: string) => {
+    async (): Promise<{ done: boolean }> => {
       if (DEMO_MODE) {
         tokens.dualControl = `dc_${crypto.randomUUID()}`;
         tokens.orgUser = "demo.org_user.jwt";
@@ -1724,21 +1724,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           actingRole: "initiator",
           expiresAt: Date.now() + 30 * 60_000,
         });
-        return;
+        return { done: true };
       }
+      // Poll the device-confirm status — the user opens the org-specific link
+      // from email; once it's confirmed the backend issues the operate session.
       const res = await api.post<{
+        confirmed?: boolean;
         access_token?: string;
         session_token?: string;
         dual_control_session?: string;
         inactivity_expires_at?: string;
         user?: { full_name?: string; email?: string; id?: number };
-      }>("/org-users/auth/login/device", {
-        device_token: dcDeviceToken.current,
-        code,
+      }>("/org-users/auth/device-status", {
+        challenge: dcDeviceToken.current,
         device_id: deviceId(),
       });
+      if (!res || res.confirmed === false || !res.access_token) return { done: false };
       applyOperateSession(res);
       if (!tokens.dualControl) throw new Error("Operate session was not issued");
+      return { done: true };
     },
     [applyOperateSession],
   );

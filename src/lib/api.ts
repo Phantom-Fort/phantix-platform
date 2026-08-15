@@ -107,11 +107,13 @@ async function request<T>(
       const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
       // A mutation sent without (or with a stale) dual-control session: drop the
       // token so the next requireDualControl() re-opens the operate overlay.
-      if (/authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg)) {
+      // The org / org-user session stays intact — the user is NOT logged out.
+      const dcSessionIssue = /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
+      if (dcSessionIssue) {
         tokens.dualControl = null;
         window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired"));
       }
-      if (res.status === 401) {
+      if (res.status === 401 && !dcSessionIssue) {
         tokens.platform = null;
         tokens.orgUser = null;
         tokens.email = null;
@@ -150,11 +152,12 @@ async function requestMultipart<T>(
       } catch { /* non-JSON */ }
       const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
       const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
-      if (/authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg)) {
+      const dcSessionIssue = /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
+      if (dcSessionIssue) {
         tokens.dualControl = null;
         window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired"));
       }
-      if (res.status === 401) {
+      if (res.status === 401 && !dcSessionIssue) {
         tokens.platform = null;
         tokens.orgUser = null;
         tokens.email = null;
