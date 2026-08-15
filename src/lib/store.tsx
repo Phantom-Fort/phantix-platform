@@ -1409,12 +1409,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         });
         return created!;
       }
+      // New user creation after dual-control is assigned must carry the operate
+      // session header so it is queued for the authorizer's approval.
       const res = await api.post<Record<string, unknown>>("/org-users", {
         full_name: u.full_name,
         email: u.email,
         title: u.title,
         role: u.role,
-      });
+      }, { dualControl: true });
       let id = extractId(res);
       let full_name = String(res.full_name ?? res.name ?? u.full_name);
       let email = String(res.email ?? u.email);
