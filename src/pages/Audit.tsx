@@ -1,13 +1,20 @@
-﻿import React, { useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Download, ArrowRight, Loader2 } from "lucide-react";
+import { Download, ArrowRight, Loader2, RefreshCw } from "lucide-react";
 import { PageHeader, Card, StatusBadge } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/utils";
 
 export default function Audit() {
-  const { state, toast, exportAuditCsv } = useStore();
+  const { state, toast, exportAuditCsv, refreshAudit } = useStore();
   const [exporting, setExporting] = useState(false);
+
+  // Load the audit trail on mount and poll so new user activities stream in.
+  useEffect(() => { void refreshAudit(); }, [refreshAudit]);
+  useEffect(() => {
+    const t = window.setInterval(() => { void refreshAudit(); }, 30000);
+    return () => window.clearInterval(t);
+  }, [refreshAudit]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -27,9 +34,12 @@ export default function Audit() {
         title="Audit trail"
         description="Immutable platform-DB trail. Once dual control is active, completed actions carry initiator and authorizer name + title snapshots for compliance export."
         actions={
-          <button className="btn-secondary" onClick={() => void handleExport()} disabled={exporting}>
-            {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="btn-ghost" onClick={() => void refreshAudit()} title="Refresh audit trail"><RefreshCw size={15} /></button>
+            <button className="btn-secondary" onClick={() => void handleExport()} disabled={exporting}>
+              {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export CSV
+            </button>
+          </div>
         }
       />
 

@@ -530,6 +530,7 @@ type Store = {
   createTicket: (subject: string, priority: string, body: string) => Promise<void>;
   decidePending: (id: number, approve: boolean) => Promise<void>;
   refreshPending: () => Promise<void>;
+  refreshAudit: () => Promise<void>;
   sendTestAlert: () => Promise<void>;
   updateAlertSettings: (settings: Partial<AlertSettings>) => Promise<void>;
   exportAuditCsv: () => Promise<void>;
@@ -786,7 +787,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         companies: companies.length ? companies : s.companies,
         alerts: Array.isArray(alertsRes) ? (alertsRes as unknown as AlertEvent[]) : (((alertsRes as { items?: unknown[] })?.items ?? []) as AlertEvent[]),
         alertSettings: alertSettingsRes ? normalizeAlertSettings(alertSettingsRes) : s.alertSettings,
-        audit: Array.isArray(auditRes) ? (auditRes as unknown as AuditEvent[]) : s.audit,
+        audit: Array.isArray(auditRes) ? (auditRes as unknown as AuditEvent[]) : (((auditRes as { items?: unknown[] })?.items ?? []) as AuditEvent[]),
         pending: Array.isArray(pendingRes) ? (pendingRes as unknown as PendingAction[]) : s.pending,
         tools: toolsRes ? mapToolsFromApi(toolsRes) : s.tools,
         tickets: ticketsRes ? mapTicketsFromApi(ticketsRes) : s.tickets,
@@ -2200,6 +2201,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     } catch { /* keep current list */ }
   }, [persist]);
 
+  const refreshAudit = useCallback(async () => {
+    if (DEMO_MODE) return;
+    try {
+      const auditRes = await api.get<unknown>("/audit/events?limit=200");
+      const items = Array.isArray(auditRes)
+        ? (auditRes as unknown as AuditEvent[])
+        : (((auditRes as { items?: unknown[] })?.items ?? []) as AuditEvent[]);
+      if (items.length > 0) persist((s) => ({ ...s, audit: items }));
+    } catch { /* keep current list */ }
+  }, [persist]);
+
   const sendTestAlert = useCallback(async () => {
     if (DEMO_MODE) {
       await delay(400);
@@ -2266,7 +2278,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       issueLoginLink, clearDevice,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
-      toggleTool, createTicket, decidePending, refreshPending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
+      toggleTool, createTicket, decidePending, refreshPending, refreshAudit, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
@@ -2277,7 +2289,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       issueLoginLink, clearDevice,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
       createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
-      toggleTool, createTicket, decidePending, refreshPending, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
+      toggleTool, createTicket, decidePending, refreshPending, refreshAudit, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toast, dismissToast],
   );
 

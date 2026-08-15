@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, Loader2, GitBranch, ShieldCheck, Clock } from "lucide-react";
+import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, Loader2, GitBranch, ShieldCheck, Clock, CheckCircle2 } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -46,6 +46,9 @@ export default function GithubIntegration() {
   const [upgradeRepo, setUpgradeRepo] = useState<Repo | null>(null);
   const [query, setQuery] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [justConnected, setJustConnected] = useState(false);
+  const installRef = useRef<Installation | null>(null);
+  installRef.current = install;
 
   const mapInstall = (inst: any): Installation => ({
     connected: Boolean(inst?.connected),
@@ -128,6 +131,31 @@ export default function GithubIntegration() {
 
   useEffect(() => { load(); }, [load]);
 
+  // When the user returns to this tab after installing the app in the new tab,
+  // refresh the connection immediately.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") void load(); };
+    const onFocus = () => {
+      const cur = installRef.current;
+      if (!cur?.connected || cur.status === "awaiting_approval" || cur.status === "suspended") void load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [load]);
+
+  // While the user is finishing the install in the new tab, poll so the
+  // connection is picked up automatically the moment GitHub records it.
+  useEffect(() => {
+    if (!justConnected) return;
+    const t = window.setInterval(() => { void load(); }, 6000);
+    const stop = window.setTimeout(() => setJustConnected(false), 90_000);
+    return () => { window.clearInterval(t); window.clearTimeout(stop); };
+  }, [justConnected, load]);
+
   // Poll every 20s while awaiting org approval
   const awaiting = install?.status === "awaiting_approval";
   useEffect(() => {
@@ -142,7 +170,9 @@ export default function GithubIntegration() {
       if (DEMO_MODE) { await delay(400); setInstall(demoInstall); return; }
       const res = await api.get<InstallInfo>("/github/install-url");
       if (!res.configured) { toast("error", "GitHub App not configured", "The GitHub App is not set up on the server yet."); return; }
-      window.location.href = res.install_url;
+      // Open in a new tab so the user stays in the app; we poll + refresh on return.
+      window.open(res.install_url, "_blank", "noopener,noreferrer");
+      setJustConnected(true);
     } catch (e) { toast("error", "Connect failed", e instanceof Error ? e.message : ""); }
     finally { setConnecting(false); }
   };
@@ -207,7 +237,37 @@ export default function GithubIntegration() {
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
               Install the Phantix App on GitHub to inventory repositories and run security analysis. Private repos are available on the Premium plan.
             </p>
-            <button onClick={connect} disabled={connecting} className="btn-primary mt-6"><Github size={16} /> {connecting ? "Redirecting..." : "Connect GitHub"}</button>
+            <button onClick={connect} disabled={connecting} className="btn-primary mt-6"><Github size={16} /> {connecting ? "Opening GitHub..." : "Connect GitHub"}</button>
+
+            {justConnected && (
+              <div className="mx-auto mt-5 max-w-md rounded-xl border border-phantix-600/40 bg-phantix-800/40 px-4 py-3 text-left">
+                <div className="flex items-start gap-2">
+                  <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin text-gold-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-200">GitHub opened in a new tab</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">
+                      Complete the install there, then come back — we refresh automatically. Installed already?
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button onClick={() => void load()} disabled={loading} className="btn-secondary !py-1.5 !text-xs">
+                        <RefreshCw size={12} className={cx(loading && "animate-spin")} /> Check connection now
+                      </button>
+                      <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="btn-ghost !text-xs"><ExternalLink size={12} /> Open GitHub</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!justConnected && !awaiting && (
+              <div className="mx-auto mt-5 flex max-w-md items-center justify-center gap-2 text-xs text-slate-500">
+                <CheckCircle2 size={13} className="text-gold-400" />
+                Installed the app already?
+                <button onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-1 font-semibold text-gold-400 hover:text-gold-300">
+                  <RefreshCw size={12} className={cx(loading && "animate-spin")} /> Refresh status
+                </button>
+              </div>
+            )}
 
             {/* Awaiting org approval */}
             {awaiting && (
