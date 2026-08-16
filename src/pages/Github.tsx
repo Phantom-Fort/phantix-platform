@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
 
 interface InstallInfo { install_url: string; state: string; configured: boolean; }
+interface DiscoverableInstall { installation_id: number; account_login: string; account_type: string; repository_selection: string | null; }
 interface Installation {
   connected: boolean;
   status: string;
@@ -21,10 +22,11 @@ interface Installation {
   can_analyze: boolean;
   setup_action: string | null;
   message: string;
+  discoverable_installations: DiscoverableInstall[];
 }
 interface Repo { id: number; full_name: string; name: string; private: boolean; can_analyze: boolean; requires_premium: boolean; default_branch: string; }
 
-const demoInstall: Installation = { connected: true, status: "connected", approval_status: "approved", installation_status: "active", account_login: "acme-dev", account_type: "User", installation_id: "987654", pat_fallback: false, can_list_repos: true, can_analyze: true, setup_action: "install", message: "GitHub App connected" };
+const demoInstall: Installation = { connected: true, status: "connected", approval_status: "approved", installation_status: "active", account_login: "acme-dev", account_type: "User", installation_id: "987654", pat_fallback: false, can_list_repos: true, can_analyze: true, setup_action: "install", message: "GitHub App connected", discoverable_installations: [] };
 const demoRepos: Repo[] = [
   { id: 1, full_name: "acme-dev/api-gateway", name: "api-gateway", private: true, can_analyze: true, requires_premium: false, default_branch: "main" },
   { id: 2, full_name: "acme-dev/web-portal", name: "web-portal", private: false, can_analyze: true, requires_premium: false, default_branch: "main" },
@@ -47,6 +49,7 @@ export default function GithubIntegration() {
   const [query, setQuery] = useState("");
   const [loadError, setLoadError] = useState("");
   const [justConnected, setJustConnected] = useState(false);
+  const [linkingId, setLinkingId] = useState<number | null>(null);
   const installRef = useRef<Installation | null>(null);
   installRef.current = install;
 
@@ -63,6 +66,9 @@ export default function GithubIntegration() {
     can_analyze: inst?.can_analyze !== false,
     setup_action: inst?.setup_action ?? null,
     message: String(inst?.message ?? ""),
+    discoverable_installations: Array.isArray(inst?.discoverable_installations)
+      ? (inst.discoverable_installations as DiscoverableInstall[])
+      : [],
   });
 
   // OAuth callback: GitHub redirects back with installation_id/setup_action/state (+ org hints)
@@ -178,10 +184,10 @@ export default function GithubIntegration() {
   };
 
   const disconnect = async () => {
-    if (!(await requireDualControl("Disconnecting the GitHub App requires a dual-control operate session."))) return;
+    // DELETE /github/installation is dual-control exempt (per FE contract §2.2).
     try {
-      if (DEMO_MODE) { await delay(300); } else { await api.delete("/github/installation", { dualControl: true }); }
-      setInstall({ connected: false, status: "not_connected", approval_status: null, installation_status: null, account_login: "", account_type: "", installation_id: "", pat_fallback: false, can_list_repos: false, can_analyze: false, setup_action: null, message: "" });
+      if (DEMO_MODE) { await delay(300); } else { await api.delete("/github/installation"); }
+      setInstall({ connected: false, status: "not_connected", approval_status: null, installation_status: null, account_login: "", account_type: "", installation_id: "", pat_fallback: false, can_list_repos: false, can_analyze: false, setup_action: null, message: "", discoverable_installations: [] });
       setRepos([]);
       toast("success", "Disconnected");
     } catch (e) { toast("error", "Disconnect failed"); }
@@ -197,12 +203,25 @@ export default function GithubIntegration() {
     finally { setRefreshing(false); }
   };
 
+  const linkInstall = async (installationId: number) => {
+    setLinkingId(installationId);
+    try {
+      if (DEMO_MODE) { await delay(400); setInstall(demoInstall); return; }
+      await api.post("/github/callback", { installation_id: installationId, setup_action: "install" });
+      toast("success", "Installation linked");
+      await load();
+    } catch (e) { toast("error", "Link failed", e instanceof Error ? e.message : ""); }
+    finally { setLinkingId(null); }
+  };
+
   const analyze = async (repo: Repo) => {
     if (!repo.can_analyze) { setUpgradeRepo(repo); setUpgradeOpen(true); return; }
+    // Analyze is a mutating op — dual-control session required when configured.
+    if (!(await requireDualControl("Analyzing a repository requires a dual-control operate session."))) return;
     setAnalyzing(repo.id);
     try {
       if (DEMO_MODE) { await delay(800); toast("success", "Analysis queued", `${repo.full_name}`); return; }
-      await api.post("/github/repositories/analyze", { repo_id: repo.id, full_name: repo.full_name, analysis_profile: "full" });
+      await api.post("/github/repositories/analyze", { repo_id: repo.id, full_name: repo.full_name, analysis_profile: "full" }, { dualControl: true });
       toast("success", "Analysis queued", `${repo.full_name}`);
     } catch (e: any) {
       const code = e?.detail?.code ?? e?.detail?.detail?.code;
@@ -238,6 +257,36 @@ export default function GithubIntegration() {
               Install the Phantix App on GitHub to inventory repositories and run security analysis. Private repos are available on the Premium plan.
             </p>
             <button onClick={connect} disabled={connecting} className="btn-primary mt-6"><Github size={16} /> {connecting ? "Opening GitHub..." : "Connect GitHub"}</button>
+
+            {/* Discoverable (already-installed) GitHub Apps to link */}
+            {(install?.discoverable_installations?.length ?? 0) > 0 && (
+              <div className="mx-auto mt-6 max-w-md rounded-xl border border-gold-400/25 bg-gold-400/5 p-4 text-left">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gold-300">
+                  {install!.discoverable_installations.length} unlinked GitHub installation{install!.discoverable_installations.length === 1 ? "" : "s"} found
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">
+                  The App is already installed on one of your GitHub accounts — link it instead of reinstalling.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {install!.discoverable_installations.map((d) => (
+                    <div key={d.installation_id} className="flex items-center gap-3 rounded-lg border border-phantix-700/40 bg-phantix-950/50 px-3 py-2.5">
+                      <Github size={15} className="shrink-0 text-gold-400" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-200">{d.account_login}</p>
+                        <p className="text-[10px] text-slate-500">{d.account_type || "GitHub App"}{d.repository_selection ? ` · ${d.repository_selection}` : ""}</p>
+                      </div>
+                      <button
+                        onClick={() => void linkInstall(d.installation_id)}
+                        disabled={linkingId === d.installation_id}
+                        className="btn-secondary shrink-0 !px-3 !py-1.5 !text-xs"
+                      >
+                        {linkingId === d.installation_id ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />} Link
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {justConnected && (
               <div className="mx-auto mt-5 max-w-md rounded-xl border border-phantix-600/40 bg-phantix-800/40 px-4 py-3 text-left">

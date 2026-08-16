@@ -61,6 +61,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/device-confirm" element={<DeviceConfirm />} />
+          <Route path="/github" element={<GithubIntegration />} />
+          <Route path="/integrations/github/callback" element={<GithubIntegration />} />
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
