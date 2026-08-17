@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, CopyChip, Tabs } from "@/components/ui";
 import { useStore } from "@/lib/store";
+import { mediaUrl } from "@/lib/api";
 import type { Organization, OrgContact } from "@/lib/types";
 import { timeAgo, cx } from "@/lib/utils";
 
@@ -82,7 +83,8 @@ export default function Identity() {
       await uploadLogo(file);
       toast("success", "Logo uploaded", "POST /organizations/me/logo --- used on report covers and footers.");
     } catch (err) {
-      toast("error", "Upload failed", err instanceof Error ? err.message : "Could not upload logo");
+      const st = (err as { status?: number })?.status;
+      toast("error", st === 502 || st === 503 ? "Storage unavailable" : "Upload failed", st === 502 || st === 503 ? "Storage unavailable — retry." : err instanceof Error ? err.message : "Could not upload logo");
     } finally {
       setLogoBusy(false);
       if (logoInputRef.current) logoInputRef.current.value = "";
@@ -98,7 +100,8 @@ export default function Identity() {
       await deleteLogo();
       toast("success", "Logo removed", "DELETE /organizations/me/logo");
     } catch (err) {
-      toast("error", "Remove failed", err instanceof Error ? err.message : "Could not remove logo");
+      const st = (err as { status?: number })?.status;
+      toast("error", st === 502 || st === 503 ? "Storage unavailable" : "Remove failed", st === 502 || st === 503 ? "Storage unavailable — retry." : err instanceof Error ? err.message : "Could not remove logo");
     } finally {
       setLogoBusy(false);
     }
@@ -452,7 +455,7 @@ export default function Identity() {
               <div className="flex items-center gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
                 <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-phantix-800/70">
                   {state.org.logo_url ? (
-                    <img src={state.org.logo_url} alt="" className="h-full w-full object-contain" />
+                    <img src={mediaUrl(state.org.logo_url)} alt="" className="h-full w-full object-contain" />
                   ) : (
                     <span className="font-display text-lg font-bold text-gold-400">{(state.org.name || "?").slice(0, 1)}</span>
                   )}

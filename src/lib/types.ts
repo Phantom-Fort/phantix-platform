@@ -158,6 +158,12 @@ export interface ToolItem {
   description: string;
   subscribed: boolean;
   price_note: string;
+  tier?: string;
+  pricing_model?: string;
+  eligible?: boolean;
+  eligibility_reason?: string | null;
+  monthly_price_ngn?: number;
+  yearly_price_ngn?: number;
 }
 
 export interface Payment {

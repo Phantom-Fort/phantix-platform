@@ -11,7 +11,7 @@
 // prefix so no endpoint is ever called without it. Relative "/api/v1" is kept
 // for same-origin dev proxies.
 const RAW_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-const API_BASE = (() => {
+export const API_BASE = (() => {
   if (!RAW_API_BASE) return RAW_API_BASE;
   let base = RAW_API_BASE.replace(/\/+$/, "").replace(/^(?!https?:\/\/|\/)/i, "https://");
   if (base.startsWith("/")) return base; // relative — dev proxy already targets /api/v1
@@ -19,6 +19,18 @@ const API_BASE = (() => {
   return base;
 })();
 export const DEMO_MODE = !API_BASE;
+
+/** Resolve a media/object path to a full URL for <img>/download. The backend
+ *  returns relative paths like `/api/v1/media/{token}` — prefix the API origin
+ *  when configured so the asset loads from the API, not the page origin. */
+export function mediaUrl(path?: string | null): string {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith("/") && API_BASE && !API_BASE.startsWith("/")) {
+    return `${API_BASE}${path}`;
+  }
+  return path;
+}
 import { dedupedRequest } from "./dedupe";
 
 /** Build-time master switch — mirrors backend PHANTIX_AGI_ENABLED (default on). */

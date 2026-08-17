@@ -55,13 +55,13 @@ const emptySetup = (): SetupState => ({
 
 /** Demo-only seed catalog --- never used when VITE_API_BASE is set. */
 const demoTools: ToolItem[] = [
-  { id: 1, key: "nmap", name: "Nmap", category: "Discovery", description: "Port & service scanning with admin-pinned flags", subscribed: true, price_note: "Included" },
-  { id: 2, key: "nuclei", name: "Nuclei", category: "Vulnerability", description: "Template-driven CVE & misconfiguration engine", subscribed: true, price_note: "Included" },
-  { id: 3, key: "subfinder", name: "Subfinder", category: "Discovery", description: "Passive subdomain enumeration", subscribed: true, price_note: "Included" },
-  { id: 4, key: "katana", name: "Katana", category: "Recon", description: "Web crawling for the web_scan pipeline", subscribed: false, price_note: "Add-on" },
-  { id: 5, key: "sqlmap", name: "SQLMap", category: "Exploitation", description: "Parameterized SQLi confirmation", subscribed: false, price_note: "Add-on" },
-  { id: 6, key: "gowitness", name: "Gowitness", category: "Evidence", description: "Screenshot capture for report evidence", subscribed: false, price_note: "Add-on" },
-  { id: 7, key: "caido", name: "Caido Advanced Proxy", category: "Vulnerability", description: "Advanced deep web/API analysis via Caido — proxy history, Replay, findings, workflows. The primary advanced path (replaces Burp).", subscribed: false, price_note: "Add-on" },
+  { id: 1, key: "dns_hygiene", name: "DNS Hygiene", category: "scanning", description: "Authoritative DNS checks, hygiene and exposure", subscribed: true, price_note: "Included", tier: "free", pricing_model: "free", eligible: true, monthly_price_ngn: 0 },
+  { id: 2, key: "network_surface_scan", name: "Network Surface Scan", category: "scanning", description: "Port & service discovery with admin-pinned flags", subscribed: true, price_note: "Included", tier: "free", pricing_model: "free", eligible: true, monthly_price_ngn: 0 },
+  { id: 3, key: "basic_asset_inventory", name: "Basic Asset Inventory", category: "scanning", description: "Asset CRUD + light discovery", subscribed: true, price_note: "Included", tier: "free", pricing_model: "free", eligible: true, monthly_price_ngn: 0 },
+  { id: 4, key: "vulnerability_scanner", name: "Vulnerability Scanner", category: "scanning", description: "nmap + nuclei + vuln YAML pipeline", subscribed: false, price_note: "Included", tier: "free", pricing_model: "free", eligible: true, monthly_price_ngn: 0 },
+  { id: 5, key: "cloud_security_scan", name: "Cloud Security Scan", category: "scanning", description: "CSPM-style cloud posture checks", subscribed: false, price_note: "Add-on · ₦150,000/mo", tier: "addon_subscription", pricing_model: "paid", eligible: false, eligibility_reason: "Billable add-on — requires active Premium (or coupon) first.", monthly_price_ngn: 150000 },
+  { id: 6, key: "dynamic_mobile_testing", name: "Dynamic Mobile Testing", category: "scanning", description: "Mobile dynamic VAPT via AVD", subscribed: false, price_note: "Add-on · ₦250,000/mo", tier: "addon_subscription", pricing_model: "paid", eligible: false, eligibility_reason: "Billable add-on — requires active Premium (or coupon) first.", monthly_price_ngn: 250000 },
+  { id: 7, key: "ai_pentest_agent", name: "AI Pentest Agent", category: "other", description: "Autonomous, human-gated pentest agent (engagement)", subscribed: false, price_note: "Add-on · quote", tier: "addon_engagement", pricing_model: "paid", eligible: false, eligibility_reason: "Engagement tool — staff quote and provision after sales acceptance.", monthly_price_ngn: 0 },
 ];
 
 const demoPayments: Payment[] = [
@@ -297,15 +297,31 @@ function parseDomainFlags(raw: unknown): { dns: boolean; http: boolean; domain: 
 function mapToolsFromApi(raw: unknown): ToolItem[] {
   const list = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] })?.items ?? []);
   const items = list as Record<string, unknown>[];
-  return items.map((t, i) => ({
-    id: Number(t.id ?? i + 1),
-    key: String(t.tool_key ?? t.key ?? ""),
-    name: String(t.name ?? t.tool_name ?? t.key ?? ""),
-    category: String(t.category ?? "tooling"),
-    description: String(t.description ?? ""),
-    subscribed: t.subscription_status === "active" || t.provision_status === "active" || t.subscribed === true,
-    price_note: String(t.pricing_model ?? (t.eligible ? "Included" : "Add-on")),
-  }));
+  return items.map((t, i) => {
+    const pricing = String(t.pricing_model ?? "free");
+    const tier = String(t.tier ?? (pricing === "paid" ? "addon_subscription" : pricing === "free" ? "free" : "free"));
+    const subscribed = t.subscription_status === "active" || t.provision_status === "provisioned" || t.subscribed === true;
+    return {
+      id: Number(t.id ?? i + 1),
+      key: String(t.tool_key ?? t.key ?? ""),
+      name: String(t.name ?? t.tool_name ?? t.key ?? ""),
+      category: String(t.category ?? "tooling"),
+      description: String(t.description ?? ""),
+      subscribed,
+      price_note:
+        t.monthly_price_ngn && Number(t.monthly_price_ngn) > 0
+          ? `Add-on · ₦${Number(t.monthly_price_ngn).toLocaleString()}/mo`
+          : tier === "free"
+            ? "Included"
+            : "Add-on",
+      tier,
+      pricing_model: pricing,
+      eligible: t.eligible === true || t.eligible == null,
+      eligibility_reason: t.eligibility_reason ? String(t.eligibility_reason) : null,
+      monthly_price_ngn: Number(t.monthly_price_ngn ?? 0),
+      yearly_price_ngn: Number(t.yearly_price_ngn ?? 0),
+    };
+  });
 }
 
 /** Normalize GET /alerts/settings into a full AlertSettings (defensive defaults). */
@@ -2132,8 +2148,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       const fd = new FormData();
       fd.append("file", file);
-      const needsDc = !!tokens.dualControl;
-      const res = await api.postMultipart<unknown>("/organizations/me/logo", fd, needsDc ? { dualControl: true } : undefined);
+      const res = await api.postMultipart<unknown>("/organizations/me/logo", fd, { dualControl: true });
       const mapped = mapOrgFromApi(res, state.org.email);
       const logoUrl = mapped.logo_url;
       persist((s) => ({ ...s, org: { ...s.org, ...mapped, logo_url: logoUrl } }));
@@ -2150,8 +2165,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       logAudit("org.logo.delete", "tenancy", "Removed company logo");
       return;
     }
-    const needsDc = !!tokens.dualControl;
-    const res = await api.delete<unknown>("/organizations/me/logo", needsDc ? { dualControl: true } : undefined);
+    const res = await api.delete<unknown>("/organizations/me/logo", { dualControl: true });
     if (res) {
       const mapped = mapOrgFromApi(res, state.org.email);
       persist((s) => ({ ...s, org: { ...s.org, ...mapped, logo_url: null } }));
@@ -2169,25 +2183,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         persist((s) => ({ ...s, tools: s.tools.map((t) => (t.id === tool.id ? { ...t, subscribed: !t.subscribed } : t)) }));
         return;
       }
-      const needsDc = !!tokens.dualControl;
+      if (!(await requireDualControl("Tool subscription changes require a dual-control operate session."))) return;
       const nextSubscribed = !tool.subscribed;
       // Optimistic update: flip the toggle immediately; roll back on failure.
       persist((s) => ({ ...s, tools: s.tools.map((t) => (t.id === tool.id ? { ...t, subscribed: nextSubscribed } : t)) }));
+      const opts = { dualControl: true };
+      const tier = tool.tier ?? (tool.pricing_model === "paid" ? "addon_subscription" : "free");
       try {
         if (nextSubscribed) {
-          try {
-            await api.post("/tools/subscribe", { tool_key: tool.key, billing_cycle: "monthly" }, needsDc ? { dualControl: true } : undefined);
-          } catch {
-            await api.post("/tools/request", { tool_key: tool.key }, needsDc ? { dualControl: true } : undefined);
+          if (tool.eligible === false) {
+            throw new Error(tool.eligibility_reason || "This tool is not available to your organization yet.");
+          }
+          if (tier === "addon_subscription" || tool.pricing_model === "paid") {
+            // Paid add-on → activate via subscription (provisions immediately).
+            await api.post("/tools/subscribe", { tool_key: tool.key, billing_cycle: "monthly" }, opts);
+          } else {
+            // Free / premium_included → auto-provision. Engagement tools → quote-only request.
+            await api.post("/tools/request", { tool_key: tool.key }, opts);
           }
         }
-      } catch {
+        // Unsubscribe: no cancel endpoint exists; keep local toggle only.
+      } catch (e) {
         // Roll back on failure
         persist((s) => ({ ...s, tools: s.tools.map((t) => (t.id === tool.id ? { ...t, subscribed: tool.subscribed } : t)) }));
-        throw new Error("Tool update failed");
+        throw e instanceof Error ? e : new Error("Tool update failed");
       }
     },
-    [persist],
+    [persist, requireDualControl],
   );
 
   const createTicket = useCallback(
