@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Readability: floor for micro text (scales with the 17px root). ──
+   Lifts 9–13px utility text to legible sizes everywhere without editing
+   hundreds of usages. Unlayered rules win over Tailwind's layered utilities. */
+[class*="text-[9px]"],
+[class*="text-[10px]"] {
+  font-size: 0.75rem; /* 12.75px @ 17px root */
+}
+[class*="text-[11px]"],
+[class*="text-[12px]"],
+[class*="text-[13px]"] {
+  font-size: 0.8125rem; /* 13.8px @ 17px root */
+}
+
 @layer base {
   :root,
   :root[data-theme="dark"] {
@@ -182,11 +195,20 @@
   }
 
   html {
+    /* Readability: 17px root scales every rem-based text size and spacing,
+       so standard Tailwind sizes (xs, sm, base…) render ~6% larger for all users. */
+    font-size: 17px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     scroll-behavior: smooth;
   }
 
   body {
     @apply bg-phantix-950 text-slate-200 font-sans antialiased;
+    font-size: 1rem;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    text-rendering: optimizeLegibility;
     background-image:
       radial-gradient(ellipse 90% 55% at 50% -10%, rgba(51, 85, 181, 0.22), transparent),
       radial-gradient(ellipse 50% 40% at 90% 110%, rgba(232, 181, 77, 0.06), transparent);
