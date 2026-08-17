@@ -355,7 +355,7 @@ function mapTicketsFromApi(raw: unknown): SupportTicket[] {
   return (list as Record<string, unknown>[]).map((t) => ({
     id: Number(t.id ?? 0),
     subject: String(t.subject ?? ""),
-    status: (["open", "pending", "closed"].includes(String(t.status ?? "open")) ? t.status : "open") as SupportTicket["status"],
+    status: (String(t.status ?? "open") || "open") as SupportTicket["status"],
     priority: String(t.priority ?? "normal"),
     created_at: String(t.created_at ?? new Date().toISOString()),
     messages: Array.isArray(t.messages)
@@ -561,9 +561,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     // Restore an existing dual-control session token so mutations reuse it
     // instead of re-opening the initiator/authorizer OTP flow on every page load.
-    const meta = readOperateMeta();
-    if (tokens.dualControl && meta && meta.expiresAt != null && meta.expiresAt > Date.now()) {
-      return { unlocked: true, actingUser: meta.actingUser, actingRole: meta.actingRole, expiresAt: meta.expiresAt };
+    // The token itself is authoritative — a stale local expiry (clock skew, tab
+    // hidden timers) must not force a re-code while the backend session is live.
+    if (tokens.dualControl) {
+      const meta = readOperateMeta();
+      return {
+        unlocked: true,
+        actingUser: meta?.actingUser ?? "Operate user",
+        actingRole: meta?.actingRole ?? "initiator",
+        expiresAt: meta?.expiresAt != null && meta.expiresAt > Date.now() ? meta.expiresAt : Date.now() + 20 * 60_000,
+      };
     }
     return { unlocked: false, actingUser: null, actingRole: null, expiresAt: null };
   });
@@ -1611,10 +1618,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const requireDualControl = useCallback(
     (reason = "This action requires an active dual-control operate session.") => {
-      const sessionActive =
-        operate.unlocked &&
-        !!tokens.dualControl &&
-        (operate.expiresAt == null || operate.expiresAt > Date.now());
+      // Backend idle window is authoritative — a live operate token is valid even
+      // if the FE's local expiresAt is stale (clock skew, background-tab timers).
+      const sessionActive = operate.unlocked && !!tokens.dualControl;
       if (sessionActive) return Promise.resolve(true);
       if (!state.dualControl.configured && !DEMO_MODE) {
         toast("warning", "Set up dual control first", "Assign initiator + authorizer under People & Control.");
@@ -1625,8 +1631,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setDualControlPrompt({ open: true, reason });
       });
     },
-    [operate.unlocked, operate.expiresAt, state.dualControl.configured, toast],
+    [operate.unlocked, state.dualControl.configured, toast],
   );
+
+  // Slide the operate expiry on real activity. Backend inactivity window is what
+  // actually matters — this keeps the FE in sync so it stops asking for a fresh
+  // code on every action while the operate session is still valid.
+  useEffect(() => {
+    const onActivity = () => {
+      setOperate((prev) => {
+        if (!prev.unlocked) return prev;
+        const next = { ...prev, expiresAt: Date.now() + 20 * 60_000 };
+        persistOperateMeta(next);
+        return next;
+      });
+    };
+    window.addEventListener("phantix:operate-activity", onActivity);
+    return () => window.removeEventListener("phantix:operate-activity", onActivity);
+  }, []);
+
+  // Lock only when the backend reports the operate session is gone/expired.
+  useEffect(() => {
+    const onExpired = () => {
+      tokens.dualControl = null;
+      clearOperateMeta();
+      setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+      toast("warning", "Operate session expired", "Unlock dual-control again to continue.");
+    };
+    window.addEventListener("phantix:dual-control-session-expired", onExpired);
+    return () => window.removeEventListener("phantix:dual-control-session-expired", onExpired);
+  }, [toast]);
 
   const requestDualControlOtp = useCallback(
     async (email: string) => {

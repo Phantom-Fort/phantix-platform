@@ -83,7 +83,8 @@ async function request<T>(
   headers["X-Device-Id"] = deviceId();
   const bearer = tokens.orgUser ?? tokens.platform;
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-  if (opts.dualControl && tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl;
+  const sentDualControl = !!tokens.dualControl && opts.dualControl === true;
+  if (sentDualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
 
   let body: BodyInit | undefined;
   if (opts.form) {
@@ -98,6 +99,12 @@ async function request<T>(
   const timer = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch(`${API_BASE}${path}`, { method, headers, body, signal: controller.signal });
+    // Operate session is an idle session on the backend: every successful mutation
+    // that used it counts as activity and slides the FE expiry forward so the user
+    // is not asked for another code while still working.
+    if (res.ok && sentDualControl) {
+      window.dispatchEvent(new CustomEvent("phantix:operate-activity"));
+    }
     if (!res.ok) {
       let detail: unknown = res.statusText;
       try {
@@ -142,9 +149,13 @@ async function requestMultipart<T>(
   headers["X-Device-Id"] = deviceId();
   const bearer = tokens.orgUser ?? tokens.platform;
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-  if (opts.dualControl && tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
+  const sentDualControl = !!tokens.dualControl && opts.dualControl === true;
+  if (sentDualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
 
     const res = await fetch(`${API_BASE}${path}`, { method, headers, body: formData });
+    if (res.ok && sentDualControl) {
+      window.dispatchEvent(new CustomEvent("phantix:operate-activity"));
+    }
     if (!res.ok) {
       let detail: unknown = res.statusText;
       try {
@@ -153,7 +164,7 @@ async function requestMultipart<T>(
       const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
       const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
       const dcSessionIssue = /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
-      if (dcSessionIssue) {
+      if (dcSessionIssue && sentDualControl) {
         tokens.dualControl = null;
         window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired"));
       }

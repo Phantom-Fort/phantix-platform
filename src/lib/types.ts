@@ -172,7 +172,7 @@ export interface Payment {
 export interface SupportTicket {
   id: number;
   subject: string;
-  status: "open" | "pending" | "closed";
+  status: "open" | "pending" | "closed" | "resolved" | string;
   priority: string;
   created_at: string;
   messages: { from: string; body: string; at: string }[];

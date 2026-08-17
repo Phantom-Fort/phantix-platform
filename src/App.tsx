@@ -61,8 +61,6 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/device-confirm" element={<DeviceConfirm />} />
-          <Route path="/github" element={<GithubIntegration />} />
-          <Route path="/integrations/github/callback" element={<GithubIntegration />} />
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
@@ -77,6 +75,7 @@ export default function App() {
             <Route path="/users" element={<RequireManagement><Users /></RequireManagement>} />
             <Route path="/connections" element={<RequireManagement><Connections /></RequireManagement>} />
             <Route path="/github" element={<RequireManagement><GithubIntegration /></RequireManagement>} />
+            <Route path="/integrations/github/callback" element={<RequireManagement><GithubIntegration /></RequireManagement>} />
             <Route path="/tools" element={<RequireManagement><Tools /></RequireManagement>} />
             <Route path="/billing" element={<RequireManagement><Billing /></RequireManagement>} />
             <Route path="/ai" element={<RequireManagement><AiSettings /></RequireManagement>} />

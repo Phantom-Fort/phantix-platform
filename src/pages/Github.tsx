@@ -176,9 +176,9 @@ export default function GithubIntegration() {
       if (DEMO_MODE) { await delay(400); setInstall(demoInstall); return; }
       const res = await api.get<InstallInfo>("/github/install-url");
       if (!res.configured) { toast("error", "GitHub App not configured", "The GitHub App is not set up on the server yet."); return; }
-      // Open in a new tab so the user stays in the app; we poll + refresh on return.
-      window.open(res.install_url, "_blank", "noopener,noreferrer");
-      setJustConnected(true);
+      // Redirect in the same tab — the OAuth callback returns to this page
+      // (/integrations/github/callback) so the sidebar and page stay intact.
+      window.location.href = res.install_url;
     } catch (e) { toast("error", "Connect failed", e instanceof Error ? e.message : ""); }
     finally { setConnecting(false); }
   };

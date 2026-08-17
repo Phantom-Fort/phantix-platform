@@ -51,5 +51,6 @@ export const statusColor: Record<string, string> = {
   not_bootstrapped: "text-severity-medium bg-severity-medium/10 border-severity-medium/30",
   expired: "text-slate-400 bg-slate-400/10 border-slate-500/30",
   closed: "text-slate-400 bg-slate-400/10 border-slate-500/30",
+  resolved: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
   subscribed: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
 };

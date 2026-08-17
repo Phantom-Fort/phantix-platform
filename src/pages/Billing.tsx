@@ -16,7 +16,7 @@ const demoPricing: PricingInfo = { monthly_list_price_ngn: 100000, first_month_p
 const demoSubscription: SubscriptionInfo = { id: 1, status: "active", billing_cycle: "monthly", grant_source: "payment", current_period_start: "2026-07-01T00:00:00Z", current_period_end: "2026-08-01T00:00:00Z" };
 
 export default function Billing() {
-  const { state, toast, session } = useStore();
+  const { state, toast, session, requireDualControl } = useStore();
   const [loading, setLoading] = useState(true);
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const [pricing, setPricing] = useState<PricingInfo | null>(null);
@@ -49,14 +49,15 @@ export default function Billing() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleSubscribe = async () => {
+    if (!(await requireDualControl("Subscribing requires a dual-control operate session."))) return;
     setBusy(true);
     try {
-      const res = await api.post<any>("/billing/subscribe", { billing_cycle: selectedCycle });
+      const res = await api.post<any>("/billing/subscribe", { billing_cycle: selectedCycle }, { dualControl: true });
       const paymentId = res?.payment?.id;
       if (paymentId) {
         setPayingId(paymentId);
-        const initRes = await api.post<any>(`/billing/payments/${paymentId}/initialize`, { email: session?.email || state.org.email || "", callback_url: `${window.location.origin}/billing` });
-        if (initRes?.authorization_url) window.open(initRes.authorization_url, "_blank");
+        const initRes = await api.post<any>(`/billing/payments/${paymentId}/initialize`, { email: session?.email || state.org.email || "", callback_url: `${window.location.origin}/billing` }, { dualControl: true });
+        if (initRes?.authorization_url) window.location.href = initRes.authorization_url;
         else toast("info", "Paystack", `Access code: ${initRes?.access_code ?? "N/A"} — complete payment then click Verify below`);
       }
     } catch (e) { toast("error", "Subscribe failed", e instanceof Error ? e.message : ""); }
@@ -64,18 +65,20 @@ export default function Billing() {
   };
 
   const handleVerify = async (paymentId: number) => {
-    try { await api.post(`/billing/payments/${paymentId}/verify`, {}); toast("success", "Payment verified"); loadData(); setPayingId(null); } catch (e) { toast("error", "Verification failed"); }
+    try { await api.post(`/billing/payments/${paymentId}/verify`, {}, { dualControl: true }); toast("success", "Payment verified"); loadData(); setPayingId(null); } catch (e) { toast("error", "Verification failed"); }
   };
 
   const handleRedeemCoupon = async () => {
     if (!couponCode.trim()) return;
+    if (!(await requireDualControl("Redeeming a beta code requires a dual-control operate session."))) return;
     setBusy(true);
-    try { await api.post("/billing/coupons/redeem", { code: couponCode.trim() }); toast("success", "Coupon redeemed", "Full access activated"); setShowCoupon(false); setCouponCode(""); loadData(); } catch (e) { toast("error", "Invalid code", e instanceof Error ? e.message : ""); }
+    try { await api.post("/billing/coupons/redeem", { code: couponCode.trim() }, { dualControl: true }); toast("success", "Coupon redeemed", "Full access activated"); setShowCoupon(false); setCouponCode(""); loadData(); } catch (e) { toast("error", "Redeem failed", e instanceof Error ? e.message : "Invalid or already redeemed code"); }
     finally { setBusy(false); }
   };
 
   const handleCancel = async () => {
-    try { await api.post("/billing/subscription/cancel", {}); toast("warning", "Cancelled", "Auto-renew cancelled — access continues to period end"); setShowCancelConfirm(false); loadData(); } catch (e) { toast("error", "Failed"); }
+    if (!(await requireDualControl("Cancelling the subscription requires a dual-control operate session."))) return;
+    try { await api.post("/billing/subscription/cancel", {}, { dualControl: true }); toast("warning", "Cancelled", "Auto-renew cancelled — access continues to period end"); setShowCancelConfirm(false); loadData(); } catch (e) { toast("error", "Failed"); }
   };
 
   if (loading) return <div className="flex min-h-[40vh] items-center justify-center"><Spinner className="h-6 w-6" /></div>;
