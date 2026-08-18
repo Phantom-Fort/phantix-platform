@@ -26,6 +26,7 @@ import { AGI_ENABLED } from "@/lib/api";
 import Support from "@/pages/Support";
 import Audit from "@/pages/Audit";
 import Alerts from "@/pages/Alerts";
+import Sandbox from "@/pages/Sandbox";
 
 // Authenticated + setup-complete gate for management routes
 function RequireManagement({ children }: { children: React.ReactNode }) {
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/setup" element={<SetupRoute />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<RequireManagement><Dashboard /></RequireManagement>} />
+            <Route path="/sandbox" element={<RequireManagement><Sandbox /></RequireManagement>} />
             <Route path="/identity" element={<RequireManagement><Identity /></RequireManagement>} />
             <Route path="/companies" element={<RequireManagement><Companies /></RequireManagement>} />
             <Route path="/users" element={<RequireManagement><Users /></RequireManagement>} />

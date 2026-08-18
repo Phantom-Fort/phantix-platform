@@ -4,15 +4,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
-  RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar,
+  RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
 import { APP_URL } from "@/lib/links";
 import { cx } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import SandboxBanner from "@/components/SandboxBanner";
+import { loadSandboxMe } from "@/lib/sandbox";
 
-const navSections: { label: string; items: { to: string; label: string; icon: React.ReactNode }[] }[] = [
+const baseNavSections: { label: string; items: { to: string; label: string; icon: React.ReactNode }[] }[] = [
   {
     label: "Overview",
     items: [{ to: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={17} /> }],
@@ -64,8 +66,31 @@ function OperateCountdown({ expiresAt }: { expiresAt: number }) {
 export default function Layout() {
   const { session, state, operate, lockOperate, logout, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
   const [userMenu, setUserMenu] = useState(false);
+  const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!session?.authenticated) {
+      setSandboxEnrolled(false);
+      return;
+    }
+    void loadSandboxMe().then((m) => setSandboxEnrolled(!!m?.enrolled));
+  }, [session?.authenticated]);
+
+  const navSections = React.useMemo(() => {
+    if (!sandboxEnrolled) return baseNavSections;
+    return baseNavSections.map((section) => {
+      if (section.label !== "Overview") return section;
+      return {
+        ...section,
+        items: [
+          ...section.items,
+          { to: "/sandbox", label: "BETA sandbox", icon: <FlaskConical size={17} /> },
+        ],
+      };
+    });
+  }, [sandboxEnrolled]);
 
   // Auto-logout after inactivity --- uses backend's inactivity_expires_at if set, else 20 min
   useEffect(() => {
@@ -286,6 +311,7 @@ export default function Layout() {
         </header>
 
         <main className="flex-1 px-6 py-6 lg:px-8">
+          {session?.authenticated && <SandboxBanner />}
           <Outlet />
         </main>
 

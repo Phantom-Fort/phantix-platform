@@ -221,12 +221,20 @@ export default function Login() {
               </motion.p>
             )}
 
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} className="mt-4 text-center text-xs text-slate-500">
-              Looking for the product demo?{" "}
-              <a href={APP_DEMO_URL} className="font-semibold text-gold-400 hover:text-gold-300">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9 }}
+              className="mt-4 flex flex-col items-center gap-1.5 text-center"
+            >
+              <p className="text-xs text-slate-500">Looking for the product demo?</p>
+              <a
+                href={APP_DEMO_URL}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-gold-400 hover:text-gold-300"
+              >
                 Explore the Command Centre demo →
               </a>
-            </motion.p>
+            </motion.div>
           </motion.div>
         </div>
       </div>
