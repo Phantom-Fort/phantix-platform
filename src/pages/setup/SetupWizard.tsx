@@ -57,7 +57,7 @@ export default function SetupWizard() {
       setPrivacyNotice({
         version: s.privacy_notice_version || "2026-07-10",
         title: "How Phantix handles your organization's data",
-        summary: "Demo privacy notice --- connect VITE_API_BASE for live copy from GET /organizations/privacy.",
+        summary: "Demo privacy notice --- connect the live API for copy from GET /organizations/privacy.",
         highlights: [
           { id: "1", label: "Security data", text: "Findings and assets live only in your dedicated security database." },
           { id: "2", label: "Platform data", text: "We store account, billing, and setup state only." },

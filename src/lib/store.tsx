@@ -53,7 +53,7 @@ const emptySetup = (): SetupState => ({
   steps: [],
 });
 
-/** Demo-only seed catalog --- never used when VITE_API_BASE is set. */
+/** Demo-only seed catalog --- never used in live mode. */
 const demoTools: ToolItem[] = [
   { id: 1, key: "dns_hygiene", name: "DNS Hygiene", category: "scanning", description: "Authoritative DNS checks, hygiene and exposure", subscribed: true, price_note: "Included", tier: "free", pricing_model: "free", eligible: true, monthly_price_ngn: 0 },
   { id: 2, key: "network_surface_scan", name: "Network Surface Scan", category: "scanning", description: "Port & service discovery with admin-pinned flags", subscribed: true, price_note: "Included", tier: "free", pricing_model: "free", eligible: true, monthly_price_ngn: 0 },

@@ -217,7 +217,7 @@ export default function Login() {
             {DEMO_MODE && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-5 rounded-xl border border-gold-400/20 bg-gold-400/6 px-4 py-3 text-center text-xs leading-5 text-gold-300/80">
                 <strong>Demo mode</strong> --- any email and any 6-digit code works. Set{" "}
-                <span className="font-mono">VITE_API_BASE</span> for a live API.
+                 live API configuration.
               </motion.p>
             )}
 

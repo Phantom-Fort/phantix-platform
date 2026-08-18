@@ -1,40 +1,25 @@
 ﻿// ── Platform API client ───────────────────────────────────────────────────────
-// Token model (per frontend/02_PLATFORM_IMPLEMENTATION.md):
-//   platform_access_token    company JWT (type=access)
-//   platform_org_user_token  org-user identity JWT (type=org_user)
-//   platform_dual_control    X-Dual-Control-Session (3-min idle operate token)
-//   phantix_device_id        stable browser UUID
-//
-// Demo mode serves a simulated tenant; set VITE_API_BASE to go live.
-// Normalize: tolerate "staging.phantix.site/api/v1" (missing protocol) so the
-// fetch never resolves against the page origin. Also guarantee the `/api/v1`
-// prefix so no endpoint is ever called without it. Relative "/api/v1" is kept
-// for same-origin dev proxies.
-const RAW_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-export const API_BASE = (() => {
-  if (!RAW_API_BASE) return RAW_API_BASE;
-  let base = RAW_API_BASE.replace(/\/+$/, "").replace(/^(?!https?:\/\/|\/)/i, "https://");
-  if (base.startsWith("/")) return base; // relative — dev proxy already targets /api/v1
-  if (!/\/api\/v1(?:\/|$)/i.test(base)) base = `${base}/api/v1`;
-  return base;
-})();
-export const DEMO_MODE = !API_BASE;
-
-/** Resolve a media/object path to a full URL for <img>/download. The backend
- *  returns relative paths like `/api/v1/media/{token}` — prefix the API origin
- *  when configured so the asset loads from the API, not the page origin. */
-export function mediaUrl(path?: string | null): string {
-  if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path;
-  if (path.startsWith("/") && API_BASE && !API_BASE.startsWith("/")) {
-    return `${API_BASE}${path}`;
-  }
-  return path;
-}
+// Token model: platform / org-user / dual-control. Config from src/lib/config.ts.
+import { API_BASE as CONFIG_API_BASE, AGI_ENABLED as AGI_FLAG } from "./config";
 import { dedupedRequest } from "./dedupe";
 
-/** Build-time master switch — mirrors backend PHANTIX_AGI_ENABLED (default on). */
-export const AGI_ENABLED = (import.meta.env.VITE_AGI_ENABLED ?? "true") !== "false";
+export const API_BASE = CONFIG_API_BASE;
+/** Demo only when session flag is set (not from missing API). */
+export const DEMO_MODE = false;
+export const AGI_ENABLED = AGI_FLAG;
+
+/** Same-origin media URLs — rewrite absolute upstream API paths. */
+export function mediaUrl(path?: string | null): string {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const u = new URL(path);
+      if (u.pathname.startsWith("/api/")) return `${u.pathname}${u.search}`;
+    } catch { /* keep */ }
+    return path;
+  }
+  return path.startsWith("/") ? path : `/${path}`;
+}
 
 export const tokens = {
   get platform() { return sessionStorage.getItem("platform_access_token"); },

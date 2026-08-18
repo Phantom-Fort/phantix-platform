@@ -5,10 +5,10 @@ import fs from "fs";
 
 const localPublic = path.resolve(__dirname, "public");
 const monorepoPublic = path.resolve(__dirname, "../public");
+const UPSTREAM = "https://staging.phantix.site";
 
 export default defineConfig({
   plugins: [react()],
-  // Prefer local public/ for Vercel (app root); fall back to monorepo ../public
   publicDir: fs.existsSync(localPublic) ? localPublic : monorepoPublic,
   resolve: {
     alias: {
@@ -18,6 +18,14 @@ export default defineConfig({
   server: {
     port: 5174,
     host: true,
+    proxy: {
+      "/api": {
+        target: UPSTREAM,
+        changeOrigin: true,
+        secure: true,
+        ws: true,
+      },
+    },
   },
   build: {
     chunkSizeWarningLimit: 1200,

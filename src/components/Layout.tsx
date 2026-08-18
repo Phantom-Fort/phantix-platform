@@ -280,7 +280,7 @@ export default function Layout() {
                       <p className="text-xs text-slate-500 font-mono">type=access · company JWT</p>
                     </div>
                     <div className="p-1.5">
-                      {import.meta.env.VITE_API_BASE ? null : (
+                      {DEMO_MODE ? (
                       <button
                         onClick={() => {
                           resetDemo();
@@ -292,7 +292,7 @@ export default function Layout() {
                       >
                         <RotateCcw size={15} /> Reset demo data
                       </button>
-                      )}
+                      ) : null}
                       <button
                         onClick={() => {
                           logout();
