@@ -1,7 +1,7 @@
 ﻿import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
-import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken } from "./api";
+import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken, clearCorrelationId } from "./api";
 import {
   emptyOrg,
   isSecurityDbReady,
@@ -837,19 +837,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const dismissToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
-  // Backend rejected a mutation for a missing/expired dual-control session:
-  // drop the in-memory + persisted operate state so the next action re-opens
-  // the initiator/authorizer overlay instead of failing silently.
-  useEffect(() => {
-    const onDcExpired = () => {
-      clearOperateMeta();
-      setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
-      toast("warning", "Operate session expired", "Re-authenticate as initiator or authorizer to continue.");
-    };
-    window.addEventListener("phantix:dual-control-session-expired", onDcExpired);
-    return () => window.removeEventListener("phantix:dual-control-session-expired", onDcExpired);
-  }, [toast]);
-
   const logAudit = useCallback(
     (event_key: string, category: string, action: string) => {
       persist((s) => ({
@@ -1007,6 +994,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     tokens.orgUser = null;
     tokens.dualControl = null;
     tokens.email = null;
+    clearCorrelationId();
     setSession(null);
     setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
     if (!DEMO_MODE) setState(emptyState());
@@ -1667,16 +1655,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Lock only when the backend reports the operate session is gone/expired.
+  // Auto-open the unlock overlay so the user can continue without re-navigating
+  // (the org/org-user session stays signed in — only the operate token is cleared).
   useEffect(() => {
-    const onExpired = () => {
+    const onExpired = (e: Event) => {
+      const msg = (e as CustomEvent).detail;
       tokens.dualControl = null;
       clearOperateMeta();
       setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
-      toast("warning", "Operate session expired", "Unlock dual-control again to continue.");
+      void requireDualControl(msg || "Operate session ended. Unlock to continue — you stay signed in.");
     };
     window.addEventListener("phantix:dual-control-session-expired", onExpired);
     return () => window.removeEventListener("phantix:dual-control-session-expired", onExpired);
-  }, [toast]);
+  }, [requireDualControl]);
+
+  // 403 dual-control (header missing, session still fine): open the unlock overlay
+  // so the user can operate and retry — do not clear the operate token here.
+  useEffect(() => {
+    const onRequired = (e: Event) => {
+      const msg = (e as CustomEvent).detail;
+      void requireDualControl(msg || "Unlock operate mode for this action.");
+    };
+    window.addEventListener("phantix:operate-required", onRequired);
+    return () => window.removeEventListener("phantix:operate-required", onRequired);
+  }, [requireDualControl]);
 
   const requestDualControlOtp = useCallback(
     async (email: string) => {

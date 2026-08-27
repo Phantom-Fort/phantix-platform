@@ -55,20 +55,51 @@ export function deviceId(): string {
   return id;
 }
 
+function detailMessage(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((d: { msg?: string }) => d?.msg ?? "validation error").join(", ");
+  }
+  if (detail && typeof detail === "object") {
+    const d = detail as Record<string, unknown>;
+    if (typeof d.message === "string") return d.message;
+    if (typeof d.detail === "string") return d.detail;
+    if (typeof d.error === "string") return d.error;
+  }
+  return "Request failed";
+}
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
-  constructor(status: number, detail: unknown) {
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d: { msg?: string }) => d?.msg ?? "validation error").join(", ")
-          : "Request failed";
-    super(msg);
+  /** Server correlation id (X-Correlation-ID) for support/triage. */
+  correlationId?: string;
+  constructor(status: number, detail: unknown, correlationId?: string) {
+    super(detailMessage(detail));
     this.status = status;
     this.detail = detail;
+    this.correlationId = correlationId;
   }
+}
+
+// ── Correlation ID (00-shared-auth-and-client.md §6) ────────────────────────
+// Surface X-Correlation-ID on failures so support can trace a request.
+let lastCorrelationId: string | null = null;
+
+/** Capture X-Correlation-ID from any response (if present). */
+function trackCorrelationId(res: Response): void {
+  const id = res.headers.get("X-Correlation-ID");
+  if (id) lastCorrelationId = id;
+}
+
+/** Most recent correlation id seen on any response (or null). */
+export function getCorrelationId(): string | null {
+  return lastCorrelationId;
+}
+
+/** Reset tracking (e.g. on logout). */
+export function clearCorrelationId(): void {
+  lastCorrelationId = null;
 }
 
 async function request<T>(
@@ -96,6 +127,9 @@ async function request<T>(
   const timer = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch(`${API_BASE}${path}`, { method, headers, body, signal: controller.signal });
+    // Support triage: remember the correlation id even on success, so the next
+    // failure can be traced back (00-shared-auth-and-client.md §6).
+    trackCorrelationId(res);
     // Operate session is an idle session on the backend: every successful mutation
     // that used it counts as activity and slides the FE expiry forward so the user
     // is not asked for another code while still working.
@@ -103,19 +137,26 @@ async function request<T>(
       window.dispatchEvent(new CustomEvent("phantix:operate-activity"));
     }
     if (!res.ok) {
+      const correlationId = res.headers.get("X-Correlation-ID") || undefined;
       let detail: unknown = res.statusText;
       try {
         detail = (await res.json()).detail;
       } catch { /* non-JSON */ }
       const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
       const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
-      // A mutation sent without (or with a stale) dual-control session: drop the
-      // token so the next requireDualControl() re-opens the operate overlay.
-      // The org / org-user session stays intact — the user is NOT logged out.
-      const dcSessionIssue = /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
-      if (dcSessionIssue) {
+      // Match the structured operate-middleware error shape as well as the human
+      // message. The org / org-user session stays intact — the user is NOT logged
+      // out when only the dual-control operate session is gone/missing.
+      const dcSessionIssue =
+        detailObj?.error === "dual_control_session_required" ||
+        (detailObj as Record<string, unknown> | null)?.["required_header"] === "X-Dual-Control-Session" ||
+        /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
+      if ((res.status === 401 || res.status === 403) && sentDualControl && dcSessionIssue) {
         tokens.dualControl = null;
-        window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired"));
+        window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired", { detail: msg || "Operate session ended." }));
+      } else if (res.status === 403 && dcSessionIssue) {
+        // Dual-control header missing (not a broken session): prompt re-unlock.
+        window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: msg || undefined }));
       }
       if (res.status === 401 && !dcSessionIssue) {
         tokens.platform = null;
@@ -126,7 +167,7 @@ async function request<T>(
         const m = typeof detail === "string" ? detail : "Upgrade required";
         window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: m }));
       }
-      throw new ApiError(res.status, detail);
+      throw new ApiError(res.status, detail, correlationId);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
@@ -150,20 +191,27 @@ async function requestMultipart<T>(
   if (sentDualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
 
     const res = await fetch(`${API_BASE}${path}`, { method, headers, body: formData });
+    trackCorrelationId(res);
     if (res.ok && sentDualControl) {
       window.dispatchEvent(new CustomEvent("phantix:operate-activity"));
     }
     if (!res.ok) {
+      const correlationId = res.headers.get("X-Correlation-ID") || undefined;
       let detail: unknown = res.statusText;
       try {
         detail = (await res.json()).detail;
       } catch { /* non-JSON */ }
       const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
       const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
-      const dcSessionIssue = /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
-      if (dcSessionIssue && sentDualControl) {
+      const dcSessionIssue =
+        detailObj?.error === "dual_control_session_required" ||
+        (detailObj as Record<string, unknown> | null)?.["required_header"] === "X-Dual-Control-Session" ||
+        /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
+      if ((res.status === 401 || res.status === 403) && sentDualControl && dcSessionIssue) {
         tokens.dualControl = null;
-        window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired"));
+        window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired", { detail: msg || "Operate session ended." }));
+      } else if (res.status === 403 && dcSessionIssue) {
+        window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: msg || undefined }));
       }
       if (res.status === 401 && !dcSessionIssue) {
         tokens.platform = null;
@@ -174,7 +222,7 @@ async function requestMultipart<T>(
         const m = typeof detail === "string" ? detail : "Upgrade required";
         window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: m }));
       }
-      throw new ApiError(res.status, detail);
+      throw new ApiError(res.status, detail, correlationId);
     }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
@@ -199,7 +247,8 @@ export const api = {
     if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
     if (tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl;
     const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
-    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    trackCorrelationId(res);
+    if (!res.ok) throw new ApiError(res.status, res.statusText, res.headers.get("X-Correlation-ID") || undefined);
     return res.blob();
   },
 
@@ -209,7 +258,8 @@ export const api = {
     const bearer = tokens.orgUser ?? tokens.platform;
     if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
     const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
-    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    trackCorrelationId(res);
+    if (!res.ok) throw new ApiError(res.status, res.statusText, res.headers.get("X-Correlation-ID") || undefined);
     return res.text();
   },
 };
