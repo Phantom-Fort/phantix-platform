@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Phantix Platform — organization onboarding & management portal (platform.phantix.site)",
+  "description": "Phantix Platform â€” organization onboarding & management portal (platform.phantixlabs.com)",
   "scripts": {
     "dev": "vite --port 5174",
     "build": "tsc -b && vite build",

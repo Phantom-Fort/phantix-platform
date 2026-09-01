@@ -1,6 +1,6 @@
 # Phantix Platform
 
-Organization onboarding and management portal for `platform.phantix.site`.
+Organization onboarding and management portal for `platform.phantixlabs.com`.
 
 This frontend is a Vite + React + TypeScript application for the Phantix customer platform shell, including org setup, identity, company & access management, product modules, billing, support, and audit.
 

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -544,7 +544,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
       <Modal open={!!link} onClose={() => setLink(null)} title="Application login link">
         <div className="space-y-4">
           <div className="rounded-xl border border-gold-400/25 bg-gold-400/5 p-3.5 text-xs leading-5 text-slate-400">
-            <strong className="text-gold-300">app.phantix.site</strong> --- the Command Centre where scans, campaigns and reports live.
+            <strong className="text-gold-300">app.phantixlabs.com</strong> --- the Command Centre where scans, campaigns and reports live.
             Share this with {link?.user || "the user"}. They visit the link, verify via email OTP, and get direct access --- no platform login needed.
           </div>
           <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3.5 text-xs leading-5 text-slate-400">
@@ -557,7 +557,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
             className="btn-primary w-full"
             onClick={() => {
               navigator.clipboard?.writeText(link?.url ?? "").catch(() => {});
-              toast("success", "Link copied", "Share this with the user --- they sign in on app.phantix.site.");
+              toast("success", "Link copied", "Share this with the user --- they sign in on app.phantixlabs.com.");
               setLink(null);
             }}
           >

@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { BellRing, Send, Settings, ShieldCheck } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Tabs, Modal } from "@/components/ui";
@@ -338,7 +338,7 @@ function SMTPForm({
         </div>
         <div>
           <label className="label">From Email</label>
-          <input className="input text-sm" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} placeholder="support@phantix.site" />
+          <input className="input text-sm" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} placeholder="support@phantixlabs.com" />
         </div>
       </div>
       <div>

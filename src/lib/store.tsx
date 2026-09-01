@@ -1,4 +1,4 @@
-﻿import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
 import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken, clearCorrelationId } from "./api";
@@ -1818,7 +1818,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await delay(500);
         const secret = `ll_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
         const user = state.users.find((u) => u.id === userId);
-        const url = `https://app.phantix.site/login?org=${state.org.slug}&u=${userId}&t=${secret}`;
+        const url = `https://app.phantixlabs.com/login?org=${state.org.slug}&u=${userId}&t=${secret}`;
         persist((s) => ({
           ...s,
           loginLinks: [{ id: s.nextId, user_id: userId, user_name: user?.full_name ?? "", created_at: new Date().toISOString(), used_at: null, status: "active" }, ...s.loginLinks],

@@ -1,4 +1,4 @@
-﻿// ── Platform surface types (platform.phantix.site) ───────────────────────────
+// ── Platform surface types (platform.phantixlabs.com) ───────────────────────────
 
 export interface OrgContact {
   title: string | null;

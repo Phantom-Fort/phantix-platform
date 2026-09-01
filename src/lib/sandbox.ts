@@ -1,5 +1,5 @@
 /**
- * Org sandbox tester client (Platform / platform.phantix.site).
+ * Org sandbox tester client (Platform / platform.phantixlabs.com).
  * Auth: company JWT and/or org-user JWT. Staff management is staff-portal only.
  */
 import { api, ApiError, DEMO_MODE } from "./api";
