@@ -179,7 +179,7 @@ export default function Layout() {
             href={`${APP_URL}/dashboard`}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-3 rounded-xl border border-gold-400/25 bg-gradient-to-r from-gold-400/10 to-transparent p-3 transition-all hover:border-gold-400/50 hover:shadow-glow"
+            className="flex items-center gap-3 rounded-md border border-gold-400/30 bg-phantix-900 p-3 transition-all hover:border-gold-400/50 hover:border-gold-400/60"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400/15 text-gold-400">
               <Rocket size={16} />
@@ -193,7 +193,7 @@ export default function Layout() {
 
         {/* Dual-control widget */}
         <div className="border-t border-phantix-700/40 p-3">
-          <div className="rounded-xl bg-phantix-900/70 border border-phantix-700/40 p-3">
+          <div className="rounded-md bg-phantix-900/70 border border-phantix-700/40 p-3">
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Dual control</p>
               {operate.unlocked ? <Unlock size={13} className="text-emerald-400" /> : <Lock size={13} className="text-slate-500" />}
@@ -261,9 +261,9 @@ export default function Layout() {
             <div className="relative">
               <button
                 onClick={() => setUserMenu((v) => !v)}
-                className="flex items-center gap-2.5 rounded-xl border border-phantix-700/50 bg-phantix-900/60 py-1.5 pl-1.5 pr-2.5 hover:border-phantix-500/50"
+                className="flex items-center gap-2.5 rounded-md border border-phantix-700/50 bg-phantix-900/60 py-1.5 pl-1.5 pr-2.5 hover:border-phantix-500/50"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 font-display text-xs font-bold text-phantix-950">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-gold-400/40 bg-phantix-850 font-display text-xs font-bold text-gold-300">
                   {(session?.email ?? "A").slice(0, 1).toUpperCase()}
                 </span>
                 <span className="text-left">
@@ -274,7 +274,7 @@ export default function Layout() {
               </button>
               <AnimatePresence>
                 {userMenu && (
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl glass-bright shadow-card">
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-md glass-bright shadow-card">
                     <div className="border-b border-phantix-700/40 px-4 py-3">
                       <p className="text-sm font-semibold text-slate-100">{state.org.name}</p>
                       <p className="text-xs text-slate-500 font-mono">type=access · company JWT</p>

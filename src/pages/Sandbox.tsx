@@ -181,7 +181,7 @@ export default function Sandbox() {
                     <div
                       key={u.id}
                       className={cx(
-                        "rounded-xl border p-4",
+                        "rounded-md border p-4",
                         String(u.severity).toLowerCase() === "breaking"
                           ? "border-severity-critical/35 bg-severity-critical/5"
                           : "border-phantix-700/40 bg-phantix-950/40",
@@ -225,7 +225,7 @@ export default function Sandbox() {
             ) : (
               <div className="space-y-2">
                 {ratings.map((r, i) => (
-                  <div key={r.id ?? i} className="rounded-xl border border-phantix-700/40 bg-phantix-950/40 px-3.5 py-2.5">
+                  <div key={r.id ?? i} className="rounded-md border border-phantix-700/40 bg-phantix-950/40 px-3.5 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-bold text-gold-300">{r.score}/5</span>
                       {r.nps != null && <span className="text-[11px] text-slate-500">NPS {r.nps}</span>}
@@ -276,7 +276,7 @@ export default function Sandbox() {
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, score: n }))}
                   className={cx(
-                    "flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold",
+                    "flex h-10 w-10 items-center justify-center rounded-md border text-sm font-bold",
                     form.score === n
                       ? "border-gold-400/50 bg-gold-400/15 text-gold-300"
                       : "border-phantix-700/50 bg-phantix-950/50 text-slate-400",

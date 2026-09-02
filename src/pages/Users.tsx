@@ -116,7 +116,7 @@ export default function People() {
                   { slot: "Authorizer", user: authorizer, desc: "Approves pending actions and risk treatments" },
                 ].map((s) => (
                   <div key={s.slot} className="flex items-center gap-4 rounded-2xl border border-phantix-700/40 bg-phantix-950/50 p-4">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 font-display text-base font-bold text-phantix-950">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 text-gold-300 font-display text-base font-bold text-phantix-950">
                       {s.user?.full_name.slice(0, 1) ?? "?"}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -130,7 +130,7 @@ export default function People() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 flex items-start gap-3 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+              <div className="mt-4 flex items-start gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0 text-gold-400" />
                 <div className="min-w-0 flex-1">
                 <p className="text-[11px] leading-4 text-slate-500">
@@ -258,11 +258,11 @@ function BootstrapWizard() {
                     uses your company JWT; after assignment, mutations need a live operate session.
                   </p>
                   <div className="mt-4 grid max-w-xl grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
+                    <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                       <p className="text-xs font-semibold text-gold-300">Initiator</p>
                       <p className="mt-1 text-[11px] leading-4 text-slate-500">Proposes & executes (e.g. IT Admin)</p>
                     </div>
-                    <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
+                    <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                       <p className="text-xs font-semibold text-gold-300">Authorizer</p>
                       <p className="mt-1 text-[11px] leading-4 text-slate-500">Approves actions (e.g. CISO)</p>
                     </div>
@@ -543,14 +543,14 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
       {/* Login link modal */}
       <Modal open={!!link} onClose={() => setLink(null)} title="Application login link">
         <div className="space-y-4">
-          <div className="rounded-xl border border-gold-400/25 bg-gold-400/5 p-3.5 text-xs leading-5 text-slate-400">
+          <div className="rounded-md border border-gold-400/25 bg-gold-400/5 p-3.5 text-xs leading-5 text-slate-400">
             <strong className="text-gold-300">app.phantixlabs.com</strong> --- the Command Centre where scans, campaigns and reports live.
             Share this with {link?.user || "the user"}. They visit the link, verify via email OTP, and get direct access --- no platform login needed.
           </div>
-          <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3.5 text-xs leading-5 text-slate-400">
+          <div className="rounded-md border border-gold-400/30 bg-gold-400/8 p-3.5 text-xs leading-5 text-slate-400">
             <strong>Shown once.</strong> The platform stores no secrets. Rotating the service key does not invalidate this link.
           </div>
-          <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-xs leading-6 text-gold-300/90 break-all">
+          <div className="rounded-md border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-xs leading-6 text-gold-300/90 break-all">
             {link?.url}
           </div>
           <button
@@ -579,7 +579,7 @@ function LoginLinks() {
         <CardHeader title="Issued login links" subtitle="No secrets stored here --- status only (GET /organizations/me/login-links)" />
         <div className="space-y-2">
           {state.loginLinks.map((l) => (
-            <div key={l.id} className="flex items-center gap-3 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+            <div key={l.id} className="flex items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
               <Link2 size={14} className="text-gold-400" />
               <span className="text-sm text-slate-300">{l.user_name}</span>
               <span className="text-xs text-slate-600">issued {timeAgo(l.created_at)}</span>
@@ -621,7 +621,7 @@ function ReassignModal({
   return (
     <Modal open={open} onClose={onClose} title="Reassign dual control">
       <div className="space-y-4">
-        <div className="rounded-xl border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
+        <div className="rounded-md border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
           Assign initiator and authorizer to users on your organization domain.{allowedDomains.length > 0 && (
             <span> Allowed: <strong>{allowedDomains.join(", ")}</strong>.</span>
           )}{exemptEmails.length > 0 && (

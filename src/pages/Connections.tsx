@@ -84,7 +84,7 @@ export default function Connections() {
             <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card hover>
                 <div className="flex flex-wrap items-center gap-4">
-                  <span className={cx("flex h-12 w-12 items-center justify-center rounded-xl", c.bootstrap_status === "ready" ? "bg-emerald-400/12 text-emerald-400" : "bg-phantix-800/70 text-phantix-300")}>
+                  <span className={cx("flex h-12 w-12 items-center justify-center rounded-md", c.bootstrap_status === "ready" ? "bg-emerald-400/12 text-emerald-400" : "bg-phantix-800/70 text-phantix-300")}>
                     <Database size={20} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -287,7 +287,7 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
                 type="button"
                 key={v}
                 onClick={() => setPurpose(v)}
-                className={cx("rounded-xl border p-3.5 text-left transition-all", purpose === v ? "border-gold-400/60 bg-gold-400/8" : "border-phantix-700/50 bg-phantix-950/40 hover:border-phantix-500/50")}
+                className={cx("rounded-md border p-3.5 text-left transition-all", purpose === v ? "border-gold-400/60 bg-gold-400/8" : "border-phantix-700/50 bg-phantix-950/40 hover:border-phantix-500/50")}
               >
                 <p className="text-sm font-semibold text-slate-200">{label}</p>
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">{desc}</p>
@@ -346,7 +346,7 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
             </select>
           </div>
         </div>
-        <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">
+        <div className="rounded-md border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">
           Least privilege: the storage role needs CONNECT, CREATE (or schema ownership), USAGE and DML on the
           phantix schema only --- never access to application tables.
         </div>

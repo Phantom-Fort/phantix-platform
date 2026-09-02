@@ -118,17 +118,17 @@ export default function Alerts() {
             <Card>
               <CardHeader title="SMTP" subtitle="Outbound email relay" action={<ShieldCheck size={16} className={alertSettings.smtp.enabled ? "text-emerald-400" : "text-slate-500"} />} />
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between rounded-xl bg-phantix-950/60 border border-phantix-700/40 p-3">
+                <div className="flex justify-between rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3">
                   <span className="text-slate-300">Status</span>
                   <StatusBadge status={alertSettings.alerts_enabled ? "active" : "draft"} />
                 </div>
                 {alertSettings.smtp.enabled ? (
                   <>
-                    <div className="rounded-xl bg-phantix-950/60 border border-phantix-700/40 p-3">
+                    <div className="rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3">
                       <p className="text-[10px] uppercase tracking-wider text-slate-500">Server</p>
                       <p className="mt-1 font-mono text-xs text-slate-300">{alertSettings.smtp.host}:{alertSettings.smtp.port}</p>
                     </div>
-                    <div className="rounded-xl bg-phantix-950/60 border border-phantix-700/40 p-3">
+                    <div className="rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3">
                       <p className="text-[10px] uppercase tracking-wider text-slate-500">From</p>
                       <p className="mt-1 text-xs text-slate-300">{alertSettings.smtp.from_name} &lt;{alertSettings.smtp.from_email}&gt;</p>
                     </div>
@@ -145,7 +145,7 @@ export default function Alerts() {
             <Card>
               <CardHeader title="Channels" subtitle="WhatsApp (Meta Cloud) & Telegram (Bot API)" />
               <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
+                <div className="flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                   <div>
                     <p className="text-sm font-medium text-slate-200">WhatsApp</p>
                     <p className="text-xs text-slate-500">
@@ -162,7 +162,7 @@ export default function Alerts() {
                   </div>
                   <StatusBadge status={(alertSettings.whatsapp as any).delivery_live ? "active" : alertSettings.whatsapp.enabled ? "queued" : "draft"} />
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
+                <div className="flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                   <div>
                     <p className="text-sm font-medium text-slate-200">Telegram</p>
                     <p className="text-xs text-slate-500">
@@ -307,7 +307,7 @@ function SMTPForm({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-phantix-600/30 bg-phantix-800/30 p-3 text-xs text-slate-400">
+      <div className="rounded-md border border-phantix-600/30 bg-phantix-800/30 p-3 text-xs text-slate-400">
         Configure your organization's outbound SMTP relay for alert delivery. Credentials are encrypted at rest.
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -388,7 +388,7 @@ function ChannelsForm({
   return (
     <div className="space-y-5">
       {/* WhatsApp (Meta Cloud API) */}
-      <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
+      <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-slate-200">WhatsApp</p>
@@ -419,7 +419,7 @@ function ChannelsForm({
       </div>
 
       {/* Telegram Bot API */}
-      <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
+      <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-slate-200">Telegram</p>

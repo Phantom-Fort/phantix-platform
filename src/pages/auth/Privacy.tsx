@@ -59,7 +59,7 @@ export default function Privacy() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-6">
             <div className="card p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400/15 text-gold-400"><FileText size={18} /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-gold-400/15 text-gold-400"><FileText size={18} /></span>
                 <h2 className="font-display text-lg font-semibold text-white">Privacy notice</h2>
               </div>
               <div className="mt-4 space-y-3 whitespace-pre-line text-sm leading-6 text-slate-300">{noticeText}</div>
@@ -71,7 +71,7 @@ export default function Privacy() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-6">
             <div className="card p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-700/50 text-phantix-300"><ShieldCheck size={18} /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-700/50 text-phantix-300"><ShieldCheck size={18} /></span>
                 <h2 className="font-display text-lg font-semibold text-white">Highlights</h2>
               </div>
               <ul className="mt-4 space-y-2.5">
@@ -90,7 +90,7 @@ export default function Privacy() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-6">
             <div className="card p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-700/50 text-phantix-300"><Database size={18} /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-700/50 text-phantix-300"><Database size={18} /></span>
                 <h2 className="font-display text-lg font-semibold text-white">Data we store</h2>
               </div>
               <ul className="mt-4 space-y-2.5">
@@ -108,7 +108,7 @@ export default function Privacy() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-8 space-y-5">
           <div className="card p-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-700/50 text-phantix-300"><ShieldCheck size={18} /></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-700/50 text-phantix-300"><ShieldCheck size={18} /></span>
               <h2 className="font-display text-lg font-semibold text-white">What Phantix stores</h2>
             </div>
             <ul className="mt-4 space-y-2.5">
@@ -127,7 +127,7 @@ export default function Privacy() {
 
           <div className="card border-gold-400/25 p-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400/15 text-gold-400"><Database size={18} /></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-gold-400/15 text-gold-400"><Database size={18} /></span>
               <h2 className="font-display text-lg font-semibold text-white">What lives in your dedicated security database</h2>
             </div>
             <ul className="mt-4 space-y-2.5">
@@ -142,7 +142,7 @@ export default function Privacy() {
                 </li>
               ))}
             </ul>
-            <p className="mt-4 rounded-xl bg-phantix-950/60 border border-phantix-700/40 p-3.5 text-xs leading-5 text-slate-400">
+            <p className="mt-4 rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3.5 text-xs leading-5 text-slate-400">
               Everything is written only to the <span className="font-mono text-gold-300">phantix</span> schema in a
               database you own. Phantix connects dynamically per request --- there is no copy on our side.
             </p>
@@ -150,7 +150,7 @@ export default function Privacy() {
 
           <div className="card p-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-severity-critical/12 text-severity-critical"><EyeOff size={18} /></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-severity-critical/12 text-severity-critical"><EyeOff size={18} /></span>
               <h2 className="font-display text-lg font-semibold text-white">What Phantix never touches</h2>
             </div>
             <ul className="mt-4 space-y-2.5">
@@ -168,7 +168,7 @@ export default function Privacy() {
 
           <div className="card p-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-700/50 text-phantix-300"><KeyRound size={18} /></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-700/50 text-phantix-300"><KeyRound size={18} /></span>
               <h2 className="font-display text-lg font-semibold text-white">Identity & verification</h2>
             </div>
             <ul className="mt-4 space-y-2.5">

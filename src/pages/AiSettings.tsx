@@ -139,7 +139,7 @@ export default function AiSettings() {
                 ["Mode", ai.mode || "---"],
                 ["Pentest AI", ai.ai_pentest_ready ? "Ready" : "Gated"],
               ].map(([k, v]) => (
-                <div key={k} className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
+                <div key={k} className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                   <p className="text-[10px] uppercase tracking-wider text-slate-500">{k}</p>
                   <p className="mt-1 font-medium capitalize text-slate-200">{v}</p>
                 </div>
@@ -213,7 +213,7 @@ export default function AiSettings() {
           {/* Phantix Agent toggle */}
           <Card className="border-gold-400/25">
             <CardHeader title="Phantix Agent" subtitle="Conversational security assistant for the Command Centre" action={<Bot size={16} className="text-gold-400" />} />
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
+            <div className="flex items-center justify-between gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
               <div>
                 <p className="text-sm font-semibold text-slate-200">{ai.agent_enabled ? "Enabled" : "Disabled"}</p>
                 <p className="mt-0.5 text-xs leading-5 text-slate-500">

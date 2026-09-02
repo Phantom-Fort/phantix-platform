@@ -198,7 +198,7 @@ export default function Identity() {
                   ["Industry", state.org.industry || "---"],
                   ["Plan", state.org.plan || "---"],
                 ].map(([k, v]) => (
-                  <div key={k} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+                  <div key={k} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                     <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{k}</span>
                     <CopyChip value={String(v)} />
                   </div>
@@ -235,15 +235,15 @@ export default function Identity() {
                 <p className="text-sm text-slate-500">No primary contact on file --- edit Company profile.</p>
               )}
               <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3">
+                <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3">
                   <p className="text-slate-500">Website</p>
                   <p className="mt-1 truncate text-slate-200">{state.org.website || "---"}</p>
                 </div>
-                <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3">
+                <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3">
                   <p className="text-slate-500">Phone</p>
                   <p className="mt-1 text-slate-200">{state.org.phone || "---"}</p>
                 </div>
-                <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3 col-span-2">
+                <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3 col-span-2">
                   <p className="text-slate-500">Legal name</p>
                   <p className="mt-1 text-slate-200">{state.org.legal_name || "---"}</p>
                 </div>
@@ -317,7 +317,7 @@ export default function Identity() {
               {(["primary_contact", "secondary_contact"] as const).map((which) => {
                 const c = form[which] ?? emptyContact();
                 return (
-                  <div key={which} className="rounded-xl border border-phantix-700/40 bg-phantix-950/40 p-4">
+                  <div key={which} className="rounded-md border border-phantix-700/40 bg-phantix-950/40 p-4">
                     <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{which === "primary_contact" ? "Primary" : "Secondary"}</p>
                     <div className="grid grid-cols-2 gap-2">
                       <select className="input" value={c.title ?? "mr"} onChange={(e) => setContact(which, "title", e.target.value)}>
@@ -410,7 +410,7 @@ export default function Identity() {
               <CardHeader title="Service key" subtitle="Exactly one active key per company --- X-Org-Api-Key" action={<KeyRound size={16} className="text-slate-500" />} />
               {key ? (
                 <>
-                  <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
+                  <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-mono text-sm text-slate-200">{key.prefix}</span>
@@ -452,8 +452,8 @@ export default function Identity() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <Card>
               <CardHeader title="Report branding" subtitle="POST/DELETE /organizations/me/logo --- PNG/JPEG/WebP/SVG, max 2MB" action={<ImagePlus size={16} className="text-slate-500" />} />
-              <div className="flex items-center gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
-                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-phantix-800/70">
+              <div className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
+                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-md bg-phantix-800/70">
                   {state.org.logo_url ? (
                     <img src={mediaUrl(state.org.logo_url)} alt="" className="h-full w-full object-contain" />
                   ) : (
@@ -500,7 +500,7 @@ export default function Identity() {
                       type="button"
                       onClick={() => setPreferred((p) => (on ? p.filter((k) => k !== s.key) : [...p, s.key]))}
                       className={cx(
-                        "flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors",
+                        "flex w-full items-start gap-3 rounded-md border px-3.5 py-3 text-left transition-colors",
                         on ? "border-gold-400/40 bg-gold-400/8" : "border-phantix-700/40 bg-phantix-950/40 hover:border-phantix-500/50",
                       )}
                     >
@@ -538,11 +538,11 @@ export default function Identity() {
 
       <Modal open={!!keyModal} onClose={() => setKeyModal(null)} title="Service key created">
         <div className="space-y-4">
-          <div className="flex items-start gap-3 rounded-xl border border-severity-medium/30 bg-severity-medium/10 px-4 py-3">
+          <div className="flex items-start gap-3 rounded-md border border-severity-medium/30 bg-severity-medium/10 px-4 py-3">
             <AlertTriangle size={16} className="mt-0.5 shrink-0 text-severity-medium" />
             <p className="text-xs leading-5 text-slate-300">Copy now --- the full secret is shown once.</p>
           </div>
-          <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-sm text-gold-300 break-all">{keyModal}</div>
+          <div className="rounded-md border border-phantix-700/50 bg-phantix-950/70 p-3.5 font-mono text-sm text-gold-300 break-all">{keyModal}</div>
           <button
             className="btn-primary w-full"
             onClick={() => {

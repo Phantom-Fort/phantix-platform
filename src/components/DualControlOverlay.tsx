@@ -162,7 +162,7 @@ export default function DualControlOverlay() {
                 <X size={16} />
               </button>
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold-400/15 text-gold-400">
+                <span className="flex h-11 w-11 items-center justify-center rounded-md bg-gold-400/15 text-gold-400">
                   <Lock size={20} />
                 </span>
                 <div>
@@ -173,7 +173,7 @@ export default function DualControlOverlay() {
                 </div>
               </div>
               {reason && (
-                <p className="mt-3 rounded-xl border border-phantix-700/50 bg-phantix-950/60 px-3.5 py-2.5 text-xs leading-5 text-slate-300">
+                <p className="mt-3 rounded-md border border-phantix-700/50 bg-phantix-950/60 px-3.5 py-2.5 text-xs leading-5 text-slate-300">
                   {reason}
                 </p>
               )}
@@ -181,7 +181,7 @@ export default function DualControlOverlay() {
 
             <div className="relative space-y-4 px-6 py-5">
               {(initiator || authorizer) && (
-                <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-3.5 py-3 text-[11px] leading-5 text-slate-400">
+                <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 px-3.5 py-3 text-[11px] leading-5 text-slate-400">
                   <p className="mb-1 font-semibold uppercase tracking-wider text-slate-500">Assigned controllers</p>
                   {initiator && (
                     <p>
@@ -229,13 +229,13 @@ export default function DualControlOverlay() {
 
               {stage === "otp" && (
                 <>
-                  <div className="rounded-xl border border-phantix-600/40 bg-phantix-800/40 p-3.5 text-center">
+                  <div className="rounded-md border border-phantix-600/40 bg-phantix-800/40 p-3.5 text-center">
                     <KeyRound size={20} className="mx-auto text-gold-400" />
                     <p className="mt-2 text-sm font-medium text-slate-200">Enter the email code</p>
                     <p className="mt-1 text-xs text-slate-500">Sent to {masked || maskEmail(email)}</p>
                   </div>
                   {devOtp && (
-                    <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3 text-center">
+                    <div className="rounded-md border border-gold-400/30 bg-gold-400/8 p-3 text-center">
                       <p className="text-[10px] uppercase tracking-wider text-gold-400/80">Dev OTP</p>
                       <p className="mt-1 font-mono text-xl font-bold tracking-[0.35em] text-gold-300">{devOtp}</p>
                     </div>
@@ -269,7 +269,7 @@ export default function DualControlOverlay() {
 
               {stage === "device" && (
                 <>
-                  <div className="rounded-xl border border-severity-medium/40 bg-severity-medium/10 p-3.5 text-center">
+                  <div className="rounded-md border border-severity-medium/40 bg-severity-medium/10 p-3.5 text-center">
                     <Smartphone size={20} className="mx-auto text-severity-medium" />
                     <p className="mt-2 text-sm font-medium text-slate-200">Confirm this new device</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">

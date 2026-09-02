@@ -28,7 +28,7 @@ export default function Tools() {
             <motion.div key={t.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card hover className={cx("h-full", t.subscribed && "border-emerald-400/20")}>
                 <div className="flex items-start justify-between">
-                  <span className={cx("flex h-11 w-11 items-center justify-center rounded-xl", t.subscribed ? "bg-emerald-400/12 text-emerald-400" : "bg-phantix-800/70 text-phantix-300")}>
+                  <span className={cx("flex h-11 w-11 items-center justify-center rounded-md", t.subscribed ? "bg-emerald-400/12 text-emerald-400" : "bg-phantix-800/70 text-phantix-300")}>
                     <Wrench size={17} />
                   </span>
                   <StatusBadge status={t.subscribed ? "subscribed" : locked ? "pending" : "draft"} />

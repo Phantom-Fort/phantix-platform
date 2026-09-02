@@ -128,7 +128,7 @@ export default function SetupWizard() {
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-phantix-800">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-gold-400 to-gold-600"
+              className="h-full rounded-full bg-gold-400"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
@@ -151,7 +151,7 @@ export default function SetupWizard() {
                   onClick={() => reachable && setStep(m.id)}
                   disabled={!reachable}
                   className={cx(
-                    "relative flex w-full items-center gap-3.5 rounded-xl px-2 py-3 text-left transition-colors",
+                    "relative flex w-full items-center gap-3.5 rounded-md px-2 py-3 text-left transition-colors",
                     active ? "bg-phantix-800/50" : reachable ? "hover:bg-phantix-800/30" : "opacity-50",
                   )}
                 >
@@ -161,7 +161,7 @@ export default function SetupWizard() {
                       done
                         ? "border-emerald-400 bg-emerald-400/15 text-emerald-400"
                         : active
-                          ? "border-gold-400 bg-gold-400/15 text-gold-400 shadow-glow"
+                          ? "border-gold-400 bg-gold-400/10 text-gold-400"
                           : "border-phantix-700 bg-phantix-900 text-slate-500",
                     )}
                   >
@@ -182,7 +182,7 @@ export default function SetupWizard() {
           })}
         </div>
 
-        <div className="rounded-xl border border-phantix-700/40 bg-phantix-900/60 p-4 text-[11px] leading-5 text-slate-500">
+        <div className="rounded-md border border-phantix-700/40 bg-phantix-900/60 p-4 text-[11px] leading-5 text-slate-500">
           <Info size={13} className="mb-1.5 text-gold-400" />
           Rehydrates from <span className="font-mono text-slate-400">GET /organizations/me/setup</span>.
           Required: privacy + email OTP. Domain / CAC / manual review are optional.
@@ -281,7 +281,7 @@ function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown>
           if (!el) return;
           if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) setScrolled(true);
         }}
-        className="mt-5 max-h-[300px] space-y-4 overflow-y-auto rounded-xl border border-phantix-700/50 bg-phantix-950/60 p-5 text-sm leading-6 text-slate-300"
+        className="mt-5 max-h-[300px] space-y-4 overflow-y-auto rounded-md border border-phantix-700/50 bg-phantix-950/60 p-5 text-sm leading-6 text-slate-300"
       >
         {summary && <p className="text-slate-200">{summary}</p>}
         {noticeText && (
@@ -317,7 +317,7 @@ function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown>
       {version && <p className="mt-2 text-[11px] text-slate-600">Notice version: {version}</p>}
       <label
         className={cx(
-          "mt-4 flex items-start gap-3 rounded-xl border p-4 transition-colors",
+          "mt-4 flex items-start gap-3 rounded-md border p-4 transition-colors",
           checked ? "border-emerald-400/40 bg-emerald-400/5" : "border-phantix-700/50",
           !scrolled && "opacity-60",
         )}
@@ -511,7 +511,7 @@ function OtpStep({ privacyNotice }: { privacyNotice: Record<string, unknown> | n
       ) : (
         <div className="mt-6 space-y-4">
           {devOtp && import.meta.env.DEV && (
-            <div className="rounded-xl border border-gold-400/30 bg-gold-400/8 p-3.5 text-center">
+            <div className="rounded-md border border-gold-400/30 bg-gold-400/8 p-3.5 text-center">
               <p className="text-[10px] uppercase tracking-wider text-gold-400/80">Dev mode --- your code</p>
               <p className="mt-1 font-mono text-2xl font-bold tracking-[0.4em] text-gold-300">{devOtp}</p>
             </div>
@@ -600,7 +600,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
         </p>
 
         {verified && (
-          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-emerald-400/30 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-300">
+          <div className="mt-4 flex items-center gap-2.5 rounded-md border border-emerald-400/30 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-300">
             <CheckCircle2 size={16} /> Company verified
             {s.domain_dns_ok && <span className="chip border-emerald-400/30 text-[10px]">DNS</span>}
             {s.domain_http_ok && <span className="chip border-emerald-400/30 text-[10px]">HTTP</span>}
@@ -673,7 +673,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                     <p className="text-sm text-slate-300">
                       Prove control of <span className="font-mono text-gold-300">{s.domain || domain}</span> with either method:
                     </p>
-                    <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
+                    <div className="rounded-md border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option A --- DNS TXT</p>
                         {s.domain_dns_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
@@ -695,7 +695,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                         <p className="mt-2 text-xs text-slate-500">Start verification to get instructions</p>
                       )}
                     </div>
-                    <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4">
+                    <div className="rounded-md border border-phantix-700/50 bg-phantix-950/70 p-4">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Option B --- HTTP well-known</p>
                         {s.domain_http_ok ? <CheckCircle2 size={15} className="text-emerald-400" /> : null}
@@ -915,7 +915,7 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
-          className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-gold-400 bg-gold-400/15 shadow-glow"
+          className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-gold-400/40 bg-gold-400/10"
         >
           <PartyPopper size={32} className="text-gold-400" />
         </motion.div>
@@ -954,7 +954,7 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
       <StepTitle icon={<FileText size={18} />} kicker="Step 5 of 5" title="Review & complete" />
       <div className="mt-5 space-y-2.5">
         {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+          <div key={r.label} className="flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
             <span className="text-sm text-slate-300">
               {r.label} {r.required && <span className="ml-1 text-[10px] text-slate-600">required</span>}
             </span>
@@ -963,7 +963,7 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
         ))}
       </div>
       {!canComplete && (
-        <p className="mt-4 rounded-xl border border-severity-critical/30 bg-severity-critical/8 p-3.5 text-xs leading-5 text-severity-critical">
+        <p className="mt-4 rounded-md border border-severity-critical/30 bg-severity-critical/8 p-3.5 text-xs leading-5 text-severity-critical">
           Privacy acceptance and email OTP are required. Complete those steps first --- the API returns 400 otherwise.
         </p>
       )}
@@ -1020,7 +1020,7 @@ function PrivacyRef({ notice }: { notice: Record<string, unknown> | null }) {
   const title = (notice.title as string) || "Privacy notice";
   const summary = (notice.summary as string) || "";
   return (
-    <div className="mt-4 rounded-xl border border-phantix-700/30 bg-phantix-950/40 p-3 text-xs text-slate-500">
+    <div className="mt-4 rounded-md border border-phantix-700/30 bg-phantix-950/40 p-3 text-xs text-slate-500">
       <p className="font-medium text-slate-400">{title}</p>
       {summary && <p className="mt-0.5 line-clamp-2">{summary}</p>}
       <p className="mt-1 text-[10px] text-slate-600">

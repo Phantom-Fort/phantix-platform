@@ -46,7 +46,7 @@ export default function Dashboard() {
       {!securityDbReady && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-5">
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-severity-medium/30 bg-severity-medium/8 px-5 py-4">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-severity-medium/15 text-severity-medium">
+            <span className="flex h-11 w-11 items-center justify-center rounded-md bg-severity-medium/15 text-severity-medium">
               <AlertTriangle size={19} />
             </span>
             <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export default function Dashboard() {
                 initial={{ width: 0 }}
                 animate={{ width: `${(doneCount / checklist.length) * 100}%` }}
                 transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                className="h-full rounded-full bg-gradient-to-r from-gold-400 to-emerald-400"
+                className="h-full rounded-full bg-gold-400"
               />
             </div>
             <div className="space-y-2">
@@ -80,7 +80,7 @@ export default function Dashboard() {
                   key={c.label}
                   onClick={() => !c.done && navigate(c.to)}
                   className={cx(
-                    "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors",
+                    "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-sm transition-colors",
                     c.done ? "border-emerald-400/20 bg-emerald-400/5 text-slate-400" : "border-phantix-700/50 bg-phantix-950/40 text-slate-200 hover:border-gold-400/40",
                   )}
                 >
@@ -102,7 +102,7 @@ export default function Dashboard() {
             { icon: <KeyRound size={17} />, label: "Service keys", value: (state.serviceKey ? 1 : 0) + state.companies.filter((c) => c.key_prefix).length, to: "/identity", accent: "text-severity-low bg-severity-low/12" },
           ].map((s) => (
             <Link key={s.label} to={s.to} className="card group p-5 transition-all hover:-translate-y-0.5 hover:border-phantix-500/60">
-              <span className={cx("flex h-10 w-10 items-center justify-center rounded-xl", s.accent)}>{s.icon}</span>
+              <span className={cx("flex h-10 w-10 items-center justify-center rounded-md", s.accent)}>{s.icon}</span>
               <p className="mt-3 font-display text-3xl font-bold text-white"><AnimatedNumber value={s.value} /></p>
               <p className="mt-0.5 text-xs text-slate-500 group-hover:text-slate-400">{s.label}</p>
             </Link>
@@ -119,7 +119,7 @@ export default function Dashboard() {
                 ["Slug", state.org.slug],
                 ["Creator", `#${state.org.creator_user_id}`],
               ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+                <div key={k} className="flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                   <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{k}</span>
                   <button
                     className="flex items-center gap-2 font-mono text-sm text-slate-200 hover:text-gold-300"

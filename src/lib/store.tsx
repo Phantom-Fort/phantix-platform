@@ -2380,7 +2380,7 @@ export function ToastViewport() {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 30, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            className="glass-bright rounded-xl p-3.5 shadow-card flex items-start gap-3"
+            className="glass-bright rounded-md p-3.5 shadow-card flex items-start gap-3"
           >
             <span className="mt-0.5 shrink-0">{icons[t.kind]}</span>
             <div className="min-w-0 flex-1">

@@ -26,7 +26,7 @@ export default function Companies() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card hover className="mb-4 border-gold-400/25">
           <div className="flex flex-wrap items-center gap-4">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold-400/15 text-gold-400">
+            <span className="flex h-12 w-12 items-center justify-center rounded-md bg-gold-400/15 text-gold-400">
               <Building2 size={20} />
             </span>
             <div className="min-w-0 flex-1">
@@ -59,7 +59,7 @@ export default function Companies() {
             <motion.div key={c.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card hover>
                 <div className="flex items-start gap-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-phantix-800/70 text-phantix-300">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 text-phantix-300">
                     <Building2 size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -68,7 +68,7 @@ export default function Companies() {
                     <p className="mt-1 text-xs text-slate-500">{c.industry ?? "---"} · {c.country ?? "---"} · created {timeAgo(c.created_at)}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+                <div className="mt-4 flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                   <span className="text-xs text-slate-500">Service key</span>
                   {c.key_prefix ? (
                     <span className="font-mono text-xs text-slate-300">{c.key_prefix}</span>
@@ -132,7 +132,7 @@ export default function Companies() {
               </select>
             </div>
           </div>
-          <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">
+          <div className="rounded-md border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">
             The child company is a separate tenant: its own service key, users, security database and billing scope.
             POST /organizations/me/companies.
           </div>
@@ -143,10 +143,10 @@ export default function Companies() {
       {/* Key reveal */}
       <Modal open={!!keyModal} onClose={() => setKeyModal(null)} title={`Service key --- ${keyModal?.company}`}>
         <div className="space-y-4">
-          <div className="rounded-xl border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
+          <div className="rounded-md border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
             Shown once. The backend keeps only the SHA-256 --- copy it into your secrets vault now.
           </div>
-          <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/70 p-4 font-mono text-sm text-gold-300 break-all">
+          <div className="rounded-md border border-phantix-700/50 bg-phantix-950/70 p-4 font-mono text-sm text-gold-300 break-all">
             {keyModal?.secret}
           </div>
           <button

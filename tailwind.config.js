@@ -47,14 +47,15 @@ export default {
         black: "rgb(var(--color-black) / <alpha-value>)",
       },
       fontFamily: {
-        display: ["'Space Grotesk'", "system-ui", "sans-serif"],
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
+        display: ["'Space Grotesk'", "'Geist Variable'", "system-ui", "sans-serif"],
+        sans: ["'Geist Variable'", "Inter", "system-ui", "sans-serif"],
+        mono: ["'Geist Mono Variable'", "'JetBrains Mono'", "ui-monospace", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 40px -10px rgba(232, 181, 77, 0.35)",
-        "glow-blue": "0 0 40px -10px rgba(51, 85, 181, 0.5)",
-        card: "0 8px 30px -12px rgba(2, 6, 23, 0.6)",
+        glow: "0 0 0 1px rgba(232, 181, 77, 0.25)",
+        "glow-blue": "0 0 0 1px rgba(63, 63, 70, 0.9)",
+        card: "0 1px 2px 0 rgba(0, 0, 0, 0.5)",
+        goldSm: "0 0 24px -6px rgba(232, 181, 77, 0.12)",
       },
       backgroundImage: {
       },
