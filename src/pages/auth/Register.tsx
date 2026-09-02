@@ -169,7 +169,7 @@ export default function Register() {
                       {['financial_services','fintech','banking','insurance','healthcare','technology','telecommunications','energy','manufacturing','retail','ecommerce','education','government','defense','legal','real_estate','logistics','media','hospitality','agriculture','other'].map(i=><option key={i} value={i}>{i}</option>)}
                     </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="label">Secondary email</label>
                       <input className="input" type="email" value={secondaryEmail} onChange={(e) => setSecondaryEmail(e.target.value)} placeholder="ops@yourcompany.com" />
@@ -184,7 +184,7 @@ export default function Register() {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="label">Password</label>
                       <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="min. 8 characters" />
