@@ -242,7 +242,7 @@ export default function GithubIntegration() {
       />
 
       {loadError && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-severity-critical/30 bg-severity-critical/10 px-4 py-3">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-severity-critical/30 bg-severity-critical/10 px-4 py-3">
           <p className="text-sm text-red-300">Could not load GitHub integration: {loadError}</p>
           <button onClick={load} className="btn-ghost text-xs">Retry</button>
         </div>
@@ -260,7 +260,7 @@ export default function GithubIntegration() {
 
             {/* Discoverable (already-installed) GitHub Apps to link */}
             {(install?.discoverable_installations?.length ?? 0) > 0 && (
-              <div className="mx-auto mt-6 max-w-md rounded-xl border border-gold-400/25 bg-gold-400/5 p-4 text-left">
+              <div className="mx-auto mt-6 max-w-md rounded-md border border-gold-400/25 bg-gold-400/5 p-4 text-left">
                 <p className="text-xs font-semibold uppercase tracking-wider text-gold-300">
                   {install!.discoverable_installations.length} unlinked GitHub installation{install!.discoverable_installations.length === 1 ? "" : "s"} found
                 </p>
@@ -289,7 +289,7 @@ export default function GithubIntegration() {
             )}
 
             {justConnected && (
-              <div className="mx-auto mt-5 max-w-md rounded-xl border border-phantix-600/40 bg-phantix-800/40 px-4 py-3 text-left">
+              <div className="mx-auto mt-5 max-w-md rounded-md border border-phantix-600/40 bg-phantix-800/40 px-4 py-3 text-left">
                 <div className="flex items-start gap-2">
                   <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin text-gold-400" />
                   <div>
@@ -320,7 +320,7 @@ export default function GithubIntegration() {
 
             {/* Awaiting org approval */}
             {awaiting && (
-              <div className="mx-auto mt-5 max-w-md rounded-xl border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
+              <div className="mx-auto mt-5 max-w-md rounded-md border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
                 <div className="flex items-start gap-2">
                   <Clock size={16} className="mt-0.5 shrink-0 text-amber-400" />
                   <div>
@@ -339,14 +339,14 @@ export default function GithubIntegration() {
 
             {/* Rejected / suspended */}
             {install?.status === "rejected" && (
-              <div className="mx-auto mt-5 max-w-md rounded-xl border border-severity-critical/30 bg-severity-critical/10 px-4 py-3 text-left">
+              <div className="mx-auto mt-5 max-w-md rounded-md border border-severity-critical/30 bg-severity-critical/10 px-4 py-3 text-left">
                 <p className="text-sm font-medium text-red-300">GitHub install request denied or cancelled</p>
                 <p className="mt-1 text-xs leading-5 text-slate-400">Ask an organization owner to install the app, then connect again.</p>
                 <button onClick={connect} disabled={connecting} className="btn-primary mt-3 !text-xs">{connecting ? "Redirecting..." : "Connect again"}</button>
               </div>
             )}
             {install?.status === "suspended" && (
-              <div className="mx-auto mt-5 max-w-md rounded-xl border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
+              <div className="mx-auto mt-5 max-w-md rounded-md border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
                 <p className="text-sm font-medium text-amber-300">Installation suspended on GitHub</p>
                 <p className="mt-1 text-xs leading-5 text-slate-400">The GitHub App installation was suspended. Resume it in GitHub App settings to continue.</p>
                 <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="btn-ghost mt-3 !text-xs"><ExternalLink size={12} /> Open GitHub App settings</a>
@@ -355,7 +355,7 @@ export default function GithubIntegration() {
 
             {/* PAT fallback */}
             {install?.pat_fallback && (
-              <div className="mx-auto mt-5 max-w-md rounded-xl border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
+              <div className="mx-auto mt-5 max-w-md rounded-md border border-amber-400/25 bg-amber-400/5 px-4 py-3 text-left">
                 <p className="text-xs text-amber-300">Legacy PAT is connected. Migrate to the GitHub App for private-repo analysis and better coverage.</p>
                 <button onClick={connect} disabled={connecting} className="btn-primary mt-2 !text-xs">{connecting ? "Redirecting..." : "Migrate to GitHub App"}</button>
               </div>
@@ -369,7 +369,7 @@ export default function GithubIntegration() {
             <CardHeader title="Connected account" subtitle="GitHub App installation" action={<StatusBadge status="connected" />} />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400"><GitBranch size={19} /></span>
+                <span className="flex h-11 w-11 items-center justify-center rounded-md bg-emerald-400/10 text-emerald-400"><GitBranch size={19} /></span>
                 <div>
                   <p className="font-semibold text-slate-100">{install.account_login}</p>
                   <p className="text-xs text-slate-500">{install.account_type || "GitHub App"} · {install.installation_id ? `install ${install.installation_id}` : ""}</p>
@@ -387,13 +387,13 @@ export default function GithubIntegration() {
               subtitle={`${repos.length} repos synced`}
               action={<button onClick={sync} disabled={refreshing} className="btn-ghost text-xs"><RefreshCw size={12} className={cx(refreshing && "animate-spin")} /> Sync</button>}
             />
-            <div className="mb-3 flex items-center gap-2 rounded-xl border border-phantix-700/50 bg-phantix-950/50 px-3 py-2">
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-phantix-700/50 bg-phantix-950/50 px-3 py-2">
               <Search size={14} className="text-slate-500" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search repositories..." className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder:text-slate-500" />
             </div>
             <div className="space-y-2">
               {filtered.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">No repositories. Connect a GitHub account to see repos.</p> : filtered.map((r) => (
-                <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+                <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                   <GitBranch size={15} className="shrink-0 text-gold-400" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-slate-200">{r.full_name}</p>
@@ -414,7 +414,7 @@ export default function GithubIntegration() {
       {/* Upgrade modal */}
       <Modal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} title="Private repo requires Premium">
         <div className="space-y-3">
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-gold-400/10 border border-gold-400/25">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-gold-400/10 border border-gold-400/25">
             <Lock size={16} className="text-gold-400" />
             <p className="text-sm text-slate-300"><strong className="text-gold-300">{upgradeRepo?.full_name}</strong> is a private repository. Analyzing private repos requires the Premium plan.</p>
           </div>

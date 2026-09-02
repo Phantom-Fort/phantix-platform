@@ -15,7 +15,7 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
 
 export function Card({ children, className, hover }: { children: React.ReactNode; className?: string; hover?: boolean }) {
   return (
-    <div className={cx("card p-5", hover && "transition-all duration-300 hover:border-phantix-500/60 hover:shadow-glow-blue hover:-translate-y-0.5", className)}>
+    <div className={cx("card p-5", hover && "transition-all duration-300 hover:border-phantix-500/60 hover:border-gold-400/60-blue hover:-translate-y-0.5", className)}>
       {children}
     </div>
   );
@@ -114,10 +114,10 @@ export function EmptyState({ icon, title, body, action }: { icon: React.ReactNod
 
 export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: React.ReactNode; count?: number }[]; active: string; onChange: (id: string) => void }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-1 rounded-xl bg-phantix-900/60 border border-phantix-700/40 p-1 w-fit">
+    <div className="mb-5 flex flex-wrap items-center gap-1 rounded-md bg-phantix-900/60 border border-phantix-700/40 p-1 w-fit">
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onChange(t.id)} className={cx("relative rounded-lg px-3.5 py-2 text-sm font-medium transition-colors", active === t.id ? "text-phantix-950" : "text-slate-400 hover:text-slate-100")}>
-          {active === t.id && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-lg bg-gradient-to-b from-gold-400 to-gold-600" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+          {active === t.id && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-md border border-gold-400/40 bg-phantix-800" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
           <span className="relative flex items-center gap-1.5">
             {t.label}
             {t.count !== undefined && (

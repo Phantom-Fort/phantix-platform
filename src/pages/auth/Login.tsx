@@ -187,7 +187,7 @@ export default function Login() {
                   </motion.form>
                 ) : (
                   <motion.form key="mfa" initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 14 }} onSubmit={submit} className="space-y-4">
-                    <div className="rounded-xl border border-phantix-600/40 bg-phantix-800/40 p-3.5 text-center">
+                    <div className="rounded-md border border-phantix-600/40 bg-phantix-800/40 p-3.5 text-center">
                       <ShieldCheck size={22} className="mx-auto text-gold-400" />
                       <p className="mt-2 text-sm font-medium text-slate-200">Email verification</p>
                       <p className="mt-1 text-xs text-slate-500">A 6-digit code was sent to {destinationMasked || email.replace(/(.{2}).+(@.+)/, "$1***$2")}</p>
@@ -215,7 +215,7 @@ export default function Login() {
             </div>
 
             {DEMO_MODE && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-5 rounded-xl border border-gold-400/20 bg-gold-400/6 px-4 py-3 text-center text-xs leading-5 text-gold-300/80">
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-5 rounded-md border border-gold-400/20 bg-gold-400/6 px-4 py-3 text-center text-xs leading-5 text-gold-300/80">
                 <strong>Demo mode</strong> --- any email and any 6-digit code works. Set{" "}
                  live API configuration.
               </motion.p>

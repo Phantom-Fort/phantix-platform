@@ -257,7 +257,7 @@ export default function AgiSettings() {
             <CardHeader title="Agent settings" subtitle="Enable + limits for this organization" action={<Radar size={16} className="text-gold-400" />} />
 
             {/* Enable */}
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-4">
+            <div className="flex items-center justify-between gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
               <div>
                 <p className="text-sm font-semibold text-slate-200">{s?.enabled_for_org ? "Enabled for this org" : "Disabled"}</p>
                 <p className="mt-0.5 text-xs leading-5 text-slate-500">
@@ -358,7 +358,7 @@ export default function AgiSettings() {
                 <EmptyState icon={<KeyRound size={22} />} title="No test accounts" body="Add reusable test login / registration credentials so AGI can use them automatically per environment." />
               ) : (
                 bootstrap?.test_accounts.map((a) => (
-                  <div key={a.id} className={cx("rounded-xl border p-4", a.is_default ? "border-gold-400/40 bg-gold-400/5" : "border-phantix-700/40 bg-phantix-900/40")}>
+                  <div key={a.id} className={cx("rounded-md border p-4", a.is_default ? "border-gold-400/40 bg-gold-400/5" : "border-phantix-700/40 bg-phantix-900/40")}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-[13px] font-semibold text-white">{a.label}</span>
                       {a.is_default && <span className="chip border-gold-400/40 bg-gold-400/10 text-[10px] text-gold-300"><Star size={10} className="mr-1 inline" /> default</span>}

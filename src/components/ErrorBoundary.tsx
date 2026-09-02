@@ -23,7 +23,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         <div className="flex min-h-screen items-center justify-center bg-phantix-950 text-slate-200">
           <div className="card w-full max-w-xl p-8">
             <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-xl bg-severity-critical/15 p-2.5">
+              <div className="rounded-md bg-severity-critical/15 p-2.5">
                 <ShieldAlert size={22} className="text-severity-critical" />
               </div>
               <div>
@@ -31,7 +31,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                 <p className="mt-1 text-xs text-slate-500">The UI crashed while rendering. Check the console for the component stack trace.</p>
               </div>
             </div>
-            <pre className="my-3 max-h-40 overflow-auto rounded-xl bg-phantix-950 p-3.5 text-[11px] text-severity-critical whitespace-pre-wrap">
+            <pre className="my-3 max-h-40 overflow-auto rounded-md bg-phantix-950 p-3.5 text-[11px] text-severity-critical whitespace-pre-wrap">
               {this.state.error.message}
             </pre>
             {this.state.info && (

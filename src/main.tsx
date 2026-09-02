@@ -3,6 +3,10 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { bootstrapTheme } from "./lib/theme";
+// Geist + Geist Mono — self-hosted variable woff2, loaded first
+// so the app never flashes a fallback face.
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import { initAnalytics } from "./lib/analytics";
 import "./index.css";
 

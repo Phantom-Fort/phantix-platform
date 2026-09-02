@@ -200,7 +200,7 @@ export default function Audit() {
       </div>
 
       {loadError && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-severity-critical/30 bg-severity-critical/10 px-4 py-3">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-severity-critical/30 bg-severity-critical/10 px-4 py-3">
           <p className="text-sm text-red-300">Could not load audit trail: {loadError}</p>
           <button onClick={() => setReloadKey((k) => k + 1)} className="btn-ghost text-xs">Retry</button>
         </div>

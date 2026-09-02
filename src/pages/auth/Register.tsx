@@ -235,7 +235,7 @@ export default function Register() {
                         value={d}
                         onChange={(e) => handleOtpInput(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Backspace" && !d && i > 0) document.getElementById(`otp-${i - 1}`)?.focus(); }}
-                        className="h-14 w-12 rounded-xl border border-phantix-700/50 bg-phantix-950/70 text-center font-mono text-xl font-bold text-white outline-none transition-colors focus:border-gold-400/50 focus:bg-phantix-900/70"
+                        className="h-14 w-12 rounded-md border border-phantix-700/50 bg-phantix-950/70 text-center font-mono text-xl font-bold text-white outline-none transition-colors focus:border-gold-400/50 focus:bg-phantix-900/70"
                       />
                     ))}
                   </div>

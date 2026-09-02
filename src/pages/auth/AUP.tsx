@@ -80,7 +80,7 @@ export default function AcceptableUsePolicy() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-6">
             <div className="card border-gold-400/25 p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400/15 text-gold-400"><ScrollText size={18} /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-gold-400/15 text-gold-400"><ScrollText size={18} /></span>
                 <h2 className="font-display text-lg font-semibold text-white">Summary</h2>
               </div>
               <p className="mt-4 text-sm leading-6 text-slate-300">{aup.summary}</p>
@@ -101,7 +101,7 @@ export default function AcceptableUsePolicy() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-6 space-y-5">
             <div className="card p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400/15 text-gold-400"><ShieldAlert size={18} /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-gold-400/15 text-gold-400"><ShieldAlert size={18} /></span>
                 <h2 className="font-display text-lg font-semibold text-white">Authorized use only</h2>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-300">
@@ -113,7 +113,7 @@ export default function AcceptableUsePolicy() {
 
             <div className="card p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-severity-critical/12 text-severity-critical"><Ban size={18} /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-severity-critical/12 text-severity-critical"><Ban size={18} /></span>
                 <h2 className="font-display text-lg font-semibold text-white">Prohibited conduct</h2>
               </div>
               <ul className="mt-4 space-y-2.5">
@@ -137,7 +137,7 @@ export default function AcceptableUsePolicy() {
 
             <div className="card p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-700/50 text-phantix-300"><FileText size={18} /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-700/50 text-phantix-300"><FileText size={18} /></span>
                 <h2 className="font-display text-lg font-semibold text-white">Enforcement</h2>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-300">

@@ -150,10 +150,10 @@ export default function Billing() {
             <CardHeader title={isPremium ? "Your plan" : "Choose a plan"} subtitle={`${entitlements?.billing_enforcement?.enabled ? "Billing gates active" : "Dev mode — gates off"}`} />
             <div className="space-y-4">
               <div className="flex gap-2 mb-4">
-                {(["monthly", "yearly"] as const).map(c => <button key={c} onClick={() => setSelectedCycle(c)} className={cx("flex-1 rounded-xl border py-3 text-sm font-semibold transition-colors", selectedCycle === c ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60")}>{c === "monthly" ? "Monthly" : "Yearly"}</button>)}
+                {(["monthly", "yearly"] as const).map(c => <button key={c} onClick={() => setSelectedCycle(c)} className={cx("flex-1 rounded-md border py-3 text-sm font-semibold transition-colors", selectedCycle === c ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60")}>{c === "monthly" ? "Monthly" : "Yearly"}</button>)}
               </div>
               {pricing && (
-                <div className="rounded-2xl border border-gold-400/25 bg-gradient-to-b from-gold-400/10 to-transparent p-5 text-center">
+                <div className="rounded-2xl border border-gold-400/25 bg-gradient-to-b from-phantix-900 to-phantix-950 p-5 text-center">
                   <p className="font-display text-3xl font-bold text-white">{formatNaira(selectedCycle === "monthly" ? (pricing.first_month_price_ngn || price) : pricing.yearly_price_ngn)}</p>
                   <p className="mt-1 text-sm text-slate-400">{selectedCycle === "monthly" ? `First month (${pricing.first_month_discount_percent}% off) · then ${formatNaira(pricing.subsequent_monthly_price_ngn)}/mo` : "One-time yearly payment"}</p>
                   {selectedCycle === "yearly" && <p className="mt-1 text-xs text-emerald-400">Save ~{Math.round((1 - pricing.yearly_price_ngn / (pricing.monthly_list_price_ngn * 12)) * 100)}% vs monthly</p>}
@@ -185,7 +185,7 @@ export default function Billing() {
             <CardHeader title="Payment history" subtitle={`${payments.length} invoices`} />
             <div className="space-y-2">
               {payments.map(p => (
-                <div key={p.id} className="flex items-center gap-4 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+                <div key={p.id} className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                   <div className="min-w-0 flex-1"><p className="font-mono text-sm text-slate-200">{p.reference}</p><p className="text-xs text-slate-500">{p.purpose} · {p.discount_percent ? `${p.discount_percent}% off` : ""} · {timeAgo(p.created_at)}</p></div>
                   <span className="font-semibold text-slate-200">{formatNaira(p.amount_due_ngn)}</span>
                   <StatusBadge status={p.status} />
@@ -228,7 +228,7 @@ export default function Billing() {
 
       {/* Cancel confirm */}
       <Modal open={showCancelConfirm} onClose={() => setShowCancelConfirm(false)} title="Cancel auto-renew?">
-        <div className="space-y-3"><div className="flex items-center gap-2 p-3 rounded-xl bg-severity-medium/10 border border-severity-medium/20"><AlertTriangle size={16} className="text-severity-medium" /><p className="text-sm text-slate-300">Your Premium access continues until {subscription?.current_period_end ? timeAgo(subscription.current_period_end) : "period end"}. After that, you'll be on the free plan.</p></div>
+        <div className="space-y-3"><div className="flex items-center gap-2 p-3 rounded-md bg-severity-medium/10 border border-severity-medium/20"><AlertTriangle size={16} className="text-severity-medium" /><p className="text-sm text-slate-300">Your Premium access continues until {subscription?.current_period_end ? timeAgo(subscription.current_period_end) : "period end"}. After that, you'll be on the free plan.</p></div>
           <button onClick={handleCancel} className="btn-danger w-full">Confirm cancellation</button>
         </div>
       </Modal>

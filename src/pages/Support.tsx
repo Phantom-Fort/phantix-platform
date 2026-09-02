@@ -36,7 +36,7 @@ export default function Support() {
             <motion.div key={t.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card hover className="!p-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-phantix-800/70 text-gold-400">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-800/70 text-gold-400">
                     <MessageSquare size={16} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -46,7 +46,7 @@ export default function Support() {
                   <span className="chip border-phantix-600/50 bg-phantix-800/60 text-slate-400 capitalize">{t.priority}</span>
                   <StatusBadge status={t.status} />
                 </div>
-                <div className="mt-3 rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-400">
+                <div className="mt-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-400">
                   {t.messages?.[0]?.body ? t.messages[0].body : <span className="text-slate-500">No message preview available.</span>}
                 </div>
               </Card>
