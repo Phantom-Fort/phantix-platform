@@ -24,8 +24,8 @@ import LottiePlayer from "@/components/LottiePlayer";
 import { cx } from "@/lib/utils";
 
 const GOLD = "rgb(var(--gold-400))";
-const BLUE = "rgb(var(--phantix-400))";
-const BLUE_LIGHT = "rgb(var(--phantix-600))";
+const NEUTRAL = "rgb(var(--phantix-400))";
+const NEUTRAL_LIGHT = "rgb(var(--phantix-600))";
 const WHITE = "#e2e8f0";
 
 interface Insight {
@@ -44,7 +44,7 @@ function GlobeScene() {
   return (
     <div className="relative h-80 w-80 select-none">
       <div data-anim="orbit" className="absolute -inset-8 rounded-full border border-white/10">
-        <div className="absolute -inset-3 rounded-full border border-dashed border-[rgba(144,168,232,0.25)]" />
+        <div className="absolute -inset-3 rounded-full border border-dashed border-[rgba(161,161,170,0.25)]" />
         <div
           data-anim="magnifier"
           className="absolute -top-3.5 left-1/2 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-[rgba(232,181,77,0.6)] bg-phantix-900 shadow-[0_0_22px_rgba(232,181,77,0.35)]"
@@ -58,7 +58,7 @@ function GlobeScene() {
           className="absolute inset-0 opacity-60"
           style={{
             background:
-              "repeating-linear-gradient(90deg, transparent 0 34px, rgba(90,123,214,0.25) 34px 35px), repeating-linear-gradient(0deg, transparent 0 34px, rgba(90,123,214,0.25) 34px 35px)",
+              "repeating-linear-gradient(90deg, transparent 0 34px, rgba(113,113,122,0.25) 34px 35px), repeating-linear-gradient(0deg, transparent 0 34px, rgba(113,113,122,0.25) 34px 35px)",
             maskImage: "radial-gradient(circle at 50% 50%, black 54%, transparent 74%)",
             WebkitMaskImage: "radial-gradient(circle at 50% 50%, black 54%, transparent 74%)",
           }}
@@ -75,8 +75,8 @@ function GlobeScene() {
 function SonarScene() {
   return (
     <div className="relative flex h-80 w-full max-w-xl select-none items-center justify-center">
-      <div data-anim="ring" className="absolute h-72 w-72 rounded-full border border-[rgba(144,168,232,0.28)]" />
-      <div data-anim="ring" className="absolute h-52 w-52 rounded-full border border-[rgba(144,168,232,0.4)]" />
+      <div data-anim="ring" className="absolute h-72 w-72 rounded-full border border-[rgba(161,161,170,0.28)]" />
+      <div data-anim="ring" className="absolute h-52 w-52 rounded-full border border-[rgba(161,161,170,0.4)]" />
       <div data-anim="ring" className="absolute h-36 w-36 rounded-full border border-[rgba(232,181,77,0.45)]" />
       <div
         data-anim="radar"
@@ -85,9 +85,9 @@ function SonarScene() {
       />
       <div data-anim="core" className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: GOLD, boxShadow: `0 0 18px 4px ${GOLD}` }} />
       {[
-        { top: "18%", left: "70%", c: BLUE_LIGHT },
+        { top: "18%", left: "70%", c: NEUTRAL_LIGHT },
         { top: "58%", left: "26%", c: WHITE },
-        { top: "70%", left: "68%", c: BLUE },
+        { top: "70%", left: "68%", c: NEUTRAL },
         { top: "30%", left: "38%", c: GOLD },
       ].map((p, i) => (
         <div key={i} data-anim="contact" className="absolute h-1.5 w-1.5 rounded-full" style={{ top: p.top, left: p.left, background: p.c, boxShadow: `0 0 10px 2px ${p.c}` }} />
@@ -105,7 +105,7 @@ function SonarScene() {
                 data-anim="wave"
                 d="M0 13 H 10 l4 -7 8 14 8 -18 8 22 8 -16 8 10 8 -6 6 4 12 -14 8 20 8 -14 8 8 8 -4"
                 fill="none"
-                stroke={BLUE_LIGHT}
+                stroke={NEUTRAL_LIGHT}
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeDasharray="120"
@@ -138,7 +138,7 @@ function IncidentScene() {
                 i === 0 ? "border-[rgba(232,181,77,0.6)] bg-[rgba(232,181,77,0.12)]" : "border-white/15 bg-black/40"
               )}
             >
-              <span style={{ color: i === 0 ? GOLD : BLUE_LIGHT }}>{s.icon}</span>
+              <span style={{ color: i === 0 ? GOLD : NEUTRAL_LIGHT }}>{s.icon}</span>
             </div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-300">{s.label}</span>
           </div>
@@ -197,7 +197,7 @@ function AlertsScene() {
 
       {CHANNELS.map((c) => (
         <div key={c.label} className={cx("absolute flex flex-col items-center gap-1.5", c.pos)}>
-          <div data-anim="chan" className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-black/50" style={{ color: BLUE_LIGHT }}>
+          <div data-anim="chan" className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-black/50" style={{ color: NEUTRAL_LIGHT }}>
             {c.icon}
           </div>
           <span className="text-[10px] font-medium text-slate-300">{c.label}</span>
@@ -265,12 +265,12 @@ function PipelineScene() {
   ];
   return (
     <div className="relative flex h-80 w-full max-w-xl select-none items-center justify-center">
-      <div data-anim="ring" className="absolute h-72 w-72 rounded-full border border-[rgba(90,123,214,0.3)]" />
+      <div data-anim="ring" className="absolute h-72 w-72 rounded-full border border-[rgba(113,113,122,0.3)]" />
       <div data-anim="ring" className="absolute h-60 w-60 rounded-full border border-dashed border-[rgba(232,181,77,0.35)]" />
       <div
         data-anim="radar"
         className="absolute h-72 w-72 rounded-full"
-        style={{ background: "conic-gradient(from 0deg at 50% 50%, rgba(90,123,214,0.28), transparent 75deg)" }}
+        style={{ background: "conic-gradient(from 0deg at 50% 50%, rgba(113,113,122,0.28), transparent 75deg)" }}
       />
       <div className="relative flex h-36 w-36 items-center justify-center rounded-full bg-phantix-900/70 shadow-card ring-1 ring-phantix-700">
         <BrandLogo
@@ -297,7 +297,7 @@ function PipelineScene() {
 function AgentBotScene() {
   return (
     <div className="relative flex h-80 w-full max-w-xl select-none items-center justify-center">
-      <div data-anim="ring" className="absolute h-72 w-72 rounded-full border border-[rgba(90,123,214,0.3)]" />
+      <div data-anim="ring" className="absolute h-72 w-72 rounded-full border border-[rgba(113,113,122,0.3)]" />
       <div data-anim="pulse" className="absolute h-60 w-60 rounded-full border border-[rgba(232,181,77,0.2)]" />
       <div data-anim="pulse" className="absolute h-48 w-48 rounded-full border border-[rgba(232,181,77,0.4)]" />
       <LottiePlayer src="/animations/agent.json" className="relative h-56 w-72" loop speed={1.1} />

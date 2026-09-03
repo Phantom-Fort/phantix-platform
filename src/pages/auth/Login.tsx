@@ -139,7 +139,7 @@ export default function Login() {
           >
             <div className="mb-8 text-center">
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.7, delay: 0.1 }} className="mx-auto">
-                <BrandLogo className="mx-auto h-20 w-20 drop-shadow-[0_0_40px_rgba(51,85,181,0.6)]" />
+                <BrandLogo className="mx-auto h-20 w-20 drop-shadow-[0_0_40px_rgba(232,181,77,0.5)]" />
               </motion.div>
               <h1 className="mt-5 font-display text-2xl font-bold text-white">Phantix Platform</h1>
               <p className="mt-1.5 text-sm text-slate-400">
