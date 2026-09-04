@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, X, ArrowRight, Info } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner } from "@/components/ui";

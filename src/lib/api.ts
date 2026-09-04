@@ -1,4 +1,4 @@
-﻿// ── Platform API client ───────────────────────────────────────────────────────
+// ── Platform API client ───────────────────────────────────────────────────────
 // Token model: platform / org-user / dual-control. Config from src/lib/config.ts.
 import { API_BASE as CONFIG_API_BASE, AGI_ENABLED as AGI_FLAG } from "./config";
 import { dedupedRequest } from "./dedupe";

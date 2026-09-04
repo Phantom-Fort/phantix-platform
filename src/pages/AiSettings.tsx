@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, CheckCircle2, Loader2, Bot, ToggleLeft, ToggleRight } from "lucide-react";
 import { PageHeader, Card, CardHeader } from "@/components/ui";

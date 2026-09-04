@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, Loader2, GitBranch, ShieldCheck, Clock, CheckCircle2 } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner } from "@/components/ui";
+import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, Loader2, GitBranch, ShieldCheck, Clock, CheckCircle2, Wallet, Settings2, ArrowRight } from "lucide-react";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner, Tabs } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
@@ -47,6 +47,7 @@ export default function GithubIntegration() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeRepo, setUpgradeRepo] = useState<Repo | null>(null);
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<"repos" | "branch">("repos");
   const [loadError, setLoadError] = useState("");
   const [justConnected, setJustConnected] = useState(false);
   const [linkingId, setLinkingId] = useState<number | null>(null);
@@ -380,7 +381,17 @@ export default function GithubIntegration() {
             {install.pat_fallback && <p className="mt-3 text-xs text-amber-400">Using legacy PAT fallback — connect the App to enable private-repo analysis.</p>}
           </Card>
 
-          {/* Repo list */}
+          <Tabs
+            tabs={[
+              { id: "repos", label: "Repositories" },
+              { id: "branch", label: "Branch Reviewer" },
+            ]}
+            active={view}
+            onChange={(id) => setView(id as "repos" | "branch")}
+          />
+
+          {view === "repos" ? (
+          /* Repo list */
           <Card>
             <CardHeader
               title="Repositories"
@@ -408,6 +419,9 @@ export default function GithubIntegration() {
               ))}
             </div>
           </Card>
+          ) : (
+          <BranchReviewer repos={repos} />
+          )}
         </div>
       )}
 
@@ -423,5 +437,208 @@ export default function GithubIntegration() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+// ── Branch Security Reviewer (agentic) ────────────────────────────────────────
+interface BranchReviewSettings {
+  id?: number;
+  organization_id?: number;
+  github_repository_id: number;
+  watched_branch: string;
+  enabled: boolean;
+  post_github_comment: boolean;
+  repository?: { id: number; full_name?: string; name?: string; private?: boolean } | null;
+}
+interface BranchWallet { id?: number; organization_id?: number; balance_ngn: number; updated_at?: string | null; }
+
+const demoWallet: BranchWallet = { id: 1, organization_id: 1, balance_ngn: 125000, updated_at: new Date().toISOString() };
+
+function BranchReviewer({ repos }: { repos: Repo[] }) {
+  const { toast, requireDualControl } = useStore();
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<number | null>(null);
+  const [settings, setSettings] = useState<Record<number, BranchReviewSettings>>({});
+  const [wallet, setWallet] = useState<BranchWallet | null>(null);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [amount, setAmount] = useState("50000");
+  const [topping, setTopping] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (DEMO_MODE) { await delay(300); setWallet(demoWallet); setSettings({}); setLoading(false); return; }
+      const [settingsRes, walletRes] = await Promise.all([
+        api.get<any>("/github/branch-reviews/settings"),
+        api.get<any>("/github/branch-reviews/wallet"),
+      ]);
+      const map: Record<number, BranchReviewSettings> = {};
+      for (const item of settingsRes?.items ?? []) map[Number(item.github_repository_id)] = item as BranchReviewSettings;
+      setSettings(map);
+      setWallet(walletRes as BranchWallet);
+    } catch (e) {
+      toast("error", "Could not load branch review", e instanceof Error ? e.message : "");
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const repoName = (repoId: number) => repos.find((r) => r.id === repoId)?.full_name ?? String(repoId);
+
+  const save = async (repo: Repo, patch: Partial<BranchReviewSettings>) => {
+    if (!(await requireDualControl("Saving branch review settings requires a dual-control operate session."))) return;
+    setSavingId(repo.id);
+    try {
+      if (DEMO_MODE) { await delay(400); }
+      else {
+        await api.put(`/github/repositories/${repo.id}/review-settings`, {
+          watched_branch: patch.watched_branch ?? settings[repo.id]?.watched_branch ?? repo.default_branch,
+          enabled: patch.enabled ?? settings[repo.id]?.enabled ?? true,
+          post_github_comment: patch.post_github_comment ?? settings[repo.id]?.post_github_comment ?? false,
+        }, { dualControl: true });
+      }
+      await load();
+      toast("success", "Saved", repoName(repo.id));
+    } catch (e) {
+      toast("error", "Save failed", e instanceof Error ? e.message : "");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const topUp = async () => {
+    if (!(await requireDualControl("Topping up the branch review wallet requires a dual-control operate session."))) return;
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) { toast("error", "Enter an amount", "Top-up amount must be greater than zero (NGN)."); return; }
+    setTopping(true);
+    try {
+      if (DEMO_MODE) { await delay(600); setWallet((w) => w ? { ...w, balance_ngn: w.balance_ngn + amt } : w); }
+      else {
+        const res = await api.post<any>("/github/branch-reviews/wallet/top-up", { amount_ngn: amt }, { dualControl: true });
+        toast("success", "Payment started", "Complete the Paystack payment to credit the wallet.");
+        if (res?.wallet) setWallet(res.wallet);
+      }
+      setTopUpOpen(false);
+    } catch (e) {
+      toast("error", "Top-up failed", e instanceof Error ? e.message : "");
+    } finally {
+      setTopping(false);
+    }
+  };
+
+  const balanceNgn = wallet?.balance_ngn ?? 0;
+  const enabledCount = Object.values(settings).filter((s) => s.enabled).length;
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card className="!p-4">
+          <div className="flex items-center gap-2">
+            <Wallet size={15} className="text-gold-400" />
+            <p className="text-2xl font-semibold text-white">₦{balanceNgn.toLocaleString()}</p>
+          </div>
+          <p className="mt-1 text-xs text-slate-400">Wallet balance</p>
+        </Card>
+        <Card className="!p-4">
+          <p className="text-2xl font-semibold text-emerald-400">{enabledCount}</p>
+          <p className="mt-1 text-xs text-slate-400">Repos watched</p>
+        </Card>
+        <Card className="!p-4">
+          <p className="text-2xl font-semibold text-slate-200">{repos.length}</p>
+          <p className="mt-1 text-xs text-slate-400">Synced repos</p>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader
+          title="Watched branches"
+          subtitle="Agentic review runs on each push to the watched branch. Per-push cost is deducted from the wallet."
+          action={
+            <button className="btn-primary !px-3 !py-1.5 !text-xs" onClick={() => setTopUpOpen(true)}>
+              <Plus size={12} /> Top up wallet
+            </button>
+          }
+        />
+
+        {loading ? (
+          <div className="flex justify-center py-10"><Spinner /></div>
+        ) : repos.length === 0 ? (
+          <EmptyRepoNote />
+        ) : (
+          <div className="space-y-2">
+            {repos.map((repo) => {
+              const s = settings[repo.id];
+              const configured = Boolean(s);
+              return (
+                <div key={repo.id} className="flex flex-wrap items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+                  <GitBranch size={15} className="shrink-0 text-gold-400" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium text-slate-200">{repo.full_name}</p>
+                      {configured && (s!.enabled ? <StatusBadge status="active" /> : <StatusBadge status="draft" />)}
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      watch: <span className="font-mono text-gold-300">{s?.watched_branch ?? repo.default_branch}</span>
+                      {s?.post_github_comment ? " · posts PR comment" : ""}
+                    </p>
+                  </div>
+                  {savingId === repo.id ? (
+                    <Loader2 size={15} className="animate-spin text-gold-400" />
+                  ) : configured && s!.enabled ? (
+                    <button className="btn-ghost !px-3 !py-1.5 !text-xs" onClick={() => void save(repo, { enabled: false })}>
+                      <Lock size={11} /> Pause
+                    </button>
+                  ) : (
+                    <button className="btn-secondary !px-3 !py-1.5 !text-xs" onClick={() => void save(repo, { enabled: true, watched_branch: s?.watched_branch ?? repo.default_branch })}>
+                      <Settings2 size={11} /> {configured ? "Resume" : "Watch"}
+                    </button>
+                  )}
+                  <button
+                    className="btn-ghost !px-3 !py-1.5 !text-xs"
+                    onClick={() => void save(repo, { watched_branch: s?.watched_branch === "main" ? "develop" : "main" })}
+                    title="Toggle watched branch between main and develop"
+                  >
+                    <ArrowRight size={11} /> {s?.watched_branch ?? repo.default_branch}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Modal open={topUpOpen} onClose={() => setTopUpOpen(false)} title="Top up branch review wallet">
+        <div className="space-y-4">
+          <p className="text-xs leading-5 text-slate-400">Adding to your prepaid wallet. Reviewed pushes deduct per the repo's size tier.</p>
+          <div>
+            <label className="label">Amount (NGN)</label>
+            <input className="input" type="number" min={1000} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["50000", "100000", "250000"].map((v) => (
+              <button key={v} className={cx("chip", amount === v ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "text-slate-400")} onClick={() => setAmount(v)}>
+                ₦{Number(v).toLocaleString()}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end gap-3">
+            <button className="btn-secondary" onClick={() => setTopUpOpen(false)}>Cancel</button>
+            <button className="btn-primary" disabled={topping} onClick={() => void topUp()}>
+              {topping ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Pay with Paystack
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function EmptyRepoNote() {
+  return (
+    <p className="py-8 text-center text-sm text-slate-500">
+      Sync repositories first — branch review runs on repos connected through the GitHub App.
+    </p>
   );
 }

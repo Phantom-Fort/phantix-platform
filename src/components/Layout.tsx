@@ -1,10 +1,10 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
-  RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical,
+  RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
@@ -44,6 +44,12 @@ const baseNavSections: { label: string; items: { to: string; label: string; icon
       ...(AGI_ENABLED ? [{ to: "/agi", label: "Autonomous Agent", icon: <Radar size={17} /> }] : []),
       { to: "/alerts", label: "Alerts", icon: <BellRing size={17} /> },
       { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
+    ],
+  },
+  {
+    label: "Integrations",
+    items: [
+      { to: "/integrations", label: "Integrations Hub", icon: <Cable size={17} /> },
     ],
   },
 ];
@@ -149,18 +155,18 @@ export default function Layout() {
     <div className="flex min-h-screen">
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside className="fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-phantix-700/40 bg-phantix-950/85 backdrop-blur-xl">
-        <div className="flex items-center gap-3 px-5 pb-5 pt-5">
-          <img src="/logo-white.png" alt="Phantix" className="h-9 w-9 object-contain" />
+        <div className="flex items-center gap-3 px-4 pb-3 pt-4">
+          <img src="/logo-white.png" alt="Phantix" className="h-8 w-8 object-contain" />
           <div>
             <p className="font-display text-[15px] font-bold leading-tight text-white">Phantix</p>
             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-gold-400">Platform</p>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+        <nav className="flex-1 space-y-2.5 overflow-y-auto px-2.5 pb-3">
           {navSections.map((section) => (
             <div key={section.label}>
-              <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">{section.label}</p>
+              <p className="mb-0.5 px-2.5 text-[9px] leading-none font-semibold uppercase tracking-[0.14em] text-slate-600">{section.label}</p>
               <div className="space-y-0.5">
                 {section.items.map((item) => (
                   <NavLink key={item.to} to={item.to} className={({ isActive }) => cx("nav-item", isActive && "active")}>
@@ -174,14 +180,14 @@ export default function Layout() {
         </nav>
 
         {/* Command Centre link */}
-        <div className="px-3 pb-3">
+        <div className="px-2.5 pb-2.5">
           <a
             href={`${APP_URL}/dashboard`}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-3 rounded-md border border-gold-400/30 bg-phantix-900 p-3 transition-all hover:border-gold-400/50 hover:border-gold-400/60"
+            className="flex items-center gap-2.5 rounded-md border border-gold-400/30 bg-phantix-900 p-2.5 transition-all hover:border-gold-400/50 hover:border-gold-400/60"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400/15 text-gold-400">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold-400/15 text-gold-400">
               <Rocket size={16} />
             </span>
             <span>
@@ -192,14 +198,14 @@ export default function Layout() {
         </div>
 
         {/* Dual-control widget */}
-        <div className="border-t border-phantix-700/40 p-3">
-          <div className="rounded-md bg-phantix-900/70 border border-phantix-700/40 p-3">
+        <div className="border-t border-phantix-700/40 p-2.5">
+          <div className="rounded-md bg-phantix-900/70 border border-phantix-700/40 p-2.5">
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Dual control</p>
               {operate.unlocked ? <Unlock size={13} className="text-emerald-400" /> : <Lock size={13} className="text-slate-500" />}
             </div>
             {operate.unlocked ? (
-              <div className="mt-2 space-y-1.5">
+              <div className="mt-1.5 space-y-1">
                 <p className="text-xs font-medium text-emerald-300">Operating as {operate.actingUser}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] capitalize text-slate-500">{operate.actingRole}</span>
@@ -210,7 +216,7 @@ export default function Layout() {
                 </button>
               </div>
             ) : (
-              <div className="mt-2">
+              <div className="mt-1.5">
                 {dc.configured ? (
                   <>
                     <p className="text-[11px] leading-4 text-slate-500">
@@ -218,7 +224,7 @@ export default function Layout() {
                     </p>
                     <button
                       onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
-                      className="btn-primary mt-2 w-full !px-3 !py-1.5 !text-[11px]"
+                      className="btn-primary mt-1.5 w-full !px-3 !py-1.5 !text-[11px]"
                     >
                       <Unlock size={12} /> Unlock operate
                     </button>
@@ -226,7 +232,7 @@ export default function Layout() {
                 ) : (
                   <>
                     <p className="text-[11px] leading-4 text-slate-500">Not configured --- bootstrap required</p>
-                    <button onClick={() => navigate("/users")} className="btn-secondary mt-2 w-full !px-3 !py-1.5 !text-[11px]">
+                    <button onClick={() => navigate("/users")} className="btn-secondary mt-1.5 w-full !px-3 !py-1.5 !text-[11px]">
                       <ShieldCheck size={12} /> Set up dual control
                     </button>
                   </>
