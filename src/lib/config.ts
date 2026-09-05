@@ -1,5 +1,5 @@
 /**
- * Platform (platform.phantixlabs.com) â€” hardcoded browser config (no VITE_*).
+ * Platform (platform.phantixlabs.com) — hardcoded browser config (no VITE_*).
  */
 export const API_BASE = "/api/v1";
 export const LANDING_URL = "https://phantixlabs.com";

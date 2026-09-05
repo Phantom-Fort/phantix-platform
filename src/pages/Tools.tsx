@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Wrench, CheckCircle2, Plus, Lock } from "lucide-react";
 import { PageHeader, Card, StatusBadge } from "@/components/ui";

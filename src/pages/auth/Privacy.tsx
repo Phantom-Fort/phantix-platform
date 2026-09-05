@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ShieldCheck, Database, EyeOff, KeyRound, CheckCircle2, FileText } from "lucide-react";

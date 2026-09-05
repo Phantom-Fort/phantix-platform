@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BellRing, Send, Settings, ShieldCheck } from "lucide-react";
+import { BellRing, Send, Settings, ShieldCheck, Cable } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Tabs, Modal } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo, cx } from "@/lib/utils";
@@ -115,6 +116,65 @@ export default function Alerts() {
       {tab === "channels" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {/* Integrations Hub link */}
+            <div className="lg:col-span-2">
+              <Card>
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <Cable size={16} className="text-gold-400" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-200">Connected channels</p>
+                      <p className="text-xs text-slate-400">Manage Slack, Teams, SSO, SCIM, and webhook integrations from the Integrations Hub</p>
+                    </div>
+                  </div>
+                  <Link to="/integrations" className="btn-secondary !px-3 !py-1.5">
+                    <Cable size={12} /> Open Integrations Hub
+                  </Link>
+                </div>
+              </Card>
+            </div>
+
+            {/* Severity routing floors (enforced server-side) */}
+            <div className="lg:col-span-2">
+              <Card className="!p-4">
+                <CardHeader title="Severity routing" subtitle="Floors are enforced server-side — channel policies can only narrow them" />
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-phantix-700/40">
+                        <th className="th">Severity</th>
+                        <th className="th">Email</th>
+                        <th className="th">WhatsApp / Telegram</th>
+                        <th className="th">Slack / Teams</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-phantix-700/20">
+                        <td className="td"><span className={cx("font-medium", severityBadge.critical)}>critical</span></td>
+                        <td className="td">Yes</td>
+                        <td className="td">Yes</td>
+                        <td className="td">Yes</td>
+                      </tr>
+                      <tr className="border-b border-phantix-700/20">
+                        <td className="td"><span className={cx("font-medium", severityBadge.high)}>high</span></td>
+                        <td className="td">Yes</td>
+                        <td className="td text-slate-500">No</td>
+                        <td className="td">Yes</td>
+                      </tr>
+                      <tr>
+                        <td className="td"><span className="text-slate-400">medium / low / info</span></td>
+                        <td className="td">Yes</td>
+                        <td className="td text-slate-500">No</td>
+                        <td className="td text-slate-500">No</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-3 text-[11px] leading-5 text-slate-500">
+                  WhatsApp and Telegram fire on critical only. Add Slack or Teams from the Integrations Hub to widen critical + high delivery.
+                </p>
+              </Card>
+            </div>
             <Card>
               <CardHeader title="SMTP" subtitle="Outbound email relay" action={<ShieldCheck size={16} className={alertSettings.smtp.enabled ? "text-emerald-400" : "text-slate-500"} />} />
               <div className="space-y-3 text-sm">

@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Building2, Plus, KeyRound, Copy } from "lucide-react";
 import { PageHeader, Card, StatusBadge, Modal, EmptyState, CopyChip } from "@/components/ui";

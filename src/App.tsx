@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
@@ -26,6 +26,7 @@ import { AGI_ENABLED } from "@/lib/api";
 import Support from "@/pages/Support";
 import Audit from "@/pages/Audit";
 import Alerts from "@/pages/Alerts";
+import Integrations from "@/pages/Integrations";
 import Sandbox from "@/pages/Sandbox";
 
 // Authenticated + setup-complete gate for management routes
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="/support" element={<RequireManagement><Support /></RequireManagement>} />
             <Route path="/audit" element={<RequireManagement><Audit /></RequireManagement>} />
             <Route path="/alerts" element={<RequireManagement><Alerts /></RequireManagement>} />
+            <Route path="/integrations" element={<RequireManagement><Integrations /></RequireManagement>} />
             <Route path="/settings" element={<Navigate to="/identity" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Download, ArrowRight, Loader2, RefreshCw, ChevronLeft, ChevronRight, Search, ShieldAlert } from "lucide-react";
 import { PageHeader, Card, Spinner } from "@/components/ui";
