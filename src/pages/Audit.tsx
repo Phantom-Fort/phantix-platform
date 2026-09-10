@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Download, ArrowRight, Loader2, RefreshCw, ChevronLeft, ChevronRight, Search, ShieldAlert } from "lucide-react";
-import { PageHeader, Card, Spinner } from "@/components/ui";
+import { PageHeader, Card, TableCardSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { describeEndpoint } from "@/lib/auditExplain";
@@ -207,7 +207,7 @@ export default function Audit() {
       )}
 
       {loading ? (
-        <div className="flex min-h-[40vh] items-center justify-center"><Spinner className="h-6 w-6" /></div>
+        <TableCardSkeleton rows={8} cols={8} title={false} />
       ) : (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="!p-0 overflow-hidden">

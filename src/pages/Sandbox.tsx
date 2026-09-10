@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { marked } from "marked";
 import { FlaskConical, Star, Megaphone, CheckCircle2, RefreshCw, AlertTriangle, ExternalLink, Rocket } from "lucide-react";
-import { PageHeader, Card, CardHeader, Modal, Spinner, EmptyState, StatusBadge } from "@/components/ui";
+import { PageHeader, Card, CardHeader, Modal, Spinner, EmptyState, StatusBadge, PageHeaderSkeleton, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { APP_URL } from "@/lib/links";
 import { timeAgo, cx, titleCase } from "@/lib/utils";
@@ -106,8 +106,18 @@ export default function Sandbox() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-400">
-        <Spinner className="h-5 w-5" /> Loading sandbox…
+      <div className="mx-auto max-w-[1100px]">
+        <PageHeaderSkeleton actions />
+        <div className="skeleton mb-5 h-14 w-full rounded-2xl" />
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card !p-4">
+              <div className="skeleton h-2.5 w-24 rounded" />
+              <div className="skeleton mt-2 h-5 w-16 rounded" />
+            </div>
+          ))}
+        </div>
+        <CardListSkeleton rows={3} />
       </div>
     );
   }
@@ -119,7 +129,7 @@ export default function Sandbox() {
         <EmptyState
           icon={<FlaskConical size={28} />}
           title="Not enrolled"
-          body="Your organization is not in the launch sandbox cohort. Phantix staff enroll orgs from the staff portal (max 20 seats)."
+          body="Your organization is not in the launch sandbox cohort. SecureGraph staff enroll orgs from the staff portal (max 20 seats)."
         />
       </div>
     );
@@ -147,7 +157,7 @@ export default function Sandbox() {
 
       <div className="mb-5 rounded-2xl border border-phantix-700/40 bg-phantix-900/40 px-4 py-3 text-xs leading-5 text-slate-400">
         Sandboxed orgs use the full product: <strong className="text-slate-200">Platform</strong> (org, DB, billing, people)
-        and <strong className="text-slate-200">Command Centre</strong> (assets, SOC, scans, reports). Staff portal is Phantix-internal only.
+        and <strong className="text-slate-200">Command Centre</strong> (assets, SOC, scans, reports). Staff portal is SecureGraph-internal only.
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">

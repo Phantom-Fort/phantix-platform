@@ -394,7 +394,7 @@ function SMTPForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="label">From Name</label>
-          <input className="input text-sm" value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="Phantix Application" />
+          <input className="input text-sm" value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="SecureGraph Application" />
         </div>
         <div>
           <label className="label">From Email</label>

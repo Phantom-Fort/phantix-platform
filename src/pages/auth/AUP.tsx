@@ -67,10 +67,10 @@ export default function AcceptableUsePolicy() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
           <div className="flex items-center gap-4">
-            <img src="/logo-white.png" alt="Phantix" className="h-16 w-16 object-contain" />
+            <img src="/logo-white.png" alt="SecureGraph" className="h-16 w-16 object-contain" />
             <div>
               <h1 className="font-display text-3xl font-bold text-white">{aup?.title || "Acceptable Use Policy"}</h1>
-              <p className="text-sm text-slate-500">{aup?.effective || aup?.summary || "Rules for using the Phantix platform lawfully and only on authorized systems"}</p>
+              <p className="text-sm text-slate-500">{aup?.effective || aup?.summary || "Rules for using the SecureGraph platform lawfully and only on authorized systems"}</p>
               {aup?.version && <p className="mt-1 text-[11px] font-mono text-slate-600">version {aup.version}</p>}
             </div>
           </div>
@@ -105,7 +105,7 @@ export default function AcceptableUsePolicy() {
                 <h2 className="font-display text-lg font-semibold text-white">Authorized use only</h2>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-300">
-                Use the Phantix platform only to assess, discover, or test systems you own or for which
+                Use the SecureGraph platform only to assess, discover, or test systems you own or for which
                 you hold written authorization from the lawful owner. Confirm ownership or authorization
                 in the platform before active testing; all activity is logged and auditable.
               </p>

@@ -5,8 +5,9 @@ import {
   ExternalLink, TestTube, RotateCcw, Loader2, Copy, ChevronRight, Info,
   MessageSquare, Send, Webhook, Lock, Unlock,
 } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Tabs, Spinner, EmptyState, Modal, CopyChip } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatusBadge, Tabs, EmptyState, Modal, CopyChip, SkeletonCard, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
+import { isPendingApproval } from "@/lib/api";
 import { useResource } from "@/lib/useResource";
 import { timeAgo, cx } from "@/lib/utils";
 import {
@@ -72,9 +73,10 @@ export default function Integrations() {
   const confirmUninstall = async (inst: HubInstallation) => {
     if (!(await requireDualControl("Disconnecting an integration requires a dual-control operate session."))) return;
     try {
-      await uninstallHubIntegration(inst.id, true);
-      toast("success", "Disconnected", `${inst.label} removed.`);
+      const res = await uninstallHubIntegration(inst.id, true);
       installations.refresh();
+      if (isPendingApproval(res)) toast("info", "Sent for approval", `${inst.label} disconnect is parked for an authorizer.`);
+      else toast("success", "Disconnected", `${inst.label} removed.`);
     } catch (e) {
       toast("error", "Disconnect failed", e instanceof Error ? e.message : "");
     }
@@ -118,7 +120,9 @@ export default function Integrations() {
       {tab === "catalog" && (
         <motion.div key="cat" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
           {catalog.loading && !catalog.data.length ? (
-            <div className="py-10 flex justify-center"><Spinner /></div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} className="h-40" />)}
+            </div>
           ) : catalog.data.length === 0 ? (
             <EmptyState icon={<Cable size={32} />} title="No connectors" body="The integrations catalog is empty or the Hub is not enabled on this environment." />
           ) : (
@@ -170,7 +174,7 @@ export default function Integrations() {
       {tab === "installed" && (
         <motion.div key="inst" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-3">
           {installations.loading && !installations.data.length ? (
-            <div className="py-10 flex justify-center"><Spinner /></div>
+            <CardListSkeleton rows={3} />
           ) : installations.data.length === 0 ? (
             <EmptyState icon={<PlugZap size={32} />} title="Nothing installed yet" body="Browse the Connectors tab and install your first integration." />
           ) : installations.data.map((inst, i) => (
@@ -214,10 +218,15 @@ export default function Integrations() {
                         if (!(await requireDualControl("Rotating a secret requires a dual-control operate session."))) return;
                         try {
                           const res = await rotateHubSecret(inst.id, true);
-                          const value = String(res?.secret ?? res?.webhook_secret ?? res?.webhook_url ?? "");
-                          if (value) revealSecret(`New secret · ${inst.label}`, value);
-                          else toast("success", "Secret rotated");
-                          installations.refresh();
+                          if (isPendingApproval(res)) {
+                            toast("info", "Sent for approval", "Secret rotation is parked for an authorizer.");
+                            installations.refresh();
+                          } else {
+                            const value = String(res?.secret ?? res?.webhook_secret ?? res?.webhook_url ?? "");
+                            if (value) revealSecret(`New secret · ${inst.label}`, value);
+                            else toast("success", "Secret rotated");
+                            installations.refresh();
+                          }
                         } catch (e) { toast("error", "Rotate failed", e instanceof Error ? e.message : ""); }
                       }}>
                         <RotateCcw size={11} /> Rotate
@@ -319,9 +328,13 @@ function SsoScimTab({
                       if (!(await requireDualControl("Minting a SCIM token requires a dual-control operate session."))) return;
                       try {
                         const res = await mintHubScimToken(inst.id, true);
-                        const token = String(res?.token ?? res?.scim_bearer ?? res?.scim_token ?? "");
-                        if (token) revealSecret(`SCIM token · ${inst.label}`, token);
-                        else toast("success", "SCIM token minted");
+                        if (isPendingApproval(res)) {
+                          toast("info", "Sent for approval", "SCIM token minting is parked for an authorizer.");
+                        } else {
+                          const token = String(res?.token ?? res?.scim_bearer ?? res?.scim_token ?? "");
+                          if (token) revealSecret(`SCIM token · ${inst.label}`, token);
+                          else toast("success", "SCIM token minted");
+                        }
                       } catch (e) { toast("error", "Mint failed", e instanceof Error ? e.message : ""); }
                     }}>
                       <KeyRound size={11} /> Mint SCIM token
@@ -329,8 +342,9 @@ function SsoScimTab({
                     <button className="btn-ghost !px-2.5 !py-1 !text-[11px] text-severity-critical" onClick={async () => {
                       if (!(await requireDualControl("Disconnecting SSO requires a dual-control operate session."))) return;
                       try {
-                        await uninstallHubIntegration(inst.id, true);
-                        toast("success", "SSO disabled");
+                        const res = await uninstallHubIntegration(inst.id, true);
+                        if (isPendingApproval(res)) toast("info", "Sent for approval", "SSO disconnect is parked for an authorizer.");
+                        else toast("success", "SSO disabled");
                         onChanged();
                       } catch (e) { toast("error", "Failed", e instanceof Error ? e.message : ""); }
                     }}>
@@ -436,6 +450,11 @@ function InstallModal({ connectorId, connector, onClose, onDone }: {
         body.secrets = { ...(body.secrets as Record<string, string>), [sk]: secret.trim() };
       }
       const res = await installHubIntegration(body, true);
+      if (isPendingApproval(res)) {
+        toast("info", "Sent for approval", `${connector.display_name} install is parked for an authorizer — approve it from Authorizations to finish.`);
+        onClose();
+        return;
+      }
       onDone({ authMode, id: res.id ?? Number(res.id), status: res.status });
     } catch (e) {
       toast("error", "Install failed", e instanceof Error ? e.message : "");

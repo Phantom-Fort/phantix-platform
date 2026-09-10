@@ -103,8 +103,8 @@ export async function updateHubInstallation(id: number, body: Record<string, unk
   return api.patch<HubInstallation>(`/integrations/installations/${id}`, body, { dualControl });
 }
 
-export async function uninstallHubIntegration(id: number, dualControl = true): Promise<void> {
-  await api.delete(`/integrations/installations/${id}`, { dualControl });
+export async function uninstallHubIntegration(id: number, dualControl = true): Promise<Record<string, unknown>> {
+  return api.delete<Record<string, unknown>>(`/integrations/installations/${id}`, { dualControl });
 }
 
 /** Rotate a webhook/API secret. The raw secret is returned exactly once. */

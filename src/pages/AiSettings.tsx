@@ -84,14 +84,14 @@ export default function AiSettings() {
   }, []);
 
   const toggleAgent = async () => {
-    if (!(await requireDualControl("Turning the Phantix Agent on/off requires a dual-control operate session."))) return;
+    if (!(await requireDualControl("Turning the SecureGraph Agent on/off requires a dual-control operate session."))) return;
     setAgentSaving(true);
     const next = !ai!.agent_enabled;
     try {
       if (DEMO_MODE) { await delay(300); }
       else { await api.put("/ai/settings", { agent_enabled: next }, { dualControl: true }); }
       setAi((a) => a ? { ...a, agent_enabled: next } : a);
-      toast("success", next ? "Phantix Agent enabled" : "Phantix Agent disabled", next ? "Operators can use the agent in the Command Centre." : "The agent is hidden from the Command Centre.");
+      toast("success", next ? "SecureGraph Agent enabled" : "SecureGraph Agent disabled", next ? "Operators can use the agent in the Command Centre." : "The agent is hidden from the Command Centre.");
     } catch (e) {
       toast("error", "Update failed", e instanceof Error ? e.message : "");
     } finally {
@@ -210,19 +210,19 @@ export default function AiSettings() {
             </div>
           </Card>
 
-          {/* Phantix Agent toggle */}
+          {/* SecureGraph Agent toggle */}
           <Card className="border-gold-400/25">
-            <CardHeader title="Phantix Agent" subtitle="Conversational security assistant for the Command Centre" action={<Bot size={16} className="text-gold-400" />} />
+            <CardHeader title="SecureGraph Agent" subtitle="Conversational security assistant for the Command Centre" action={<Bot size={16} className="text-gold-400" />} />
             <div className="flex items-center justify-between gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
               <div>
                 <p className="text-sm font-semibold text-slate-200">{ai.agent_enabled ? "Enabled" : "Disabled"}</p>
                 <p className="mt-0.5 text-xs leading-5 text-slate-500">
                   {ai.agent_enabled
-                    ? "Operators can chat with Phantix Agent from the Command Centre sidebar."
+                    ? "Operators can chat with SecureGraph Agent from the Command Centre sidebar."
                     : "The agent is hidden from the Command Centre. Toggle on to let operators use it."}
                 </p>
               </div>
-              <button onClick={toggleAgent} disabled={agentSaving} className="shrink-0" aria-label="Toggle Phantix Agent">
+              <button onClick={toggleAgent} disabled={agentSaving} className="shrink-0" aria-label="Toggle SecureGraph Agent">
                 {agentSaving ? <Loader2 size={22} className="animate-spin text-gold-400" /> : ai.agent_enabled ? <ToggleRight size={26} className="text-emerald-400" /> : <ToggleLeft size={26} className="text-slate-500" />}
               </button>
             </div>

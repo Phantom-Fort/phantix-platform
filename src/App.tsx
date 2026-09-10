@@ -28,6 +28,7 @@ import Audit from "@/pages/Audit";
 import Alerts from "@/pages/Alerts";
 import Integrations from "@/pages/Integrations";
 import Sandbox from "@/pages/Sandbox";
+import DangerZone from "@/pages/DangerZone";
 
 // Authenticated + setup-complete gate for management routes
 function RequireManagement({ children }: { children: React.ReactNode }) {
@@ -87,6 +88,7 @@ export default function App() {
             <Route path="/audit" element={<RequireManagement><Audit /></RequireManagement>} />
             <Route path="/alerts" element={<RequireManagement><Alerts /></RequireManagement>} />
             <Route path="/integrations" element={<RequireManagement><Integrations /></RequireManagement>} />
+            <Route path="/danger-zone" element={<RequireManagement><DangerZone /></RequireManagement>} />
             <Route path="/settings" element={<Navigate to="/identity" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

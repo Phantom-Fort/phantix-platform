@@ -131,8 +131,12 @@ export default function Connections() {
                           if (!(await guard())) return;
                           setBusyId(c.id);
                           try {
-                            await bootstrapConnection(c.id);
-                            toast("success", "Schema bootstrapped", "phantix schema ready --- assets, scans, findings, risks, evidence.");
+                            const boot = await bootstrapConnection(c.id);
+                            if (boot?.pending) {
+                              toast("info", "Sent for approval", "Schema bootstrap is parked for an authorizer — approve it from Authorizations to finish.");
+                            } else {
+                              toast("success", "Schema bootstrapped", "phantix schema ready --- assets, scans, findings, risks, evidence.");
+                            }
                           } catch (err) {
                             toast("error", "Bootstrap failed", err instanceof Error ? err.message : "Bootstrap failed");
                           } finally {
@@ -149,8 +153,12 @@ export default function Connections() {
                       onClick={async () => {
                         if (!(await guard())) return;
                         try {
-                          await deleteConnection(c.id);
-                          toast("info", "Connection deleted");
+                          const del = await deleteConnection(c.id);
+                          if (del?.pending) {
+                            toast("info", "Sent for approval", "Connection removal is parked for an authorizer — approve it from Authorizations.");
+                          } else {
+                            toast("info", "Connection deleted");
+                          }
                         } catch (err) {
                           toast("error", "Delete failed", err instanceof Error ? err.message : "Delete failed");
                         }
@@ -276,11 +284,11 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <label className="label">Name</label>
-            <input name="name" className="input" defaultValue="Phantix Security Store" required />
+            <input name="name" className="input" defaultValue="SecureGraph Store" required />
           </div>
           <div className="col-span-2 grid grid-cols-2 gap-2">
             {([
-              ["security_data_storage", "Security data storage", "Phantix writes findings, assets, evidence --- phantix schema only"],
+              ["security_data_storage", "Security data storage", "SecureGraph writes findings, assets, evidence --- phantix schema only"],
               ["config_inspection", "Config inspection", "Read-only security posture --- never business rows"],
             ] as const).map(([v, label, desc]) => (
               <button

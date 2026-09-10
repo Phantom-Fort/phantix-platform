@@ -17,7 +17,7 @@ export default function Support() {
     <div className="mx-auto max-w-[1000px]">
       <PageHeader
         title="Support"
-        description="Tickets route to the Phantix support desk. Quote your tenant ID and slug for faster resolution."
+        description="Tickets route to the SecureGraph support desk. Quote your tenant ID and slug for faster resolution."
         actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> New ticket</button>}
       />
 

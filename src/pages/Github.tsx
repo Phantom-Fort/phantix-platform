@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, Loader2, GitBranch, ShieldCheck, Clock, CheckCircle2, Wallet, Settings2, ArrowRight } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner, Tabs } from "@/components/ui";
-import { api, DEMO_MODE, delay } from "@/lib/api";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, Tabs, SkeletonCard } from "@/components/ui";
+import { api, DEMO_MODE, delay, isPendingApproval } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
 
@@ -238,7 +238,7 @@ export default function GithubIntegration() {
     <div className="mx-auto max-w-[1000px]">
       <PageHeader
         title="GitHub"
-        description="Connect the Phantix GitHub App to inventory and analyze your repositories. Primary integration — PAT is legacy."
+        description="Connect the SecureGraph GitHub App to inventory and analyze your repositories. Primary integration — PAT is legacy."
         actions={<button onClick={load} className="btn-ghost"><RefreshCw size={15} /></button>}
       />
 
@@ -249,13 +249,13 @@ export default function GithubIntegration() {
         </div>
       )}
 
-      {loading ? <div className="flex min-h-[30vh] items-center justify-center"><Spinner className="h-5 w-5" /></div> : !install?.connected ? (
+      {loading ? <SkeletonCard className="h-64" /> : !install?.connected ? (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="text-center">
             <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-phantix-800/70 text-gold-400"><Github size={30} /></span>
             <h2 className="mt-5 font-display text-2xl font-bold text-white">Connect your GitHub account</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-              Install the Phantix App on GitHub to inventory repositories and run security analysis. Private repos are available on the Premium plan.
+              Install the SecureGraph App on GitHub to inventory repositories and run security analysis. Private repos are available on the Premium plan.
             </p>
             <button onClick={connect} disabled={connecting} className="btn-primary mt-6"><Github size={16} /> {connecting ? "Opening GitHub..." : "Connect GitHub"}</button>
 
@@ -327,7 +327,7 @@ export default function GithubIntegration() {
                   <div>
                     <p className="text-sm font-medium text-amber-300">Awaiting GitHub org approval</p>
                     <p className="mt-1 text-xs leading-5 text-slate-400">
-                      Waiting for a GitHub organization owner to approve the Phantix app. This page refreshes automatically.
+                      Waiting for a GitHub organization owner to approve the SecureGraph app. This page refreshes automatically.
                     </p>
                     <div className="mt-3 flex items-center gap-2">
                       <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="btn-ghost !text-xs"><ExternalLink size={12} /> Open GitHub</a>
@@ -493,11 +493,16 @@ function BranchReviewer({ repos }: { repos: Repo[] }) {
     try {
       if (DEMO_MODE) { await delay(400); }
       else {
-        await api.put(`/github/repositories/${repo.id}/review-settings`, {
+        const res = await api.put<Record<string, unknown>>(`/github/repositories/${repo.id}/review-settings`, {
           watched_branch: patch.watched_branch ?? settings[repo.id]?.watched_branch ?? repo.default_branch,
           enabled: patch.enabled ?? settings[repo.id]?.enabled ?? true,
           post_github_comment: patch.post_github_comment ?? settings[repo.id]?.post_github_comment ?? false,
         }, { dualControl: true });
+        if (isPendingApproval(res)) {
+          await load();
+          toast("info", "Sent for approval", `${repoName(repo.id)} review settings are parked for an authorizer.`);
+          return;
+        }
       }
       await load();
       toast("success", "Saved", repoName(repo.id));
@@ -563,7 +568,18 @@ function BranchReviewer({ repos }: { repos: Repo[] }) {
         />
 
         {loading ? (
-          <div className="flex justify-center py-10"><Spinner /></div>
+          <div className="space-y-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex flex-wrap items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3" style={{ opacity: 1 - i * 0.15 }}>
+                <div className="skeleton h-4 w-4 shrink-0 rounded" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="skeleton h-3.5 w-52 max-w-[60%] rounded" />
+                  <div className="skeleton h-2.5 w-32 rounded" />
+                </div>
+                <div className="skeleton h-7 w-24 shrink-0 rounded-md" />
+              </div>
+            ))}
+          </div>
         ) : repos.length === 0 ? (
           <EmptyRepoNote />
         ) : (

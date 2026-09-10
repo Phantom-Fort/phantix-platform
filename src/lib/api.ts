@@ -82,6 +82,27 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Wait (seconds) carried by a 429 "too many failed attempts" response, if the
+ * server put a number in the detail. No Retry-After header yet — callers should
+ * fall back to a generic "try again shortly" when this returns null.
+ */
+export function throttleSeconds(err: unknown): number | null {
+  if (!(err instanceof ApiError) || err.status !== 429) return null;
+  const msg = typeof err.message === "string" ? err.message : "";
+  const m = msg.match(/(\d+)\s*seconds?/i);
+  return m ? Math.max(1, parseInt(m[1], 10)) : null;
+}
+
+/**
+ * Middleware-parked action (approvals-and-sensitive-actions §2.2): a 2xx with
+ * `pending: true` means the call did NOT run — it was filed for an authorizer.
+ * The UI must say "sent for approval", never that the action happened.
+ */
+export function isPendingApproval(body: unknown): boolean {
+  return !!body && typeof body === "object" && (body as { pending?: unknown }).pending === true;
+}
+
 // ── Correlation ID (00-shared-auth-and-client.md §6) ────────────────────────
 // Surface X-Correlation-ID on failures so support can trace a request.
 let lastCorrelationId: string | null = null;
@@ -167,6 +188,14 @@ async function request<T>(
         const m = typeof detail === "string" ? detail : "Upgrade required";
         window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: m }));
       }
+      // Login throttling (staging-rollout §8): failed attempts are throttled per
+      // identifier — 5 failures/5 min → 429. Never present it as a wrong password.
+      if (res.status === 429) {
+        const sec = (typeof detail === "string" ? detail : msg).match(/(\d+)\s*seconds?/i);
+        window.dispatchEvent(new CustomEvent("phantix:throttled", {
+          detail: { seconds: sec ? Math.max(1, parseInt(sec[1], 10)) : null },
+        }));
+      }
       throw new ApiError(res.status, detail, correlationId);
     }
     if (res.status === 204) return undefined as T;
@@ -221,6 +250,13 @@ async function requestMultipart<T>(
       if (res.status === 402) {
         const m = typeof detail === "string" ? detail : "Upgrade required";
         window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: m }));
+      }
+      // Login throttling (staging-rollout §8).
+      if (res.status === 429) {
+        const sec = (typeof detail === "string" ? detail : msg).match(/(\d+)\s*seconds?/i);
+        window.dispatchEvent(new CustomEvent("phantix:throttled", {
+          detail: { seconds: sec ? Math.max(1, parseInt(sec[1], 10)) : null },
+        }));
       }
       throw new ApiError(res.status, detail, correlationId);
     }

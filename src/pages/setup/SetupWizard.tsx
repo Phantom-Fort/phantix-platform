@@ -56,7 +56,7 @@ export default function SetupWizard() {
     if (DEMO_MODE) {
       setPrivacyNotice({
         version: s.privacy_notice_version || "2026-07-10",
-        title: "How Phantix handles your organization's data",
+        title: "How SecureGraph handles your organization's data",
         summary: "Demo privacy notice --- connect the live API for copy from GET /organizations/privacy.",
         highlights: [
           { id: "1", label: "Security data", text: "Findings and assets live only in your dedicated security database." },
@@ -977,7 +977,7 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
           setError(null);
           try {
             await completeSetup();
-            toast("success", "Organization setup complete", "Welcome to Phantix Platform.");
+            toast("success", "Organization setup complete", "Welcome to SecureGraph Platform.");
           } catch (err) {
             setError(err instanceof Error ? err.message : "Complete failed --- check privacy and email OTP");
           } finally {
@@ -1024,7 +1024,7 @@ function PrivacyRef({ notice }: { notice: Record<string, unknown> | null }) {
       <p className="font-medium text-slate-400">{title}</p>
       {summary && <p className="mt-0.5 line-clamp-2">{summary}</p>}
       <p className="mt-1 text-[10px] text-slate-600">
-        This privacy model applies to all organization data stored by Phantix.
+        This privacy model applies to all organization data stored by SecureGraph.
         <span className="ml-1">Your data lives in your dedicated security database --- we never store business rows.</span>
       </p>
     </div>
