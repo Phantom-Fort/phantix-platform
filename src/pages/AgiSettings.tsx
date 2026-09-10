@@ -4,7 +4,7 @@ import {
   Radar, ShieldCheck, Loader2, Plus, Pencil, Trash2, CheckCircle2,
   RefreshCw, Lock, Mail, Globe2, Star, ToggleLeft, ToggleRight, KeyRound,
 } from "lucide-react";
-import { PageHeader, Card, CardHeader, Modal, EmptyState, StatusBadge, Spinner } from "@/components/ui";
+import { PageHeader, Card, CardHeader, Modal, EmptyState, StatusBadge, PageHeaderSkeleton, SettingsSkeleton } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
@@ -212,7 +212,12 @@ export default function AgiSettings() {
   };
 
   if (loading) {
-    return <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-400"><Spinner className="h-5 w-5" /> Loading Autonomous Agent settings...</div>;
+    return (
+      <div className="mx-auto max-w-[1100px]">
+        <PageHeaderSkeleton actions />
+        <SettingsSkeleton groups={3} rows={3} />
+      </div>
+    );
   }
 
   if (loadError && !bootstrap) {

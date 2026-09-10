@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2, KeyRound, RefreshCw, ImagePlus, AlertTriangle, CheckCircle2, Layers, Save, User,
+  ShieldCheck, Download, Loader2, Send, FileText,
 } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, CopyChip, Tabs } from "@/components/ui";
+import TypeToConfirm from "@/components/TypeToConfirm";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, CopyChip, Tabs, EmptyState, Spinner } from "@/components/ui";
 import { useStore } from "@/lib/store";
-import { mediaUrl } from "@/lib/api";
+import { api, mediaUrl } from "@/lib/api";
 import type { Organization, OrgContact } from "@/lib/types";
 import { timeAgo, cx } from "@/lib/utils";
 
@@ -61,6 +63,7 @@ export default function Identity() {
   const [form, setForm] = useState<Organization>(state.org);
   const [busy, setBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
+  const [removeLogoOpen, setRemoveLogoOpen] = useState(false);
   const logoInputRef = React.useRef<HTMLInputElement>(null);
   const key = state.serviceKey;
 
@@ -89,6 +92,13 @@ export default function Identity() {
       setLogoBusy(false);
       if (logoInputRef.current) logoInputRef.current.value = "";
     }
+  };
+
+  const onLogoRemoveClick = async () => {
+    if (state.dualControl.configured && !operate.unlocked) {
+      if (!(await requireDualControl("Removing the company logo requires a dual-control operate session."))) return;
+    }
+    setRemoveLogoOpen(true);
   };
 
   const onLogoRemove = async () => {
@@ -176,6 +186,7 @@ export default function Identity() {
           { id: "profile", label: "Company profile" },
           { id: "security", label: "Security posture" },
           { id: "keys", label: "Keys & branding" },
+          { id: "privacy", label: "Privacy & data" },
         ]}
         active={tab}
         onChange={setTab}
@@ -480,7 +491,7 @@ export default function Identity() {
                       {logoBusy ? "Working..." : "Upload logo"}
                     </button>
                     {state.org.logo_url && (
-                      <button type="button" className="btn-ghost !py-2 !text-xs" disabled={logoBusy} onClick={() => void onLogoRemove()}>
+                      <button type="button" className="btn-ghost !py-2 !text-xs text-severity-critical" disabled={logoBusy} onClick={() => void onLogoRemoveClick()}>
                         Remove
                       </button>
                     )}
@@ -535,6 +546,24 @@ export default function Identity() {
           </motion.div>
         </div>
       )}
+
+      {tab === "privacy" && <DataSubjectPanel />}
+
+      {/* GitHub/Cloudflare-style file-delete gate — the logo is a stored file. */}
+      <TypeToConfirm
+        open={removeLogoOpen}
+        title="Remove the company logo?"
+        message={
+          <>
+            This deletes the logo file from your organisation's stored media. It is used on report cover pages and
+            footers, so every generated report after removal will fall back to the placeholder. This cannot be undone.
+          </>
+        }
+        confirmLabel="Remove logo"
+        busy={logoBusy}
+        onCancel={() => setRemoveLogoOpen(false)}
+        onConfirm={() => void onLogoRemove()}
+      />
 
       <Modal open={!!keyModal} onClose={() => setKeyModal(null)} title="Service key created">
         <div className="space-y-4">
@@ -620,6 +649,180 @@ function ChipGroup({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ── Privacy & data (staging-rollout §2) ──────────────────────────────────────
+// NDPA §34–37 data-subject requests: POST/GET /api/v1/organizations/me/
+// data-subject-request beside the privacy notice (GET /organizations/privacy)
+// and the self-service export (GET /organizations/me/data-export).
+
+type DsrType = "access" | "rectification" | "erasure" | "portability" | "restriction" | "objection";
+
+const DSR_TYPES: { id: DsrType; label: string; helper: string }[] = [
+  { id: "access", label: "Access my data", helper: "See what personal data we hold about you." },
+  { id: "rectification", label: "Correct my data", helper: "Fix inaccurate or incomplete personal data." },
+  { id: "erasure", label: "Delete my data", helper: "Ask us to erase your personal data." },
+  { id: "portability", label: "Take my data elsewhere", helper: "Receive a machine-readable copy." },
+  { id: "restriction", label: "Restrict processing", helper: "Limit how your data is used while we review." },
+  { id: "objection", label: "Object to processing", helper: "Object to a specific use of your data." },
+];
+
+interface DsrRow {
+  id: number;
+  reference: string;
+  request_type: DsrType;
+  details?: string | null;
+  contact_email?: string | null;
+  status: string;
+  created_at?: string;
+}
+
+const DSR_STATUS_CLASSES: Record<string, string> = {
+  received: "border-gold-400/30 bg-gold-400/10 text-gold-300",
+  in_progress: "border-sky-400/30 bg-sky-400/10 text-sky-300",
+  completed: "border-emerald-400/30 bg-emerald-400/10 text-emerald-400",
+  rejected: "border-severity-critical/30 bg-severity-critical/10 text-severity-critical",
+};
+
+function DataSubjectPanel() {
+  const { toast } = useStore();
+  const [type, setType] = useState<DsrType | null>(null);
+  const [details, setDetails] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [rows, setRows] = useState<DsrRow[] | null>(null);
+  const [noticeVersion, setNoticeVersion] = useState<string | null>(null);
+
+  const refresh = React.useCallback(() => {
+    api.get<DsrRow[]>("/organizations/me/data-subject-request").then(setRows).catch(() => setRows([]));
+  }, []);
+
+  React.useEffect(() => {
+    api.get<{ version?: string }>("/organizations/privacy").then((p) => setNoticeVersion(p?.version ?? null)).catch(() => {});
+    refresh();
+  }, [refresh]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!type) return;
+    setSubmitting(true);
+    try {
+      await api.post("/organizations/me/data-subject-request", {
+        request_type: type,
+        details: details.trim() || null,
+        contact_email: contactEmail.trim() || null,
+      });
+      toast("success", "Request received", `${DSR_TYPES.find((t) => t.id === type)?.label} — we will respond on the contact details on file.`);
+      setType(null);
+      setDetails("");
+      refresh();
+    } catch (err) {
+      toast("error", "Could not submit request", err instanceof Error ? err.message : "Try again");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const exportData = async () => {
+    setExporting(true);
+    try {
+      const blob = await api.download("/organizations/me/data-export");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "phantix-my-data.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast("success", "Download started", "Your data export is ready.");
+    } catch (err) {
+      toast("error", "Export failed", err instanceof Error ? err.message : "Try again");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <Card>
+          <CardHeader
+            title="Raise a data subject request"
+            subtitle={noticeVersion ? `Privacy notice v${noticeVersion}` : "NDPA §34–37 — in product, not by email"}
+            action={
+              <button type="button" onClick={() => void exportData()} disabled={exporting} className="btn-secondary !px-3 !py-1.5 text-xs">
+                {exporting ? <Loader2 size={13} className="mr-1.5 inline animate-spin" /> : <Download size={13} className="mr-1.5 inline" />}
+                Download my data
+              </button>
+            }
+          />
+          <form onSubmit={submit} className="space-y-4 px-5 pb-5">
+            <div className="grid gap-2 sm:grid-cols-1">
+              {DSR_TYPES.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setType(r.id)}
+                  className={cx(
+                    "rounded-lg border px-3 py-2 text-left transition-colors",
+                    type === r.id ? "border-gold-400/50 bg-gold-400/10" : "border-phantix-700/60 bg-phantix-900/40 hover:border-phantix-600",
+                  )}
+                >
+                  <p className={cx("text-sm font-medium", type === r.id ? "text-gold-300" : "text-slate-200")}>{r.label}</p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{r.helper}</p>
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="label">Details (optional)</label>
+              <textarea className="input min-h-[64px] resize-y" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Anything that helps us act on your request." />
+            </div>
+            <div>
+              <label className="label">Contact email (optional)</label>
+              <input type="email" className="input" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@company.com" />
+            </div>
+            <button type="submit" className="btn-primary w-full !py-2.5" disabled={!type || submitting}>
+              {submitting ? <Loader2 size={14} className="mr-1.5 inline animate-spin" /> : <Send size={14} className="mr-1.5 inline" />}
+              Submit request
+            </button>
+          </form>
+        </Card>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+        <Card>
+          <CardHeader title="Your requests" subtitle="Reference · type · status" action={<ShieldCheck size={16} className="text-slate-500" />} />
+          <div className="px-5 pb-5">
+            {rows === null ? (
+              <div className="flex justify-center py-8"><Spinner /></div>
+            ) : rows.length === 0 ? (
+              <EmptyState icon={<FileText size={20} />} title="No requests yet" body="Raise a request on the left and track its status here." />
+            ) : (
+              <div className="space-y-2">
+                {rows.map((r) => (
+                  <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-phantix-900/50 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-200">
+                        <span className="font-mono text-gold-400">{r.reference}</span>
+                        <span className="mx-2 text-slate-600">·</span>
+                        {DSR_TYPES.find((t) => t.id === r.request_type)?.label ?? r.request_type}
+                      </p>
+                      {r.details && <p className="mt-0.5 truncate text-[11px] text-slate-500">{r.details}</p>}
+                    </div>
+                    <span className={cx("chip !px-2 !py-0.5 text-[10px] capitalize", DSR_STATUS_CLASSES[r.status] ?? "border-phantix-700/60 bg-phantix-800/60 text-slate-300")}>
+                      {r.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      </motion.div>
     </div>
   );
 }

@@ -150,9 +150,217 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
 
 export function SkeletonCard({ className }: { className?: string }) {
   return (
-    <div className={cx("card animate-pulse border-phantix-700/40 bg-phantix-900/50 p-5", className)}>
+    <div className={cx("card border-phantix-700/40 bg-phantix-900/50 p-5", className)}>
       <div className="skeleton mb-3 h-4 w-3/4 rounded" />
       <div className="skeleton h-3 w-1/2 rounded" />
+    </div>
+  );
+}
+
+// -- Optimistic UI / page-layout skeletons -----------------------------------
+// Each skeleton mirrors the real page layout so the loading state reads as the
+// page already rendering rather than as a stalled screen. Pick the variant that
+// matches what is about to appear -- a spinner in the middle of an empty page
+// tells the user nothing about what they are waiting for.
+
+export function SkeletonBlock({ className }: { className?: string }) {
+  return <div className={cx("skeleton", className)} />;
+}
+
+/** Page title / subtitle / actions area. */
+export function PageHeaderSkeleton({ actions = false }: { actions?: boolean }) {
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <div className="skeleton mb-2 h-5 w-48 rounded" />
+        <div className="skeleton h-8 w-72 max-w-full rounded" />
+        <div className="skeleton mt-3 h-3 w-96 max-w-full rounded" />
+      </div>
+      {actions && (
+        <div className="flex gap-2">
+          <div className="skeleton h-9 w-28 rounded-md" />
+          <div className="skeleton h-9 w-32 rounded-md" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** KPI stat card. */
+export function StatCardSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cx("card border-phantix-700/40 bg-phantix-900/50 p-4", className)}>
+      <div className="skeleton h-3 w-16 rounded" />
+      <div className="skeleton mt-3 h-7 w-20 rounded" />
+      <div className="skeleton mt-2 h-2.5 w-24 rounded" />
+    </div>
+  );
+}
+
+/** A row with icon + two text lines + trailing badge (list / card pages). */
+export function CardListSkeleton({ rows = 5, className }: { rows?: number; className?: string }) {
+  return (
+    <div className={cx("space-y-3", className)}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="card border-phantix-700/40 bg-phantix-900/50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="skeleton h-10 w-10 shrink-0 rounded-md" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="skeleton h-4 w-2/3 rounded" />
+              <div className="skeleton h-3 w-1/3 rounded" />
+            </div>
+            <div className="skeleton h-6 w-16 shrink-0 rounded-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Card with a header line + table-ish rows (list / report / tracker pages). */
+export function TableCardSkeleton({ rows = 5, cols = 4, title = true }: { rows?: number; cols?: number; title?: boolean }) {
+  return (
+    <div className="card overflow-hidden border-phantix-700/40 bg-phantix-900/50">
+      {title && (
+        <div className="flex items-center justify-between border-b border-phantix-700/40 px-4 py-3">
+          <div className="skeleton h-4 w-40 rounded" />
+          <div className="skeleton h-6 w-16 rounded-md" />
+        </div>
+      )}
+      <div className="divide-y divide-phantix-800/40 px-4">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="grid items-center gap-4 py-3.5" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+            {Array.from({ length: cols }).map((__, j) => (
+              <div key={j} className="skeleton h-3.5 rounded" style={{ width: j === 0 ? "82%" : "100%", opacity: 1 - i * 0.07 - j * 0.05 }} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Two-column split (list + detail). */
+export function SplitPaneSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <div className="xl:col-span-1">
+        <CardListSkeleton rows={rows} />
+      </div>
+      <div className="xl:col-span-2">
+        <SkeletonCard className="h-96" />
+      </div>
+    </div>
+  );
+}
+
+/** Stacked label + control rows -- settings and configuration screens. */
+export function SettingsSkeleton({ groups = 3, rows = 3 }: { groups?: number; rows?: number }) {
+  return (
+    <div className="space-y-5">
+      {Array.from({ length: groups }).map((_, g) => (
+        <div key={g} className="card border-phantix-700/40 bg-phantix-900/50 p-5">
+          <div className="skeleton h-4 w-44 rounded" />
+          <div className="skeleton mt-2 h-3 w-72 max-w-full rounded" />
+          <div className="mt-5 space-y-4">
+            {Array.from({ length: rows }).map((__, i) => (
+              <div key={i} className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="skeleton h-3.5 w-40 rounded" />
+                  <div className="skeleton h-2.5 w-64 max-w-full rounded" />
+                </div>
+                <div className="skeleton h-8 w-24 shrink-0 rounded-md" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Numbered step rail + active step panel -- the setup wizard shape. */
+export function WizardSkeleton({ steps = 5 }: { steps?: number }) {
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+      <div className="space-y-2 lg:col-span-1">
+        {Array.from({ length: steps }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-900/50 p-3">
+            <div className="skeleton h-7 w-7 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="skeleton h-3 w-24 rounded" />
+              <div className="skeleton h-2.5 w-16 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="lg:col-span-3">
+        <div className="card border-phantix-700/40 bg-phantix-900/50 p-6">
+          <div className="skeleton h-5 w-56 rounded" />
+          <div className="skeleton mt-3 h-3 w-full max-w-lg rounded" />
+          <div className="mt-6 space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="skeleton h-3 w-28 rounded" />
+                <div className="skeleton h-9 w-full rounded-md" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex gap-2">
+            <div className="skeleton h-9 w-24 rounded-md" />
+            <div className="skeleton h-9 w-28 rounded-md" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** KPI grid used on dashboards. */
+export function StatGridSkeleton({ count = 4, className }: { count?: number; className?: string }) {
+  return (
+    <div className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4", className)}>
+      {Array.from({ length: count }).map((_, i) => <StatCardSkeleton key={i} />)}
+    </div>
+  );
+}
+
+/** Full-page optimistic loading shell -- pick the layout matching the page. */
+export function PageSkeleton({
+  variant = "cards",
+  rows = 5,
+  cols = 4,
+  actions = false,
+  className,
+}: {
+  variant?: "cards" | "table" | "list" | "split" | "dashboard" | "settings" | "wizard";
+  rows?: number;
+  cols?: number;
+  actions?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cx("mx-auto max-w-[1400px]", className)}>
+      <PageHeaderSkeleton actions={actions} />
+      {variant === "dashboard" && (
+        <>
+          <StatGridSkeleton />
+          <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <div className="xl:col-span-2"><SkeletonCard className="h-80" /></div>
+            <SkeletonCard className="h-80" />
+          </div>
+        </>
+      )}
+      {variant === "split" && <SplitPaneSkeleton rows={rows} />}
+      {variant === "table" && <TableCardSkeleton rows={rows} cols={cols} />}
+      {variant === "list" && <CardListSkeleton rows={rows} />}
+      {variant === "settings" && <SettingsSkeleton rows={rows} />}
+      {variant === "wizard" && <WizardSkeleton />}
+      {variant === "cards" && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: Math.min(rows, 6) }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
     </div>
   );
 }

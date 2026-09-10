@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
-import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken, clearCorrelationId } from "./api";
+import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken, clearCorrelationId, isPendingApproval } from "./api";
 import {
   emptyOrg,
   isSecurityDbReady,
@@ -216,7 +216,7 @@ const demoState = (): PersistedState => ({
     { id: 2, event_type: "alert_sent", severity: "medium", title: "New unverified asset discovered", status: "delivered", channels: ["email", "whatsapp"], created_at: new Date(Date.now() - 7200000).toISOString() },
     { id: 3, event_type: "alert_failed", severity: "critical", title: "Compromised credential detected", status: "failed", channels: ["email", "telegram"], created_at: new Date(Date.now() - 86400000).toISOString() },
   ],
-  alertSettings: { alerts_enabled: true, smtp: { enabled: true, host: "smtp.example.com", port: 587, from_email: "alerts@acme.ng", from_name: "Phantix Alerts", use_tls: true }, email_recipients: ["security@acme.ng"], whatsapp: { enabled: false, provider: "", recipients: [] }, telegram: { enabled: true, provider: "telegram_bot", recipients: ["@acme_security"] }, notify: { critical: true, high: true, medium: true, low: false, info: false } },
+  alertSettings: { alerts_enabled: true, smtp: { enabled: true, host: "smtp.example.com", port: 587, from_email: "alerts@acme.ng", from_name: "SecureGraph Alerts", use_tls: true }, email_recipients: ["security@acme.ng"], whatsapp: { enabled: false, provider: "", recipients: [] }, telegram: { enabled: true, provider: "telegram_bot", recipients: ["@acme_security"] }, notify: { critical: true, high: true, medium: true, low: false, info: false } },
   nextId: 100,
 });
 
@@ -345,7 +345,7 @@ function normalizeAlertSettings(raw: unknown): AlertSettings {
       host: String(smtpRaw.host ?? ""),
       port: Number(smtpRaw.port ?? 587),
       from_email: String(smtpRaw.from_email ?? smtpRaw.fromEmail ?? ""),
-      from_name: String(smtpRaw.from_name ?? smtpRaw.fromName ?? "Phantix Alerts"),
+      from_name: String(smtpRaw.from_name ?? smtpRaw.fromName ?? "SecureGraph Alerts"),
       use_tls: smtpRaw.use_tls !== false,
     },
     email_recipients: emailRecipients,
@@ -518,6 +518,7 @@ type Store = {
   confirmDualControlDevice: () => Promise<{ done: boolean }>;
   issueLoginLink: (userId: number) => Promise<string>;
   clearDevice: (userId: number) => Promise<void>;
+  deleteOrgUser: (id: number) => Promise<{ pending: boolean }>;
   // connections
   refreshConnections: () => Promise<void>;
   refreshServiceKey: () => Promise<void>;
@@ -530,10 +531,12 @@ type Store = {
     },
   ) => Promise<void>;
   testConnection: (id: number) => Promise<void>;
-  bootstrapConnection: (id: number) => Promise<void>;
-  deleteConnection: (id: number) => Promise<void>;
+  bootstrapConnection: (id: number) => Promise<{ pending: boolean }>;
+  deleteConnection: (id: number) => Promise<{ pending: boolean }>;
   // companies & keys
   createCompany: (c: { name: string; industry: string; country: string }) => Promise<void>;
+  deleteCompany: (id: number) => Promise<{ pending: boolean }>;
+  deleteAccount: () => Promise<{ pending: boolean }>;
   rotateServiceKey: (companyId?: number) => Promise<string>;
   revokeServiceKey: () => Promise<void>;
   savePreferredServices: (services: string[]) => Promise<void>;
@@ -642,7 +645,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const resolvedEmail = email || emailFromToken() || tokens.email || "";
       if (resolvedEmail) tokens.email = resolvedEmail;
 
-      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes, alertsRes, alertSettingsRes, auditRes, pendingRes, entRes, identityRes, loginLinksRes, companiesRes, toolsRes, ticketsRes] = await Promise.all([
+      const [meRes, setupRes, connsRes, primaryRes, keyRes, usersRes, dcRes, alertsRes, alertSettingsRes, auditRes, pendingRes, entRes, identityRes, loginLinksRes, companiesRes, toolsRes, myToolsRes, ticketsRes] = await Promise.all([
         api.get<unknown>("/organizations/me").catch(() => null),
         api.get<SetupApi>("/organizations/me/setup").catch(() => null),
         api.get<unknown>("/db-connections").catch(() => null),
@@ -661,6 +664,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         api.get<unknown>("/organizations/me/login-links").catch(() => null),
         api.get<unknown>("/organizations/me/companies").catch(() => null),
         api.get<unknown>("/tools/catalog").catch(() => null),
+        api.get<unknown>("/tools/my-tools").catch(() => null),
         api.get<unknown>("/support/tickets").catch(() => null),
       ]);
 
@@ -812,7 +816,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         alertSettings: alertSettingsRes ? normalizeAlertSettings(alertSettingsRes) : s.alertSettings,
         audit: Array.isArray(auditRes) ? (auditRes as unknown as AuditEvent[]) : (((auditRes as { items?: unknown[] })?.items ?? []) as AuditEvent[]),
         pending: Array.isArray(pendingRes) ? (pendingRes as unknown as PendingAction[]) : s.pending,
-        tools: toolsRes ? mapToolsFromApi(toolsRes) : s.tools,
+        tools: (() => {
+          if (!toolsRes) return s.tools;
+          const catalog = mapToolsFromApi(toolsRes);
+          if (!myToolsRes) return catalog;
+          const mine = mapToolsFromApi(myToolsRes);
+          const subscribedKeys = new Set(
+            mine.filter((t) => t.subscribed || t.key).map((t) => t.key).filter(Boolean),
+          );
+          // Prefer explicit subscribed flags from my-tools; also treat any returned row as provisioned.
+          const mineByKey = new Map(mine.map((t) => [t.key, t]));
+          for (const t of mine) {
+            if (t.key) subscribedKeys.add(t.key);
+          }
+          return catalog.map((t) => {
+            const fromMine = mineByKey.get(t.key);
+            if (!fromMine && !subscribedKeys.has(t.key)) return t;
+            return { ...t, subscribed: true };
+          });
+        })(),
         tickets: ticketsRes ? mapTicketsFromApi(ticketsRes) : s.tickets,
       }));
       setSession({ authenticated: true, email: displayEmail });
@@ -1868,6 +1890,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [logAudit, state.users],
   );
 
+  const deleteOrgUser = useCallback(
+    async (id: number) => {
+      if (DEMO_MODE) {
+        await delay(400);
+        const user = state.users.find((u) => u.id === id);
+        persist((s) => ({ ...s, users: s.users.filter((u) => u.id !== id) }));
+        logAudit("org_user.delete", "people", `Removed org user: ${user?.full_name ?? id}`);
+        return { pending: false };
+      }
+      // Per platform API: DELETE /org-users/{id} is a soft deactivation, and it
+      // parks for authorizer approval when dual-control is configured.
+      const res = await api.delete<Record<string, unknown>>(`/org-users/${id}`, { dualControl: true });
+      if (isPendingApproval(res)) return { pending: true };
+      const user = state.users.find((u) => u.id === id);
+      persist((s) => ({ ...s, users: s.users.filter((u) => u.id !== id) }));
+      logAudit("org_user.delete", "people", `Removed org user: ${user?.full_name ?? id}`);
+      return { pending: false };
+    },
+    [persist, logAudit, state.users],
+  );
+
   // ── Connections ──────────────────────────────────────────────────────────
   const refreshConnections = useCallback(async () => {
     if (DEMO_MODE) return;
@@ -2009,10 +2052,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           connections: s.connections.map((c) => (c.id === id ? { ...c, bootstrap_status: "ready" as const, schema_version: "1.4.2" } : c)),
         }));
         logAudit("db_connection.bootstrap", "connections", "Bootstrapped security schema v1.4.2");
-        return;
+        return { pending: false };
       }
       const needsDc = !!tokens.dualControl;
-      const res = await api.post<unknown>(`/db-connections/${id}/bootstrap`, undefined, needsDc ? { dualControl: true } : undefined);
+      const res = await api.post<Record<string, unknown>>(`/db-connections/${id}/bootstrap`, undefined, needsDc ? { dualControl: true } : undefined);
+      // §2.2 parked: 2xx + pending:true → nothing ran; it is filed for an authorizer.
+      if (isPendingApproval(res)) return { pending: true };
       const row = mapConnectionFromApi(res);
       persist((s) => ({
         ...s,
@@ -2026,6 +2071,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }));
       await refreshConnections();
       logAudit("db_connection.bootstrap", "connections", "Bootstrapped security schema");
+      return { pending: false };
     },
     [persist, logAudit, refreshConnections],
   );
@@ -2036,12 +2082,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await delay(350);
         persist((s) => ({ ...s, connections: s.connections.filter((c) => c.id !== id) }));
         logAudit("db_connection.delete", "connections", `Deleted connection #${id}`);
-        return;
+        return { pending: false };
       }
       const needsDc = !!tokens.dualControl;
-      await api.delete(`/db-connections/${id}`, needsDc ? { dualControl: true } : undefined);
+      const res = await api.delete<Record<string, unknown>>(`/db-connections/${id}`, needsDc ? { dualControl: true } : undefined);
+      if (isPendingApproval(res)) return { pending: true };
       persist((s) => ({ ...s, connections: s.connections.filter((c) => c.id !== id) }));
       logAudit("db_connection.delete", "connections", `Deleted connection #${id}`);
+      return { pending: false };
     },
     [persist, logAudit],
   );
@@ -2079,6 +2127,45 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       logAudit("company.create", "tenancy", `Created child company: ${c.name}`);
     },
     [persist, logAudit],
+  );
+
+  const deleteCompany = useCallback(
+    async (id: number) => {
+      if (DEMO_MODE) {
+        await delay(400);
+        const company = state.companies.find((c) => c.id === id);
+        persist((s) => ({ ...s, companies: s.companies.filter((c) => c.id !== id) }));
+        logAudit("company.delete", "tenancy", `Deleted child company: ${company?.name ?? id}`);
+        return { pending: false };
+      }
+      const res = await api.delete<Record<string, unknown>>(`/organizations/me/companies/${id}`, { dualControl: true });
+      if (isPendingApproval(res)) return { pending: true };
+      const company = state.companies.find((c) => c.id === id);
+      persist((s) => ({ ...s, companies: s.companies.filter((c) => c.id !== id) }));
+      logAudit("company.delete", "tenancy", `Deleted child company: ${company?.name ?? id}`);
+      return { pending: false };
+    },
+    [persist, logAudit, state.companies],
+  );
+
+  const deleteAccount = useCallback(
+    async () => {
+      if (DEMO_MODE) {
+        await delay(600);
+        logAudit("org.delete", "tenancy", "Deleted organization account");
+        try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+        logout();
+        return { pending: false };
+      }
+      // Permanently deletes the whole platform account (organization + users,
+      // companies, keys, and data). Require dual-control operate when configured.
+      const res = await api.delete<Record<string, unknown>>("/organizations/me", { dualControl: true });
+      if (isPendingApproval(res)) return { pending: true };
+      logAudit("org.delete", "tenancy", "Deleted organization account");
+      logout();
+      return { pending: false };
+    },
+    [logAudit, logout],
   );
 
   const rotateServiceKey = useCallback(
@@ -2279,7 +2366,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // when enabled and live; medium → email only.
     await api.post("/alerts/test", {
       severity: "critical",
-      title: "[TEST] Phantix Critical Alert",
+      title: "[TEST] SecureGraph Critical Alert",
       body: "This is a test critical alert. If you received this, your email, WhatsApp, and Telegram channels are configured correctly."
     }, { dualControl: true });
   }, []);
@@ -2333,9 +2420,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
       requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
-      issueLoginLink, clearDevice,
+      issueLoginLink, clearDevice, deleteOrgUser,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
-      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
+      createCompany, deleteCompany, deleteAccount, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
       toggleTool, createTicket, decidePending, refreshPending, refreshAudit, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toasts, toast, dismissToast,
     }),
@@ -2344,9 +2431,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,
-      issueLoginLink, clearDevice,
+      issueLoginLink, clearDevice, deleteOrgUser,
       refreshConnections, refreshServiceKey, createConnection, testConnection, bootstrapConnection, deleteConnection,
-      createCompany, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
+      createCompany, deleteCompany, deleteAccount, rotateServiceKey, revokeServiceKey, savePreferredServices, uploadLogo, deleteLogo,
       toggleTool, createTicket, decidePending, refreshPending, refreshAudit, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toast, dismissToast],
   );

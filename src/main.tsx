@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { MotionConfig } from "framer-motion";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { bootstrapTheme } from "./lib/theme";
@@ -8,10 +9,12 @@ import { bootstrapTheme } from "./lib/theme";
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import { initAnalytics } from "./lib/analytics";
+import { loadBrandTokens } from "./lib/branding";
 import "./index.css";
 
 bootstrapTheme();
 initAnalytics();
+loadBrandTokens();
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {
@@ -19,9 +22,14 @@ if (!rootEl) {
 } else {
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
+      {/* reducedMotion="user" drops transform/layout animation for anyone who
+          asked the OS for calmer motion; quick opacity fades still carry the
+          reveal so content never snaps in (Learn UI — reduced motion). */}
+      <MotionConfig reducedMotion="user">
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </MotionConfig>
     </React.StrictMode>,
   );
 }

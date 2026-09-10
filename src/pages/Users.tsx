@@ -252,7 +252,7 @@ function BootstrapWizard() {
                 <div>
                   <h2 className="font-display text-xl font-bold text-white">Set up two-person control</h2>
                   <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
-                    Phantix protects every mutation with <strong className="text-slate-200">dual control</strong>:
+                    SecureGraph protects every mutation with <strong className="text-slate-200">dual control</strong>:
                     one person <strong className="text-gold-300">initiates</strong>, a different person{" "}
                     <strong className="text-gold-300">authorizes</strong>. You'll create both users now --- bootstrap
                     uses your company JWT; after assignment, mutations need a live operate session.

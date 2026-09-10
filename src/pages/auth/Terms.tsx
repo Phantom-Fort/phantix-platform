@@ -67,10 +67,10 @@ export default function Terms() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
           <div className="flex items-center gap-4">
-            <img src="/logo-white.png" alt="Phantix" className="h-16 w-16 object-contain" />
+            <img src="/logo-white.png" alt="SecureGraph" className="h-16 w-16 object-contain" />
             <div>
               <h1 className="font-display text-3xl font-bold text-white">{terms?.title || "Terms of Service & Acceptable Use"}</h1>
-              <p className="text-sm text-slate-500">{terms?.effective || terms?.summary || "The agreement that governs your use of the Phantix platform"}</p>
+              <p className="text-sm text-slate-500">{terms?.effective || terms?.summary || "The agreement that governs your use of the SecureGraph platform"}</p>
               {terms?.version && <p className="mt-1 text-[11px] font-mono text-slate-600">version {terms.version}</p>}
             </div>
           </div>
@@ -105,7 +105,7 @@ export default function Terms() {
                 <h2 className="font-display text-lg font-semibold text-white">Services</h2>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-300">
-                Phantix provides a subscription-based security platform covering attack-surface discovery,
+                SecureGraph provides a subscription-based security platform covering attack-surface discovery,
                 asset intelligence, compliance tracking, and optional staff-facilitated VAPT / security
                 assessment services. Subscriptions recur at the agreed billing cycle; project engagements
                 are billed as one-off fees. All payments are processed through our payment provider (Paystack).

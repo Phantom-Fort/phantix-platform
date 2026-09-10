@@ -46,10 +46,10 @@ export default function Privacy() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
           <div className="flex items-center gap-4">
-            <img src="/logo-white.png" alt="Phantix" className="h-16 w-16 object-contain" />
+            <img src="/logo-white.png" alt="SecureGraph" className="h-16 w-16 object-contain" />
             <div>
               <h1 className="font-display text-3xl font-bold text-white">{notice?.title || "Privacy notice"}</h1>
-              <p className="text-sm text-slate-500">{notice?.summary || "How Phantix handles your data --- the short, honest version"}</p>
+              <p className="text-sm text-slate-500">{notice?.summary || "How SecureGraph handles your data --- the short, honest version"}</p>
               {notice?.version && <p className="mt-1 text-[11px] font-mono text-slate-600">version {notice.version}</p>}
             </div>
           </div>
@@ -109,7 +109,7 @@ export default function Privacy() {
           <div className="card p-6">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-700/50 text-phantix-300"><ShieldCheck size={18} /></span>
-              <h2 className="font-display text-lg font-semibold text-white">What Phantix stores</h2>
+              <h2 className="font-display text-lg font-semibold text-white">What SecureGraph stores</h2>
             </div>
             <ul className="mt-4 space-y-2.5">
               {[
@@ -144,14 +144,14 @@ export default function Privacy() {
             </ul>
             <p className="mt-4 rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3.5 text-xs leading-5 text-slate-400">
               Everything is written only to the <span className="font-mono text-gold-300">phantix</span> schema in a
-              database you own. Phantix connects dynamically per request --- there is no copy on our side.
+              database you own. SecureGraph connects dynamically per request --- there is no copy on our side.
             </p>
           </div>
 
           <div className="card p-6">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-md bg-severity-critical/12 text-severity-critical"><EyeOff size={18} /></span>
-              <h2 className="font-display text-lg font-semibold text-white">What Phantix never touches</h2>
+              <h2 className="font-display text-lg font-semibold text-white">What SecureGraph never touches</h2>
             </div>
             <ul className="mt-4 space-y-2.5">
               {[

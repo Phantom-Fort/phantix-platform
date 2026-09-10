@@ -1,25 +1,80 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, X, ArrowRight, Info } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner } from "@/components/ui";
+import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, Info } from "lucide-react";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { formatNaira, timeAgo, cx } from "@/lib/utils";
 
 interface Entitlements { billing_enforcement: { enabled: boolean; mode: string; environment: string; free_asset_cap?: number; free_org_user_cap?: number; free_report_formats?: string[] }; premium_active: boolean; full_access_coupon: any; subscription: any; packs: any[]; message: string; }
 interface PricingInfo { monthly_list_price_ngn: number; first_month_price_ngn: number; subsequent_monthly_price_ngn: number; yearly_price_ngn: number; first_month_discount_percent: number; }
-interface SubscriptionInfo { id: number; status: string; billing_cycle: string; grant_source: string; current_period_start: string; current_period_end: string; }
+interface SubscriptionInfo { id: number; status: string; billing_cycle: string; grant_source: string; current_period_start: string; current_period_end: string; plan?: string; }
 interface PaymentInfo { id: number; reference: string; amount_due_ngn: number; status: string; purpose: string; discount_percent: number; created_at: string; }
+interface PlanInfo {
+  key: string;
+  name: string;
+  list_price_ngn: number | null;
+  sales_motion?: string;
+  allowances?: { ai_credits_mo?: number | null };
+  credit_allotment?: number | null;
+  features?: string[];
+}
+interface CreditBundle { credits: number; price_ngn?: number | null; currency?: string }
+interface CreditBalance {
+  buckets: Record<string, number>;
+  total: number;
+  cycle: string;
+  plan?: string | null;
+  plan_name?: string | null;
+  ai_credits_mo?: number | null;
+  exhausted?: boolean;
+  low?: boolean;
+  top_up_required?: boolean;
+  bundles: CreditBundle[];
+}
+
+const PENDING_PAYMENT_KEY = "phantix_pending_payment_id";
 
 const demoEntitlements: Entitlements = { billing_enforcement: { enabled: true, mode: "auto", environment: "production" }, premium_active: false, full_access_coupon: null, subscription: null, packs: [], message: "Dev mode" };
-const demoPricing: PricingInfo = { monthly_list_price_ngn: 100000, first_month_price_ngn: 50000, subsequent_monthly_price_ngn: 100000, yearly_price_ngn: 1000000, first_month_discount_percent: 50 };
-const demoSubscription: SubscriptionInfo = { id: 1, status: "active", billing_cycle: "monthly", grant_source: "payment", current_period_start: "2026-07-01T00:00:00Z", current_period_end: "2026-08-01T00:00:00Z" };
+const demoPricing: PricingInfo = { monthly_list_price_ngn: 9900, first_month_price_ngn: 4950, subsequent_monthly_price_ngn: 9900, yearly_price_ngn: 99000, first_month_discount_percent: 50 };
+const demoSubscription: SubscriptionInfo = { id: 1, status: "active", billing_cycle: "monthly", grant_source: "payment", current_period_start: "2026-07-01T00:00:00Z", current_period_end: "2026-08-01T00:00:00Z", plan: "starter" };
+const demoCredits: CreditBalance = {
+  buckets: { allowance: 2500, allotment: 3000, topup: 0 },
+  total: 5500,
+  cycle: "2026-09",
+  plan: "starter",
+  plan_name: "Starter",
+  ai_credits_mo: 3000,
+  bundles: [
+    { credits: 500, price_ngn: 5000, currency: "NGN" },
+    { credits: 2000, price_ngn: 18000, currency: "NGN" },
+    { credits: 5000, price_ngn: 40000, currency: "NGN" },
+  ],
+};
+
+function normalizePayments(raw: unknown): PaymentInfo[] {
+  if (Array.isArray(raw)) return raw as PaymentInfo[];
+  if (raw && typeof raw === "object" && Array.isArray((raw as { items?: unknown }).items)) {
+    return (raw as { items: PaymentInfo[] }).items;
+  }
+  return [];
+}
+
+function normalizePlans(raw: unknown): PlanInfo[] {
+  if (Array.isArray(raw)) return raw as PlanInfo[];
+  if (raw && typeof raw === "object" && Array.isArray((raw as { plans?: unknown }).plans)) {
+    return (raw as { plans: PlanInfo[] }).plans;
+  }
+  return [];
+}
 
 export default function Billing() {
   const { state, toast, session, requireDualControl } = useStore();
   const [loading, setLoading] = useState(true);
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const [pricing, setPricing] = useState<PricingInfo | null>(null);
+  const [plans, setPlans] = useState<PlanInfo[]>([]);
+  const [credits, setCredits] = useState<CreditBalance | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [payments, setPayments] = useState<PaymentInfo[]>([]);
   const [gatewayPublicKey, setGatewayPublicKey] = useState("");
@@ -29,24 +84,91 @@ export default function Billing() {
   const [showCoupon, setShowCoupon] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [topUpBusy, setTopUpBusy] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      if (DEMO_MODE) { setEntitlements(demoEntitlements); setPricing(demoPricing); setSubscription(demoSubscription); setPayments([]); setLoading(false); return; }
-      const [entRes, priceRes, gwRes] = await Promise.all([
+      if (DEMO_MODE) {
+        setEntitlements(demoEntitlements);
+        setPricing(demoPricing);
+        setSubscription(demoSubscription);
+        setCredits(demoCredits);
+        setPlans([
+          { key: "free", name: "Free", list_price_ngn: 0 },
+          { key: "starter", name: "Starter", list_price_ngn: 9900 },
+          { key: "growth", name: "Growth", list_price_ngn: 19900 },
+          { key: "enterprise", name: "Enterprise", list_price_ngn: null },
+        ]);
+        setPayments([]);
+        setLoading(false);
+        return;
+      }
+      const [entRes, priceRes, plansRes, creditsRes, gwRes] = await Promise.all([
         api.get<any>("/billing/entitlements").catch(() => null),
         api.get<PricingInfo>("/billing/pricing").catch(() => null),
+        api.get<unknown>("/billing/plans").catch(() => null),
+        api.get<CreditBalance>("/billing/credits").catch(() => null),
         api.get<any>("/billing/gateway").catch(() => null),
       ]);
-      setEntitlements(entRes); setPricing(priceRes);
+      setEntitlements(entRes);
+      setPricing(priceRes);
+      setPlans(normalizePlans(plansRes));
+      setCredits(creditsRes);
       if (gwRes?.public_key) setGatewayPublicKey(gwRes.public_key);
       api.get<SubscriptionInfo>("/billing/subscription").then(setSubscription).catch(() => setSubscription(null));
-      api.get<{ items: PaymentInfo[] }>("/billing/payments").then(r => setPayments(r?.items ?? [])).catch(() => {});
-    } catch { } finally { setLoading(false); }
+      api.get<unknown>("/billing/payments").then((r) => setPayments(normalizePayments(r))).catch(() => {});
+    } catch { /* keep prior */ } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const handleVerify = useCallback(async (paymentId: number, opts?: { silent?: boolean }) => {
+    try {
+      await api.post(`/billing/payments/${paymentId}/verify`, {}, { dualControl: true });
+      if (!opts?.silent) toast("success", "Payment verified");
+      try { sessionStorage.removeItem(PENDING_PAYMENT_KEY); } catch { /* ignore */ }
+      setPayingId(null);
+      await loadData();
+    } catch (e) {
+      if (!opts?.silent) toast("error", "Verification failed", e instanceof Error ? e.message : undefined);
+    }
+  }, [loadData, toast]);
+
+  // Auto-verify after Paystack return (?reference= / ?trxref= / ?payment_id=) or stashed id.
+  useEffect(() => {
+    if (DEMO_MODE || loading) return;
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("reference") || params.get("trxref") || "";
+    const paymentParam = params.get("payment_id") || params.get("payment") || "";
+    let pendingId: number | null = null;
+    if (/^\d+$/.test(paymentParam)) pendingId = Number(paymentParam);
+    if (!pendingId && reference) {
+      const match = payments.find((p) => p.reference === reference);
+      if (match) pendingId = match.id;
+    }
+    if (!pendingId) {
+      try {
+        const stashed = sessionStorage.getItem(PENDING_PAYMENT_KEY);
+        if (stashed && /^\d+$/.test(stashed)) pendingId = Number(stashed);
+      } catch { /* ignore */ }
+    }
+    if (!pendingId) return;
+
+    const stripQuery = () => {
+      const url = new URL(window.location.href);
+      ["reference", "trxref", "payment_id", "payment"].forEach((k) => url.searchParams.delete(k));
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    };
+
+    void (async () => {
+      setPayingId(pendingId!);
+      await handleVerify(pendingId!, { silent: false });
+      stripQuery();
+    })();
+    // Run once payments/load settle; avoid re-firing on every payments change after strip.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, payments.length]);
 
   const handleSubscribe = async () => {
     if (!(await requireDualControl("Subscribing requires a dual-control operate session."))) return;
@@ -56,7 +178,12 @@ export default function Billing() {
       const paymentId = res?.payment?.id;
       if (paymentId) {
         setPayingId(paymentId);
-        const initRes = await api.post<any>(`/billing/payments/${paymentId}/initialize`, { email: session?.email || state.org.email || "", callback_url: `${window.location.origin}/billing` }, { dualControl: true });
+        try { sessionStorage.setItem(PENDING_PAYMENT_KEY, String(paymentId)); } catch { /* ignore */ }
+        const initRes = await api.post<any>(`/billing/payments/${paymentId}/initialize`, {
+          email: session?.email || state.org.email || "",
+          callback_url: `${window.location.origin}/billing`,
+          ...(gatewayPublicKey ? {} : {}),
+        }, { dualControl: true });
         if (initRes?.authorization_url) window.location.href = initRes.authorization_url;
         else toast("info", "Paystack", `Access code: ${initRes?.access_code ?? "N/A"} — complete payment then click Verify below`);
       }
@@ -64,8 +191,32 @@ export default function Billing() {
     finally { setBusy(false); }
   };
 
-  const handleVerify = async (paymentId: number) => {
-    try { await api.post(`/billing/payments/${paymentId}/verify`, {}, { dualControl: true }); toast("success", "Payment verified"); loadData(); setPayingId(null); } catch (e) { toast("error", "Verification failed"); }
+  const handleCreditTopUp = async (bundle: number) => {
+    if (!(await requireDualControl("Buying AI credits requires a dual-control operate session."))) return;
+    setTopUpBusy(bundle);
+    try {
+      const res = await api.post<any>(
+        "/billing/credits/top-up/checkout",
+        {
+          bundle,
+          email: session?.email || state.org.email || "",
+          callback_url: `${window.location.origin}/billing`,
+        },
+        { dualControl: true },
+      );
+      const paymentId = res?.payment?.id;
+      if (paymentId) {
+        setPayingId(paymentId);
+        try { sessionStorage.setItem(PENDING_PAYMENT_KEY, String(paymentId)); } catch { /* ignore */ }
+      }
+      if (res?.authorization_url) window.location.href = res.authorization_url;
+      else if (res?.access_code) toast("info", "Paystack", `Access code: ${res.access_code} — complete payment then click Verify`);
+      else toast("error", "Top-up failed", "No Paystack session returned");
+    } catch (e) {
+      toast("error", "Top-up failed", e instanceof Error ? e.message : "");
+    } finally {
+      setTopUpBusy(null);
+    }
   };
 
   const handleRedeemCoupon = async () => {
@@ -81,17 +232,49 @@ export default function Billing() {
     try { await api.post("/billing/subscription/cancel", {}, { dualControl: true }); toast("warning", "Cancelled", "Auto-renew cancelled — access continues to period end"); setShowCancelConfirm(false); loadData(); } catch (e) { toast("error", "Failed"); }
   };
 
-  if (loading) return <div className="flex min-h-[40vh] items-center justify-center"><Spinner className="h-6 w-6" /></div>;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-[1200px]">
+        <PageHeaderSkeleton actions />
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          <div className="skeleton h-6 w-28 rounded-full" />
+          <div className="skeleton h-3 w-40 rounded" />
+        </div>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <SkeletonCard className="h-72" />
+          <SkeletonCard className="h-72" />
+        </div>
+      </div>
+    );
+  }
 
-  const isPremium = entitlements?.premium_active || subscription?.status === "active";
+  const starterPlan = plans.find((p) => p.key === "starter");
+  const growthPlan = plans.find((p) => p.key === "growth");
+  const planKey = String(subscription?.plan || entitlements?.subscription?.plan || "").toLowerCase();
+  const activePlan = plans.find((p) => p.key === planKey);
+  const isPremium = Boolean(entitlements?.premium_active) || subscription?.status === "active";
   const isPastDue = subscription?.status === "past_due";
   const isGrace = (entitlements as any)?.subscription?.in_grace_period || isPastDue;
   const daysUntilEnd = subscription?.current_period_end ? Math.ceil((new Date(subscription.current_period_end).getTime() - Date.now()) / 86400000) : null;
   const expiringSoon = isPremium && daysUntilEnd !== null && daysUntilEnd <= 5 && daysUntilEnd >= 0;
   const isCoupon = subscription?.grant_source === "coupon";
-  const price = pricing?.monthly_list_price_ngn ?? 100000;
 
-  // Free report formats come from entitlements (json/csv/markdown/md free; pdf/docx/xlsx premium).
+  const listPrice = starterPlan?.list_price_ngn ?? pricing?.monthly_list_price_ngn ?? 9900;
+  const yearlyFromPlans = starterPlan?.list_price_ngn != null && starterPlan.list_price_ngn > 0
+    ? starterPlan.list_price_ngn * 10
+    : pricing?.yearly_price_ngn;
+  const displayMonthly = pricing?.first_month_price_ngn ?? listPrice;
+  const displaySubsequent = pricing?.subsequent_monthly_price_ngn ?? listPrice;
+  const displayYearly = yearlyFromPlans ?? pricing?.yearly_price_ngn ?? listPrice * 10;
+  const discountPct = pricing?.first_month_discount_percent ?? 50;
+
+  const planLabel = activePlan?.name
+    || (isPremium ? (planKey === "growth" ? "Growth" : planKey === "enterprise" ? "Enterprise" : "Starter") : "Free");
+  const featureList = (isPremium
+    ? (activePlan?.features?.length ? activePlan.features : growthPlan?.features || starterPlan?.features)
+    : plans.find((p) => p.key === "free")?.features)
+    ?? ["All 11 product engines", "Unlimited campaigns & scans", "Verified-only PDF/DOCX reports", "Dual-control + audit exports", "WA/Telegram alert channels", "AI-assisted remediation"];
+
   const enforcementOn = entitlements?.billing_enforcement?.enabled === true;
   const freeFormats = new Set((entitlements?.billing_enforcement?.free_report_formats ?? ["json", "csv", "markdown", "md"]).map(f => f.toLowerCase()));
   const reportFormats: { fmt: string; label: string; free: boolean }[] = [
@@ -104,9 +287,17 @@ export default function Billing() {
   ];
   const canDownload = (fmt: string) => !enforcementOn || isPremium || freeFormats.has(fmt.toLowerCase());
 
+  const creditBundles = credits?.bundles?.length
+    ? credits.bundles
+    : [
+        { credits: 500, price_ngn: undefined },
+        { credits: 2000, price_ngn: undefined },
+        { credits: 5000, price_ngn: undefined },
+      ];
+
   return (
     <div className="mx-auto max-w-[1200px]">
-      <PageHeader title="Billing" description="Manage your Phantix subscription, payments, and access" actions={<button onClick={loadData} className="btn-ghost"><RefreshCw size={15} /></button>} />
+      <PageHeader title="Billing" description="Manage your SecureGraph subscription, payments, and access" actions={<button onClick={loadData} className="btn-ghost"><RefreshCw size={15} /></button>} />
 
       {/* Subscription alerts */}
       {isGrace && (
@@ -115,7 +306,7 @@ export default function Billing() {
           <div>
             <p className="text-sm font-semibold text-amber-300">Grace period active</p>
             <p className="text-xs text-slate-400 mt-0.5">
-              Your Premium access continues until {(entitlements as any)?.subscription?.grace_ends_at ? timeAgo((entitlements as any).subscription.grace_ends_at) : "grace expires"}. Pay the renewal invoice to stay Premium.
+              Your {planLabel} access continues until {(entitlements as any)?.subscription?.grace_ends_at ? timeAgo((entitlements as any).subscription.grace_ends_at) : "grace expires"}. Pay the renewal invoice to stay on plan.
             </p>
           </div>
         </div>
@@ -123,7 +314,7 @@ export default function Billing() {
       {expiringSoon && !isGrace && (
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-gold-400/25 bg-gold-400/5 px-4 py-3">
           <AlertTriangle size={16} className="mt-0.5 shrink-0 text-gold-400" />
-          <p className="text-sm text-slate-200">Your Premium subscription {daysUntilEnd === 0 ? "expires today" : `ends in ${daysUntilEnd} day${daysUntilEnd === 1 ? "" : "s"}`}. <button onClick={() => setShowCoupon(true)} className="text-gold-400 hover:text-gold-300 underline">Redeem a coupon</button> or renew via subscribe.</p>
+          <p className="text-sm text-slate-200">Your {planLabel} subscription {daysUntilEnd === 0 ? "expires today" : `ends in ${daysUntilEnd} day${daysUntilEnd === 1 ? "" : "s"}`}. <button onClick={() => setShowCoupon(true)} className="text-gold-400 hover:text-gold-300 underline">Redeem a coupon</button> or renew via subscribe.</p>
         </div>
       )}
       {!isPremium && !isGrace && entitlements && (
@@ -131,32 +322,38 @@ export default function Billing() {
           <Info size={16} className="mt-0.5 shrink-0 text-slate-400" />
           <div>
             <p className="text-sm text-slate-300">You're on the Free plan.</p>
-            <p className="text-xs text-slate-400 mt-0.5">Limited to {(entitlements as any)?.billing_enforcement?.free_asset_cap ?? 25} assets and {(entitlements as any)?.billing_enforcement?.free_org_user_cap ?? 2} users. Upgrade to Premium for full access.</p>
+            <p className="text-xs text-slate-400 mt-0.5">Limited to {(entitlements as any)?.billing_enforcement?.free_asset_cap ?? 25} assets and {(entitlements as any)?.billing_enforcement?.free_org_user_cap ?? 2} users. Upgrade to Starter for full engine access.</p>
           </div>
         </div>
       )}
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <div className={cx("chip", isPremium ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/50 bg-slate-500/10 text-slate-500")}>
-          {isGrace ? "Grace period" : isCoupon ? `Beta access until ${subscription?.current_period_end ? timeAgo(subscription.current_period_end) : "expiry"}` : isPremium ? "Premium active" : "Free plan"}
+          {isGrace ? "Grace period" : isCoupon ? `Beta access until ${subscription?.current_period_end ? timeAgo(subscription.current_period_end) : "expiry"}` : isPremium ? `${planLabel} active` : "Free plan"}
         </div>
         {isPremium && subscription?.current_period_end && <span className="text-xs text-slate-400">{isGrace ? "Renewal overdue" : `Renews ${timeAgo(subscription.current_period_end)}`}</span>}
+        {credits != null && (
+          <span className={cx("chip text-xs", credits.exhausted ? "border-severity-critical/30 bg-severity-critical/10 text-severity-critical" : credits.low ? "border-amber-400/30 bg-amber-400/10 text-amber-300" : "border-phantix-600/50 bg-phantix-800/40 text-slate-300")}>
+            <DollarSign size={11} className="inline mr-1" />
+            {credits.total.toLocaleString()} AI credits
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Plan selector */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
-            <CardHeader title={isPremium ? "Your plan" : "Choose a plan"} subtitle={`${entitlements?.billing_enforcement?.enabled ? "Billing gates active" : "Dev mode — gates off"}`} />
+            <CardHeader title={isPremium ? "Your plan" : "Choose a plan"} subtitle={`${entitlements?.billing_enforcement?.enabled ? "Billing gates active" : "Dev mode — gates off"}${starterPlan ? ` · ${starterPlan.name}` : ""}`} />
             <div className="space-y-4">
               <div className="flex gap-2 mb-4">
                 {(["monthly", "yearly"] as const).map(c => <button key={c} onClick={() => setSelectedCycle(c)} className={cx("flex-1 rounded-md border py-3 text-sm font-semibold transition-colors", selectedCycle === c ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60")}>{c === "monthly" ? "Monthly" : "Yearly"}</button>)}
               </div>
-              {pricing && (
+              {(pricing || starterPlan) && (
                 <div className="rounded-2xl border border-gold-400/25 bg-gradient-to-b from-phantix-900 to-phantix-950 p-5 text-center">
-                  <p className="font-display text-3xl font-bold text-white">{formatNaira(selectedCycle === "monthly" ? (pricing.first_month_price_ngn || price) : pricing.yearly_price_ngn)}</p>
-                  <p className="mt-1 text-sm text-slate-400">{selectedCycle === "monthly" ? `First month (${pricing.first_month_discount_percent}% off) · then ${formatNaira(pricing.subsequent_monthly_price_ngn)}/mo` : "One-time yearly payment"}</p>
-                  {selectedCycle === "yearly" && <p className="mt-1 text-xs text-emerald-400">Save ~{Math.round((1 - pricing.yearly_price_ngn / (pricing.monthly_list_price_ngn * 12)) * 100)}% vs monthly</p>}
+                  <p className="font-display text-3xl font-bold text-white">{formatNaira(selectedCycle === "monthly" ? displayMonthly : displayYearly)}</p>
+                  <p className="mt-1 text-sm text-slate-400">{selectedCycle === "monthly" ? `First month (${discountPct}% off) · then ${formatNaira(displaySubsequent)}/mo` : "One-time yearly payment (10× monthly)"}</p>
+                  {selectedCycle === "yearly" && listPrice > 0 && <p className="mt-1 text-xs text-emerald-400">Save ~{Math.round((1 - displayYearly / (listPrice * 12)) * 100)}% vs monthly</p>}
                 </div>
               )}
               {!isPremium && <button onClick={handleSubscribe} disabled={busy} className="btn-primary w-full !py-3">{busy ? <Spinner className="h-4 w-4" /> : <><CreditCard size={15} /> Subscribe</>}</button>}
@@ -169,14 +366,59 @@ export default function Billing() {
         {/* Coupons + Features */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
           <Card>
-            <CardHeader title="Premium features" subtitle={isPremium ? "You have full access" : "Upgrade to unlock"} />
+            <CardHeader title={isPremium ? `${planLabel} features` : "Starter features"} subtitle={isPremium ? "You have full access" : "Upgrade to unlock"} />
             <ul className="space-y-2.5 mb-4">
-              {["All 11 product engines", "Unlimited campaigns & scans", "Verified-only PDF/DOCX reports", "Dual-control + audit exports", "WA/Telegram alert channels", "AI-assisted remediation"].map(f => <li key={f} className="flex items-center gap-2 text-sm text-slate-300"><CheckCircle2 size={14} className={isPremium ? "text-emerald-400" : "text-slate-600"} /> {f}</li>)}
+              {featureList.slice(0, 8).map(f => <li key={f} className="flex items-center gap-2 text-sm text-slate-300"><CheckCircle2 size={14} className={isPremium ? "text-emerald-400" : "text-slate-600"} /> {f}</li>)}
             </ul>
             <button onClick={() => setShowCoupon(true)} className="btn-secondary w-full text-sm"><Ticket size={14} /> Redeem beta code</button>
           </Card>
         </motion.div>
       </div>
+
+      {/* AI credits wallet — same Card pattern as the rest of Billing */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="mt-5">
+        <Card>
+          <CardHeader
+            title="AI credits"
+            subtitle={
+              credits
+                ? `${credits.total.toLocaleString()} available · cycle ${credits.cycle}${credits.plan_name || credits.plan ? ` · ${credits.plan_name || credits.plan}` : ""}`
+                : "Workspace AI credit wallet"
+            }
+          />
+          {credits ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(credits.buckets || {}).map(([bucket, amount]) => (
+                  <span key={bucket} className="chip text-xs border-phantix-600/50 bg-phantix-800/40 text-slate-300">
+                    {bucket}: {Number(amount).toLocaleString()}
+                  </span>
+                ))}
+                {credits.exhausted && <span className="chip text-xs border-severity-critical/30 bg-severity-critical/10 text-severity-critical">Exhausted</span>}
+                {credits.low && !credits.exhausted && <span className="chip text-xs border-amber-400/30 bg-amber-400/10 text-amber-300">Low</span>}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {creditBundles.map((b) => (
+                  <button
+                    key={b.credits}
+                    type="button"
+                    disabled={topUpBusy != null}
+                    onClick={() => void handleCreditTopUp(b.credits)}
+                    className="btn-secondary text-sm !py-2"
+                  >
+                    {topUpBusy === b.credits ? <Spinner className="h-3.5 w-3.5" /> : (
+                      <>+{b.credits.toLocaleString()}{b.price_ngn != null ? ` · ${formatNaira(b.price_ngn)}` : ""}</>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">Top-ups land in the topup bucket without changing your plan. Viewing and exporting results never consumes credits.</p>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">Credit balance unavailable — refresh after signing in with an organisation session.</p>
+          )}
+        </Card>
+      </motion.div>
 
       {/* Payments history */}
       {payments.length > 0 && (
@@ -189,7 +431,7 @@ export default function Billing() {
                   <div className="min-w-0 flex-1"><p className="font-mono text-sm text-slate-200">{p.reference}</p><p className="text-xs text-slate-500">{p.purpose} · {p.discount_percent ? `${p.discount_percent}% off` : ""} · {timeAgo(p.created_at)}</p></div>
                   <span className="font-semibold text-slate-200">{formatNaira(p.amount_due_ngn)}</span>
                   <StatusBadge status={p.status} />
-                  {p.status === "pending" && <button onClick={() => { setPayingId(p.id); handleVerify(p.id); }} className="btn-primary !px-3 !py-1.5 !text-xs">Pay</button>}
+                  {p.status === "pending" && <button onClick={() => { setPayingId(p.id); void handleVerify(p.id); }} className="btn-primary !px-3 !py-1.5 !text-xs">Verify</button>}
                 </div>
               ))}
             </div>
@@ -206,13 +448,13 @@ export default function Billing() {
               <span key={r.fmt} className={cx("chip text-xs", canDownload(r.fmt) ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/40 bg-slate-500/10 text-slate-500")}>
                 <Download size={11} className="inline mr-1" />
                 {r.label}
-                {!canDownload(r.fmt) && <span className="ml-1 opacity-70">(Premium)</span>}
+                {!canDownload(r.fmt) && <span className="ml-1 opacity-70">(Starter+)</span>}
               </span>
             ))}
           </div>
           {enforcementOn && !isPremium && (
             <p className="mt-2 text-xs text-slate-500">
-              JSON, CSV and Markdown exports stay free. Board-ready PDF/DOCX/XLSX require Premium.
+              JSON, CSV and Markdown exports stay free. Board-ready PDF/DOCX/XLSX require a paid plan.
             </p>
           )}
         </Card>
@@ -220,7 +462,7 @@ export default function Billing() {
 
       {/* Coupon modal */}
       <Modal open={showCoupon} onClose={() => setShowCoupon(false)} title="Redeem beta code">
-        <div className="space-y-3"><p className="text-sm text-slate-400">Enter a staff-issued beta code for full Premium access (up to 31 days).</p>
+        <div className="space-y-3"><p className="text-sm text-slate-400">Enter a staff-issued beta code for full plan access (up to 31 days).</p>
           <input className="input font-mono text-sm" value={couponCode} onChange={e => setCouponCode(e.target.value.toUpperCase())} placeholder="BETA-XXXX-XXXX" />
           <button onClick={handleRedeemCoupon} disabled={busy} className="btn-primary w-full">{busy ? "Redeeming..." : "Redeem"}</button>
         </div>
@@ -228,7 +470,7 @@ export default function Billing() {
 
       {/* Cancel confirm */}
       <Modal open={showCancelConfirm} onClose={() => setShowCancelConfirm(false)} title="Cancel auto-renew?">
-        <div className="space-y-3"><div className="flex items-center gap-2 p-3 rounded-md bg-severity-medium/10 border border-severity-medium/20"><AlertTriangle size={16} className="text-severity-medium" /><p className="text-sm text-slate-300">Your Premium access continues until {subscription?.current_period_end ? timeAgo(subscription.current_period_end) : "period end"}. After that, you'll be on the free plan.</p></div>
+        <div className="space-y-3"><div className="flex items-center gap-2 p-3 rounded-md bg-severity-medium/10 border border-severity-medium/20"><AlertTriangle size={16} className="text-severity-medium" /><p className="text-sm text-slate-300">Your {planLabel} access continues until {subscription?.current_period_end ? timeAgo(subscription.current_period_end) : "period end"}. After that, you'll be on the free plan.</p></div>
           <button onClick={handleCancel} className="btn-danger w-full">Confirm cancellation</button>
         </div>
       </Modal>

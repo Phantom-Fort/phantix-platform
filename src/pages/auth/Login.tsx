@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Mail, KeyRound, ArrowRight, Send } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { DEMO_MODE } from "@/lib/api";
+import { DEMO_MODE, ApiError, throttleSeconds } from "@/lib/api";
 import { APP_DEMO_URL } from "@/lib/links";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -75,6 +75,16 @@ export default function Login() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [destinationMasked, setDestinationMasked] = useState("");
+  // 429 login throttle (§8) — wait out the lock; never present as a wrong password.
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const locked = lockedUntil != null;
+  useEffect(() => {
+    if (!locked) return;
+    const t = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(t);
+  }, [locked]);
+  const retryIn = lockedUntil != null ? Math.max(0, Math.ceil((lockedUntil - now) / 1000)) : 0;
 
   const destination = () => (state.setup.setup_complete ? "/dashboard" : "/setup");
 
@@ -112,11 +122,21 @@ export default function Login() {
         navigate(destination());
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed");
+      const apiErr = err instanceof ApiError ? err : null;
+      if (apiErr?.status === 429) {
+        const secs = throttleSeconds(apiErr) ?? 60;
+        setLockedUntil(Date.now() + secs * 1000);
+        setError("Too many failed attempts. Try again shortly.");
+      } else {
+        setLockedUntil(null);
+        setError(err instanceof Error ? err.message : "Sign-in failed");
+      }
     } finally {
       setBusy(false);
     }
   };
+
+  const lockedMessage = () => (retryIn > 0 ? `Too many failed attempts. Try again in ${retryIn}s.` : error ?? "");
 
   return (
     <div className="relative flex min-h-screen overflow-hidden bg-phantix-950">
@@ -141,7 +161,7 @@ export default function Login() {
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.7, delay: 0.1 }} className="mx-auto">
                 <BrandLogo className="mx-auto h-20 w-20 drop-shadow-[0_0_40px_rgba(232,181,77,0.5)]" />
               </motion.div>
-              <h1 className="mt-5 font-display text-2xl font-bold text-white">Phantix Platform</h1>
+              <h1 className="mt-5 font-display text-2xl font-bold text-white">SecureGraph Platform</h1>
               <p className="mt-1.5 text-sm text-slate-400">
                 Company sign-in · <span className="font-mono text-xs">type=access</span>
               </p>
@@ -165,9 +185,9 @@ export default function Login() {
                         <input type="password" className="input !pl-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
                       </div>
                     </div>
-                    {error && <p className="text-sm text-severity-critical">{error}</p>}
-                    <button className="btn-primary w-full !py-3" disabled={busy}>
-                      {busy ? "Checking..." : "Continue"} <ArrowRight size={15} />
+                    {error && <p className="text-sm text-severity-critical">{lockedMessage()}</p>}
+                    <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0}>
+                      {busy ? "Checking..." : retryIn > 0 ? `Try again in ${retryIn}s` : "Continue"} {retryIn === 0 && <ArrowRight size={15} />}
                     </button>
                     <p className="text-center text-xs text-slate-500">
                       <Link to="/password-reset" className="text-gold-400 hover:text-gold-300">Forgot password?</Link>
@@ -199,11 +219,11 @@ export default function Login() {
                       placeholder="••••••"
                       autoFocus
                     />
-                    {error && <p className="text-sm text-severity-critical">{error}</p>}
-                    <button className="btn-primary w-full !py-3" disabled={busy || code.length !== 6}>
-                      {busy ? "Verifying..." : "Verify & sign in"}
+                    {error && <p className="text-sm text-severity-critical">{lockedMessage()}</p>}
+                    <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || code.length !== 6}>
+                      {busy ? "Verifying..." : retryIn > 0 ? `Try again in ${retryIn}s` : "Verify & sign in"}
                     </button>
-                    <button type="button" onClick={() => void resend()} disabled={resending} className="w-full text-center text-xs text-slate-500 hover:text-slate-300">
+                    <button type="button" onClick={() => void resend()} disabled={resending || retryIn > 0} className="w-full text-center text-xs text-slate-500 hover:text-slate-300">
                       {resending ? "Resending..." : "Resend code"}
                     </button>
                     <button type="button" onClick={() => setStage("password")} className="w-full text-center text-xs text-slate-500 hover:text-slate-300">
