@@ -155,7 +155,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen">
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-phantix-700/40 bg-phantix-950/85 backdrop-blur-xl">
+      <aside className="fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-phantix-700/40 bg-[rgb(var(--surface-sidebar))]">
         <div className="flex items-center gap-3 px-4 pb-3 pt-4">
           <img src="/logo-white.png" alt="SecureGraph" className="h-8 w-8 object-contain" />
           <div>
