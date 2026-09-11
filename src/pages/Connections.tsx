@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Database, Plus, ShieldCheck, AlertTriangle, Loader2, Trash2, Zap, Info } from "lucide-react";
-import { PageHeader, Card, StatusBadge, Modal, EmptyState } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE } from "@/lib/api";
 import { timeAgo, cx } from "@/lib/utils";
@@ -14,6 +14,7 @@ export default function Connections() {
   const [createOpen, setCreateOpen] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [drivers, setDrivers] = useState<{ db_type: string; live: boolean; note?: string }[]>([]);
+  const [optionHints, setOptionHints] = useState<any>(null);
 
   React.useEffect(() => {
     if (!DEMO_MODE) {
@@ -24,6 +25,9 @@ export default function Connections() {
           setDrivers(items.map((d: any) => ({ db_type: String(d.db_type ?? d.engine ?? ""), live: Boolean(d.live ?? d.live_probe ?? d.installed ?? false), note: d.note ? String(d.note) : undefined })));
         })
         .catch(() => { /* keep empty */ });
+      api.get<any>("/db-connections/connection-option-hints")
+        .then((r) => setOptionHints(r))
+        .catch(() => { /* optional reference */ });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -68,6 +72,27 @@ export default function Connections() {
           )}
         </p>
       </motion.div>
+
+      {optionHints?.by_db_type && (
+        <Card className="mb-5">
+          <CardHeader
+            title="Connection options"
+            subtitle="Engine-specific options beyond username / password"
+            action={<Info size={16} className="text-slate-400" />}
+          />
+          {optionHints.note && <p className="text-xs leading-5 text-slate-400">{optionHints.note}</p>}
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(optionHints.by_db_type).map(([engine, opts]) => (
+              <div key={engine} className="rounded-md border border-phantix-700/40 bg-phantix-950/40 p-2">
+                <p className="text-xs font-semibold capitalize text-slate-200">{engine}</p>
+                <p className="mt-1 break-words font-mono text-[10px] leading-4 text-slate-500">
+                  {Array.isArray(opts) ? opts.join(", ") : typeof opts === "object" ? Object.keys(opts as object).join(", ") : String(opts)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {state.connections.length === 0 ? (
         <Card>
