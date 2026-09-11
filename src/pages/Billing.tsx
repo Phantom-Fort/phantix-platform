@@ -276,14 +276,17 @@ export default function Billing() {
     ?? ["All 11 product engines", "Unlimited campaigns & scans", "Verified-only PDF/DOCX reports", "Dual-control + audit exports", "WA/Telegram alert channels", "AI-assisted remediation"];
 
   const enforcementOn = entitlements?.billing_enforcement?.enabled === true;
-  const freeFormats = new Set((entitlements?.billing_enforcement?.free_report_formats ?? ["json", "csv", "markdown", "md"]).map(f => f.toLowerCase()));
+  const ALL_REPORT_FORMATS = ["json", "csv", "markdown", "pdf", "docx", "xlsx", "html", "pptx"];
+  const freeFormats = new Set((entitlements?.billing_enforcement?.free_report_formats ?? ALL_REPORT_FORMATS).map(f => f.toLowerCase()));
   const reportFormats: { fmt: string; label: string; free: boolean }[] = [
     { fmt: "json", label: "JSON", free: freeFormats.has("json") },
     { fmt: "csv", label: "CSV", free: freeFormats.has("csv") },
     { fmt: "markdown", label: "Markdown", free: freeFormats.has("markdown") || freeFormats.has("md") },
-    { fmt: "pdf", label: "PDF", free: false },
-    { fmt: "docx", label: "DOCX", free: false },
-    { fmt: "xlsx", label: "XLSX", free: false },
+    { fmt: "pdf", label: "PDF", free: freeFormats.has("pdf") },
+    { fmt: "docx", label: "DOCX", free: freeFormats.has("docx") },
+    { fmt: "xlsx", label: "XLSX", free: freeFormats.has("xlsx") },
+    { fmt: "html", label: "HTML", free: freeFormats.has("html") },
+    { fmt: "pptx", label: "PPTX", free: freeFormats.has("pptx") },
   ];
   const canDownload = (fmt: string) => !enforcementOn || isPremium || freeFormats.has(fmt.toLowerCase());
 
@@ -442,21 +445,18 @@ export default function Billing() {
       {/* Report formats */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-5">
         <Card>
-          <CardHeader title="Report export formats" subtitle="Which report formats your plan can download" />
+          <CardHeader title="Report export formats" subtitle="All formats are free on every plan" />
           <div className="flex flex-wrap gap-2">
             {reportFormats.map((r) => (
               <span key={r.fmt} className={cx("chip text-xs", canDownload(r.fmt) ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/40 bg-slate-500/10 text-slate-500")}>
                 <Download size={11} className="inline mr-1" />
                 {r.label}
-                {!canDownload(r.fmt) && <span className="ml-1 opacity-70">(Starter+)</span>}
               </span>
             ))}
           </div>
-          {enforcementOn && !isPremium && (
-            <p className="mt-2 text-xs text-slate-500">
-              JSON, CSV and Markdown exports stay free. Board-ready PDF/DOCX/XLSX require a paid plan.
-            </p>
-          )}
+          <p className="mt-2 text-xs text-slate-500">
+            PDF, DOCX, XLSX, HTML, PPTX, JSON, CSV and Markdown are available on every plan, Free included — reporting is never the paid lever.
+          </p>
         </Card>
       </motion.div>
 

@@ -3,12 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
 import DualControlOverlay from "@/components/DualControlOverlay";
+import CookieConsent from "@/components/CookieConsent";
 import Login from "@/pages/auth/Login";
 import DeviceConfirm from "@/pages/DeviceConfirm";
 import Register from "@/pages/auth/Register";
 import Privacy from "@/pages/auth/Privacy";
 import Terms from "@/pages/auth/Terms";
 import AUP from "@/pages/auth/AUP";
+import Cookies from "@/pages/auth/Cookies";
 import PasswordResetRequest from "@/pages/auth/PasswordResetRequest";
 import PasswordResetComplete from "@/pages/auth/PasswordResetComplete";
 import SetupWizard from "@/pages/setup/SetupWizard";
@@ -68,6 +70,7 @@ export default function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/aup" element={<AUP />} />
+          <Route path="/cookies" element={<Cookies />} />
           <Route path="/password-reset" element={<PasswordResetRequest />} />
           <Route path="/reset-password" element={<PasswordResetComplete />} />
           <Route path="/setup" element={<SetupRoute />} />
@@ -95,6 +98,7 @@ export default function App() {
         </Routes>
         <ToastViewport />
         <DualControlOverlay />
+        <CookieConsent />
       </BrowserRouter>
     </StoreProvider>
   );
