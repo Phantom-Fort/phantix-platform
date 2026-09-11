@@ -12,7 +12,7 @@ import type { Organization, OrgContact } from "@/lib/types";
 import { timeAgo, cx } from "@/lib/utils";
 
 /** Allowed by PUT /organizations/me/preferred-services (API enum). */
-const serviceCatalog = [
+const DEFAULT_SERVICE_CATALOG = [
   { key: "penetration_testing", name: "Penetration testing", desc: "Engagement-style assessments & VAPT" },
   { key: "vulnerability_management", name: "Vulnerability management", desc: "Continuous vuln discovery & tracking" },
   { key: "red_team", name: "Red team", desc: "Adversary simulation" },
@@ -30,7 +30,7 @@ const serviceCatalog = [
   { key: "other", name: "Other", desc: "Custom or unlisted services" },
 ];
 
-const ALLOWED_SERVICES = new Set(serviceCatalog.map((s) => s.key));
+const ALLOWED_SERVICES = new Set(DEFAULT_SERVICE_CATALOG.map((s) => s.key));
 
 const industries = [
   "technology", "financial_services", "fintech", "healthcare", "government",
@@ -60,6 +60,27 @@ export default function Identity() {
       ALLOWED_SERVICES.has(k),
     ),
   );
+  const [catalogItems, setCatalogItems] = useState(DEFAULT_SERVICE_CATALOG);
+
+  // Preferred-services catalog from the backend (admin-editable experience configs),
+  // falling back to the static list when unavailable.
+  useEffect(() => {
+    void api
+      .get<any>("/organizations/services-catalog")
+      .then((rows) => {
+        const items = Array.isArray(rows) ? rows : [];
+        if (!items.length) return;
+        setCatalogItems(
+          items.map((r: any, i: number) => ({
+            key: String(r.key ?? r.service_key ?? `service_${i}`),
+            name: String(r.name ?? r.label ?? r.key ?? "Service"),
+            desc: String(r.description ?? r.desc ?? ""),
+          })),
+        );
+      })
+      .catch(() => undefined);
+  }, []);
+
   const [form, setForm] = useState<Organization>(state.org);
   const [busy, setBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
@@ -503,7 +524,7 @@ export default function Identity() {
             <Card className="mt-5">
               <CardHeader title="Preferred services" subtitle="Shapes navigation & modules" action={<Layers size={16} className="text-slate-500" />} />
               <div className="space-y-2">
-                {serviceCatalog.map((s) => {
+                {catalogItems.map((s) => {
                   const on = preferred.includes(s.key);
                   return (
                     <button
