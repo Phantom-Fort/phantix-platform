@@ -14,6 +14,10 @@ export interface AgentAction {
   intent?: string | null;
   params?: string | null;
   authorized?: boolean | null;
+  actor_user_id?: number | null;
+  actor_role?: string | null;
+  actor_name?: string | null;
+  actor_email?: string | null;
   context?: string[];
   status: string;
   error?: string | null;
