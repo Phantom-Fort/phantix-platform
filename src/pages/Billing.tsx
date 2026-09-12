@@ -79,6 +79,10 @@ export default function Billing() {
   const [payments, setPayments] = useState<PaymentInfo[]>([]);
   const [gatewayPublicKey, setGatewayPublicKey] = useState("");
   const [selectedCycle, setSelectedCycle] = useState<"monthly" | "yearly">("monthly");
+  // Which self-serve plan is being bought. The backend prices per plan, so the
+  // page must say which one — a single legacy price is what made "upgrade"
+  // impossible before.
+  const [selectedPlan, setSelectedPlan] = useState<"starter" | "growth">("starter");
   const [busy, setBusy] = useState(false);
   const [payingId, setPayingId] = useState<number | null>(null);
   const [showCoupon, setShowCoupon] = useState(false);
@@ -174,7 +178,11 @@ export default function Billing() {
     if (!(await requireDualControl("Subscribing requires a dual-control operate session."))) return;
     setBusy(true);
     try {
-      const res = await api.post<any>("/billing/subscribe", { billing_cycle: selectedCycle }, { dualControl: true });
+      const res = await api.post<any>(
+        "/billing/subscribe",
+        { billing_cycle: selectedCycle, plan: selectedPlan },
+        { dualControl: true },
+      );
       const paymentId = res?.payment?.id;
       if (paymentId) {
         setPayingId(paymentId);
@@ -259,13 +267,18 @@ export default function Billing() {
   const expiringSoon = isPremium && daysUntilEnd !== null && daysUntilEnd <= 5 && daysUntilEnd >= 0;
   const isCoupon = subscription?.grant_source === "coupon";
 
-  const listPrice = starterPlan?.list_price_ngn ?? pricing?.monthly_list_price_ngn ?? 9900;
-  const yearlyFromPlans = starterPlan?.list_price_ngn != null && starterPlan.list_price_ngn > 0
-    ? starterPlan.list_price_ngn * 10
-    : pricing?.yearly_price_ngn;
-  const displayMonthly = pricing?.first_month_price_ngn ?? listPrice;
-  const displaySubsequent = pricing?.subsequent_monthly_price_ngn ?? listPrice;
-  const displayYearly = yearlyFromPlans ?? pricing?.yearly_price_ngn ?? listPrice * 10;
+  // Only self-serve paid plans are purchasable here: Free needs no payment and
+  // Enterprise is a quote. Everything below prices the *selected* plan.
+  const purchasablePlans = plans.filter(
+    (p) => (p.key === "starter" || p.key === "growth") && (p.list_price_ngn ?? 0) > 0,
+  );
+  const chosenPlan = plans.find((p) => p.key === selectedPlan);
+  const isCurrentPlan = isPremium && planKey === selectedPlan;
+
+  const listPrice = chosenPlan?.list_price_ngn ?? starterPlan?.list_price_ngn ?? pricing?.monthly_list_price_ngn ?? 9900;
+  const displayMonthly = selectedPlan === "starter" ? (pricing?.first_month_price_ngn ?? listPrice) : listPrice;
+  const displaySubsequent = selectedPlan === "starter" ? (pricing?.subsequent_monthly_price_ngn ?? listPrice) : listPrice;
+  const displayYearly = listPrice * 10;
   const discountPct = pricing?.first_month_discount_percent ?? 50;
 
   const planLabel = activePlan?.name
@@ -349,6 +362,26 @@ export default function Billing() {
           <Card>
             <CardHeader title={isPremium ? "Your plan" : "Choose a plan"} subtitle={`${entitlements?.billing_enforcement?.enabled ? "Billing gates active" : "Dev mode — gates off"}${starterPlan ? ` · ${starterPlan.name}` : ""}`} />
             <div className="space-y-4">
+              {/* Plan — priced by the backend per plan, not by one legacy number. */}
+              <div className="flex gap-2">
+                {(purchasablePlans.length ? purchasablePlans : [{ key: "starter", name: "Starter", list_price_ngn: null }, { key: "growth", name: "Growth", list_price_ngn: null }]).map((p) => (
+                  <button
+                    key={p.key}
+                    onClick={() => setSelectedPlan(p.key as "starter" | "growth")}
+                    className={cx(
+                      "flex-1 rounded-md border py-3 text-sm font-semibold transition-colors",
+                      selectedPlan === p.key ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60",
+                    )}
+                  >
+                    {p.name}
+                    {p.list_price_ngn != null && p.list_price_ngn > 0 && (
+                      <span className="ml-1.5 text-[11px] font-normal text-slate-500">
+                        {formatNaira(p.list_price_ngn)}/mo
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
               <div className="flex gap-2 mb-4">
                 {(["monthly", "yearly"] as const).map(c => <button key={c} onClick={() => setSelectedCycle(c)} className={cx("flex-1 rounded-md border py-3 text-sm font-semibold transition-colors", selectedCycle === c ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60")}>{c === "monthly" ? "Monthly" : "Yearly"}</button>)}
               </div>
@@ -359,7 +392,13 @@ export default function Billing() {
                   {selectedCycle === "yearly" && listPrice > 0 && <p className="mt-1 text-xs text-emerald-400">Save ~{Math.round((1 - displayYearly / (listPrice * 12)) * 100)}% vs monthly</p>}
                 </div>
               )}
-              {!isPremium && <button onClick={handleSubscribe} disabled={busy} className="btn-primary w-full !py-3">{busy ? <Spinner className="h-4 w-4" /> : <><CreditCard size={15} /> Subscribe</>}</button>}
+              {isCurrentPlan ? (
+                <button disabled className="btn-ghost w-full !py-3 opacity-60">You are on {chosenPlan?.name ?? selectedPlan}</button>
+              ) : (
+                <button onClick={handleSubscribe} disabled={busy} className="btn-primary w-full !py-3">
+                  {busy ? <Spinner className="h-4 w-4" /> : <><CreditCard size={15} /> {isPremium ? `Switch to ${chosenPlan?.name ?? selectedPlan}` : `Subscribe to ${chosenPlan?.name ?? selectedPlan}`}</>}
+                </button>
+              )}
               {payingId && <button onClick={() => handleVerify(payingId)} className="btn-secondary w-full !py-2 text-sm"><CheckCircle2 size={14} /> Verify Payment #{payingId}</button>}
               {isPremium && subscription?.grant_source === "payment" && <button onClick={() => setShowCancelConfirm(true)} className="btn-ghost w-full text-sm text-severity-critical">Cancel auto-renew</button>}
             </div>
