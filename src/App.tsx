@@ -27,6 +27,7 @@ import AgiSettings from "@/pages/AgiSettings";
 import { AGI_ENABLED } from "@/lib/api";
 import Support from "@/pages/Support";
 import Audit from "@/pages/Audit";
+import AgentActivity from "@/pages/AgentActivity";
 import Alerts from "@/pages/Alerts";
 import Integrations from "@/pages/Integrations";
 import Sandbox from "@/pages/Sandbox";
@@ -89,6 +90,7 @@ export default function App() {
             {AGI_ENABLED && <Route path="/agi" element={<RequireManagement><AgiSettings /></RequireManagement>} />}
             <Route path="/support" element={<RequireManagement><Support /></RequireManagement>} />
             <Route path="/audit" element={<RequireManagement><Audit /></RequireManagement>} />
+            <Route path="/agent-activity" element={<RequireManagement><AgentActivity /></RequireManagement>} />
             <Route path="/alerts" element={<RequireManagement><Alerts /></RequireManagement>} />
             <Route path="/integrations" element={<RequireManagement><Integrations /></RequireManagement>} />
             <Route path="/danger-zone" element={<RequireManagement><DangerZone /></RequireManagement>} />

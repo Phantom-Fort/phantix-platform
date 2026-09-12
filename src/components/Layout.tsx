@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
   RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
-  AlertTriangle,
+  AlertTriangle, Activity,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
@@ -45,6 +45,7 @@ const baseNavSections: { label: string; items: { to: string; label: string; icon
       ...(AGI_ENABLED ? [{ to: "/agi", label: "Autonomous Agent", icon: <Radar size={17} /> }] : []),
       { to: "/alerts", label: "Alerts", icon: <BellRing size={17} /> },
       { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
+      { to: "/agent-activity", label: "Agent activity", icon: <Activity size={17} /> },
     ],
   },
   {
