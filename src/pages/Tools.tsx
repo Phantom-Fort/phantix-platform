@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Wrench, CheckCircle2, Plus, Lock } from "lucide-react";
-import { PageHeader, Card, StatusBadge } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatusBadge, EmptyState, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
-import { cx } from "@/lib/utils";
+import { api, DEMO_MODE } from "@/lib/api";
+import { cx, timeAgo } from "@/lib/utils";
 
 function toolLabel(t: { tier?: string; pricing_model?: string }): string {
   const tier = t.tier ?? (t.pricing_model === "paid" ? "addon_subscription" : "free");
@@ -14,6 +15,18 @@ function toolLabel(t: { tier?: string; pricing_model?: string }): string {
 
 export default function Tools() {
   const { state, toggleTool, toast } = useStore();
+  const [subs, setSubs] = useState<any[]>([]);
+  const [subsLoading, setSubsLoading] = useState(!DEMO_MODE);
+
+  // Paid tool subscriptions for this org (GET /tools/subscriptions).
+  useEffect(() => {
+    if (DEMO_MODE) return;
+    void api
+      .get<any[]>("/tools/subscriptions")
+      .then((rows) => setSubs(Array.isArray(rows) ? rows : []))
+      .catch(() => setSubs([]))
+      .finally(() => setSubsLoading(false));
+  }, []);
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -21,6 +34,38 @@ export default function Tools() {
         title="Tool catalog"
         description="Scanner tooling subscriptions --- separate from platform membership. Staff curate the catalog; you subscribe per company."
       />
+
+      <div className="mb-5">
+        <Card>
+          <CardHeader title="Your paid subscriptions" subtitle="Active tool add-ons and their status" action={<CheckCircle2 size={16} className="text-emerald-400" />} />
+          {subsLoading ? (
+            <CardListSkeleton rows={3} />
+          ) : subs.length === 0 ? (
+            <EmptyState icon={<Wrench size={20} />} title="No paid subscriptions" body="Subscribe to a paid add-on below to unlock its scanner or console." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-phantix-700/40">
+                    <th className="th">Tool</th>
+                    <th className="th">Status</th>
+                    <th className="th">Since</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subs.map((s: any) => (
+                    <tr key={s.id} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
+                      <td className="td text-sm text-slate-200">{s.tool_name || s.tool_key || `Tool #${s.tool_id}`}</td>
+                      <td className="td"><span className="chip text-[10px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">{s.status || "active"}</span></td>
+                      <td className="td text-xs text-slate-500">{s.created_at ? timeAgo(s.created_at) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {state.tools.map((t, i) => {
           const locked = !t.subscribed && t.eligible === false;

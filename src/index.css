@@ -65,13 +65,59 @@
 
     /* Border-first surface tokens (Xalgorix-style). Cards read as flat
        surfaces outlined by their 1px border instead of tinted/glassy fills. */
-    --surface: 0 0 0;
-    --surface-card: 10 10 10;
-    --surface-inset: 9 9 11;
+    --surface: 10 10 10;
+    --surface-card: 18 18 20;
+    --surface-inset: 14 14 16;
+    --surface-sidebar: 0 0 0;
     --border-subtle: 63 63 70;
     --border-strong: 82 82 91;
     --foreground: #e4e4e7;
     --muted-foreground: #a1a1aa;
+  }
+
+  /* Auth showcase panel (login screen) is a fixed dark hero, by design —
+     every scene inside it (globe, sonar, incident timeline, etc.) is styled
+     assuming a dark backdrop. Re-declaring the dark palette here, scoped to a
+     class instead of :root, lets it stay dark even while the rest of the app
+     is on light theme, since CSS variables only flip at :root[data-theme]. */
+  .auth-showcase-dark {
+    --phantix-950: 0 0 0;
+    --phantix-900: 10 10 10;
+    --phantix-850: 16 16 16;
+    --phantix-800: 24 24 27;
+    --phantix-700: 63 63 70;
+    --phantix-600: 82 82 91;
+    --phantix-500: 82 82 91;
+    --phantix-400: 113 113 122;
+    --phantix-300: 161 161 170;
+    --phantix-200: 212 212 216;
+    --phantix-100: 228 228 231;
+    --gold-300: 243 205 126;
+    --gold-400: 232 181 77;
+    --gold-500: 212 162 78;
+    --gold-600: 185 134 47;
+    --slate-50: 250 250 250;
+    --slate-100: 244 244 245;
+    --slate-200: 228 228 231;
+    --slate-300: 212 212 216;
+    --slate-400: 161 161 170;
+    --slate-500: 113 113 122;
+    --slate-600: 82 82 91;
+    --slate-700: 63 63 70;
+    --slate-800: 39 39 42;
+    --slate-900: 24 24 27;
+    --slate-950: 9 9 11;
+    --surface: 10 10 10;
+    --surface-card: 18 18 20;
+    --surface-inset: 14 14 16;
+    --surface-sidebar: 0 0 0;
+    --border-subtle: 63 63 70;
+    --border-strong: 82 82 91;
+    --foreground: #e4e4e7;
+    --muted-foreground: #a1a1aa;
+    --color-white: 255 255 255;
+    --color-black: 0 0 0;
+    color-scheme: dark;
   }
 
   :root[data-theme="light"] {
@@ -121,6 +167,7 @@
     --surface: 255 255 255;
     --surface-card: 255 255 255;
     --surface-inset: 250 250 250;
+    --surface-sidebar: 244 244 245;
     --border-subtle: 212 212 216;
     --border-strong: 161 161 170;
     --foreground: #18181b;
@@ -227,12 +274,13 @@
   }
 
   body {
-    @apply bg-phantix-950 text-slate-200 font-sans antialiased;
+    @apply text-slate-200 font-sans antialiased;
+    background-color: rgb(var(--surface));
     font-size: 1rem;
     line-height: 1.6;
     letter-spacing: 0.01em;
     text-rendering: optimizeLegibility;
-    /* Flat true-black workspace — no radial navy/gold glow. */
+    /* Flat dark workspace — no radial navy/gold glow. */
     background-image: none;
     transition: color 0.3s ease;
   }

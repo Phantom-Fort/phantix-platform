@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, CheckCircle2, Loader2, Bot, ToggleLeft, ToggleRight } from "lucide-react";
-import { PageHeader, Card, CardHeader } from "@/components/ui";
+import { Sparkles, CheckCircle2, Loader2, Bot, ToggleLeft, ToggleRight, ShieldCheck, GitPullRequest } from "lucide-react";
+import { PageHeader, Card, CardHeader, Modal } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
@@ -15,6 +15,9 @@ type AiStatus = {
   providers: { id: string; configured: boolean }[];
   monthly_tokens: number;
   monthly_cost_usd: number;
+  free_models_enabled: boolean;
+  continuous_pr_enabled: boolean;
+  free_plan: boolean;
 };
 
 const demoAi: AiStatus = {
@@ -30,6 +33,9 @@ const demoAi: AiStatus = {
   ],
   monthly_tokens: 128_400,
   monthly_cost_usd: 6.42,
+  free_models_enabled: false,
+  continuous_pr_enabled: false,
+  free_plan: true,
 };
 
 export default function AiSettings() {
@@ -48,9 +54,10 @@ export default function AiSettings() {
           if (!cancelled) setAi(demoAi);
           return;
         }
-        const [settings, usage] = await Promise.all([
+        const [settings, usage, models] = await Promise.all([
           api.get<Record<string, unknown>>("/ai/settings").catch(() => null),
           api.get<Record<string, unknown>>("/ai/usage").catch(() => null),
+          api.get<Record<string, unknown>>("/ai/models").catch(() => null),
         ]);
         if (cancelled) return;
         const providersRaw = Array.isArray(settings?.providers)
@@ -73,6 +80,9 @@ export default function AiSettings() {
             : enabledProviders.map((id) => ({ id, configured: true })),
           monthly_tokens: Number(usage?.monthly_tokens ?? settings?.monthly_tokens ?? 0),
           monthly_cost_usd: Number(usage?.monthly_cost_usd ?? settings?.monthly_cost_usd ?? 0),
+          free_models_enabled: Boolean(settings?.free_models_enabled),
+          continuous_pr_enabled: Boolean(settings?.continuous_pr_enabled),
+          free_plan: Boolean(models?.free_plan),
         });
       } finally {
         if (!cancelled) setLoading(false);
@@ -110,6 +120,73 @@ export default function AiSettings() {
       toast("error", "Update failed", e instanceof Error ? e.message : "");
     } finally {
       setModeSaving(false);
+    }
+  };
+
+  // ── Free open-source models (org-admin opt-in) ──────────────────────────────
+  type FreeAgreement = {
+    title: string;
+    summary: string;
+    acceptance_required_copy: string;
+    sections: { id: string; title: string; body: string }[];
+  };
+  const [freeAgreement, setFreeAgreement] = useState<FreeAgreement | null>(null);
+  const [freeModalOpen, setFreeModalOpen] = useState(false);
+  const [freeSaving, setFreeSaving] = useState(false);
+
+  const openFreeAgreement = async () => {
+    try {
+      setFreeAgreement(await api.get<FreeAgreement>("/ai/free-model-agreement"));
+      setFreeModalOpen(true);
+    } catch (e) {
+      toast("error", "Could not load the agreement", e instanceof Error ? e.message : "");
+    }
+  };
+
+  const enableFreeModels = async () => {
+    if (!(await requireDualControl("Enabling free open-source models requires a dual-control operate session."))) return;
+    setFreeSaving(true);
+    try {
+      if (!DEMO_MODE) {
+        await api.post("/ai/free-model-agreement/accept", {});
+        await api.put("/ai/settings", { free_models_enabled: true }, { dualControl: true });
+      }
+      setAi((a) => (a ? { ...a, free_models_enabled: true } : a));
+      setFreeModalOpen(false);
+      toast("success", "Free models enabled", "Operators can now choose a free open-source model in the Command Centre.");
+    } catch (e) {
+      toast("error", "Could not enable free models", e instanceof Error ? e.message : "");
+    } finally {
+      setFreeSaving(false);
+    }
+  };
+
+  const [cpSaving, setCpSaving] = useState(false);
+  const toggleContinuousPr = async (next: boolean) => {
+    if (!(await requireDualControl("Enabling Continuous PR requires a dual-control operate session."))) return;
+    setCpSaving(true);
+    try {
+      if (!DEMO_MODE) await api.put("/ai/settings", { continuous_pr_enabled: next }, { dualControl: true });
+      setAi((a) => (a ? { ...a, continuous_pr_enabled: next } : a));
+      toast("success", next ? "Continuous PR enabled" : "Continuous PR disabled", next ? "SecureGraph can open app-signed draft PRs for your developers to merge." : undefined);
+    } catch (e) {
+      toast("error", "Update failed", e instanceof Error ? e.message : "");
+    } finally {
+      setCpSaving(false);
+    }
+  };
+
+  const disableFreeModels = async () => {
+    if (!(await requireDualControl("Disabling free open-source models requires a dual-control operate session."))) return;
+    setFreeSaving(true);
+    try {
+      if (!DEMO_MODE) await api.put("/ai/settings", { free_models_enabled: false }, { dualControl: true });
+      setAi((a) => (a ? { ...a, free_models_enabled: false } : a));
+      toast("success", "Free models disabled");
+    } catch (e) {
+      toast("error", "Could not disable free models", e instanceof Error ? e.message : "");
+    } finally {
+      setFreeSaving(false);
     }
   };
 
@@ -227,8 +304,97 @@ export default function AiSettings() {
               </button>
             </div>
           </Card>
+
+          {/* Free open-source models — org-admin opt-in before operators can use them */}
+          <Card className="border-emerald-400/25">
+            <CardHeader title="Free open-source models" subtitle="Lower-cost fallback for free-plan organizations" action={<ShieldCheck size={16} className="text-emerald-400" />} />
+            {!ai.free_plan ? (
+              <p className="text-xs leading-5 text-slate-500">
+                Available on the free plan only. Your organization is on a paid plan, so direct-contract models are used.
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-200">{ai.free_models_enabled ? "Enabled" : "Not enabled"}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                      {ai.free_models_enabled
+                        ? "Operators can choose a free open-source model. These are less capable and prompts are processed by a third-party pool."
+                        : "Free, less capable open-source models (Nemotron, MiMo, Llama, Qwen). Opt in to let operators use them when credits run out."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => (ai.free_models_enabled ? void disableFreeModels() : void openFreeAgreement())}
+                    disabled={freeSaving}
+                    className="shrink-0"
+                    aria-label="Toggle free open-source models"
+                  >
+                    {freeSaving ? <Loader2 size={22} className="animate-spin text-emerald-400" /> : ai.free_models_enabled ? <ToggleRight size={26} className="text-emerald-400" /> : <ToggleLeft size={26} className="text-slate-500" />}
+                  </button>
+                </div>
+                {!ai.free_models_enabled && (
+                  <p className="mt-3 text-[11px] leading-4 text-slate-500">
+                    Enabling requires accepting the free-tier agreement and a dual-control session.
+                  </p>
+                )}
+              </>
+            )}
+          </Card>
+
+          {/* Continuous PR — org opt-in; opens app-signed draft PRs */}
+          <Card className="border-gold-400/25">
+            <CardHeader title="Continuous PR" subtitle="Ephemeral clone → app-signed commit → draft PR" action={<GitPullRequest size={16} className="text-gold-400" />} />
+            <div className="flex items-center justify-between gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-200">{ai.continuous_pr_enabled ? "Enabled" : "Disabled"}</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                  {ai.continuous_pr_enabled
+                    ? "SecureGraph can apply AutoFix patches and open a draft PR for your developers to review and merge. It never merges automatically."
+                    : "When enabled, SecureGraph opens app-signed AutoFix PRs on your repositories for developers to merge."}
+                </p>
+              </div>
+              <button onClick={() => void toggleContinuousPr(!ai.continuous_pr_enabled)} disabled={cpSaving} className="shrink-0" aria-label="Toggle Continuous PR">
+                {cpSaving ? <Loader2 size={22} className="animate-spin text-gold-400" /> : ai.continuous_pr_enabled ? <ToggleRight size={26} className="text-emerald-400" /> : <ToggleLeft size={26} className="text-slate-500" />}
+              </button>
+            </div>
+            <p className="mt-3 text-[11px] leading-4 text-slate-500">
+              Requires the GitHub App write permissions (requested on demand) and a deployment signing key. Every PR is parked for an authorizer before it runs, and only your developers merge.
+            </p>
+          </Card>
         </motion.div>
       </div>
+
+      <Modal
+        open={freeModalOpen}
+        onClose={() => !freeSaving && setFreeModalOpen(false)}
+        title={freeAgreement?.title ?? "Free-tier open-source models agreement"}
+        wide
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs leading-5 text-amber-200">
+            <ShieldCheck size={14} className="mt-0.5 shrink-0" />
+            <p>{freeAgreement?.summary}</p>
+          </div>
+          <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
+            {(freeAgreement?.sections ?? []).map((s) => (
+              <div key={s.id}>
+                <p className="text-xs font-semibold text-slate-200">{s.title}</p>
+                <p className="mt-0.5 text-[11px] leading-5 text-slate-400">{s.body}</p>
+              </div>
+            ))}
+          </div>
+          <p className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-2 text-[11px] leading-4 text-slate-300">
+            {freeAgreement?.acceptance_required_copy}
+          </p>
+          <div className="flex justify-end gap-3">
+            <button className="btn-secondary" disabled={freeSaving} onClick={() => setFreeModalOpen(false)}>Cancel</button>
+            <button className="btn-primary" disabled={freeSaving} onClick={() => void enableFreeModels()}>
+              {freeSaving ? <Loader2 size={14} className="mr-1.5 inline animate-spin" /> : <CheckCircle2 size={14} className="mr-1.5 inline" />}
+              I agree — enable free models
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

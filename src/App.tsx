@@ -3,12 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
 import DualControlOverlay from "@/components/DualControlOverlay";
+import CookieConsent from "@/components/CookieConsent";
 import Login from "@/pages/auth/Login";
 import DeviceConfirm from "@/pages/DeviceConfirm";
 import Register from "@/pages/auth/Register";
 import Privacy from "@/pages/auth/Privacy";
 import Terms from "@/pages/auth/Terms";
 import AUP from "@/pages/auth/AUP";
+import Cookies from "@/pages/auth/Cookies";
 import PasswordResetRequest from "@/pages/auth/PasswordResetRequest";
 import PasswordResetComplete from "@/pages/auth/PasswordResetComplete";
 import SetupWizard from "@/pages/setup/SetupWizard";
@@ -25,6 +27,7 @@ import AgiSettings from "@/pages/AgiSettings";
 import { AGI_ENABLED } from "@/lib/api";
 import Support from "@/pages/Support";
 import Audit from "@/pages/Audit";
+import AgentActivity from "@/pages/AgentActivity";
 import Alerts from "@/pages/Alerts";
 import Integrations from "@/pages/Integrations";
 import Sandbox from "@/pages/Sandbox";
@@ -68,6 +71,7 @@ export default function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/aup" element={<AUP />} />
+          <Route path="/cookies" element={<Cookies />} />
           <Route path="/password-reset" element={<PasswordResetRequest />} />
           <Route path="/reset-password" element={<PasswordResetComplete />} />
           <Route path="/setup" element={<SetupRoute />} />
@@ -86,6 +90,7 @@ export default function App() {
             {AGI_ENABLED && <Route path="/agi" element={<RequireManagement><AgiSettings /></RequireManagement>} />}
             <Route path="/support" element={<RequireManagement><Support /></RequireManagement>} />
             <Route path="/audit" element={<RequireManagement><Audit /></RequireManagement>} />
+            <Route path="/agent-activity" element={<RequireManagement><AgentActivity /></RequireManagement>} />
             <Route path="/alerts" element={<RequireManagement><Alerts /></RequireManagement>} />
             <Route path="/integrations" element={<RequireManagement><Integrations /></RequireManagement>} />
             <Route path="/danger-zone" element={<RequireManagement><DangerZone /></RequireManagement>} />
@@ -95,6 +100,7 @@ export default function App() {
         </Routes>
         <ToastViewport />
         <DualControlOverlay />
+        <CookieConsent />
       </BrowserRouter>
     </StoreProvider>
   );

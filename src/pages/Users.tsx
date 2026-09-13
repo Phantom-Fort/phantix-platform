@@ -5,7 +5,7 @@ import {
   Users, UserPlus, ShieldCheck, Link2, KeyRound, ArrowRight, ArrowLeft,
   CheckCircle2, Copy, Unlock, Smartphone, AlertTriangle, Info, RefreshCw, Loader2,
 } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState, Spinner } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState, Spinner, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { timeAgo, maskEmail, cx } from "@/lib/utils";
@@ -16,6 +16,24 @@ export default function People() {
   const [searchParams] = useSearchParams();
   const [addOpen, setAddOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
+  const [rbacRoles, setRbacRoles] = useState<any[]>([]);
+  const [myPerms, setMyPerms] = useState<any>(null);
+  const [rbacLoading, setRbacLoading] = useState(!DEMO_MODE);
+
+  // Per-org RBAC catalog + the current principal's permissions (GET /org-users/roles,
+  // GET /org-users/me/permissions).
+  useEffect(() => {
+    void (async () => {
+      if (DEMO_MODE) return;
+      const [rolesRes, permsRes] = await Promise.all([
+        api.get<any>("/org-users/roles").catch(() => null),
+        api.get<any>("/org-users/me/permissions").catch(() => null),
+      ]);
+      setRbacRoles(Array.isArray(rolesRes?.roles) ? rolesRes.roles : []);
+      setMyPerms(permsRes);
+      setRbacLoading(false);
+    })();
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("unlock") === "1") {
@@ -106,6 +124,44 @@ export default function People() {
               </div>
             </motion.div>
           )}
+          {/* Roles & permissions */}
+          {rbacLoading && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+              <SkeletonCard />
+            </motion.div>
+          )}
+          {!rbacLoading && rbacRoles.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+              <Card>
+                <CardHeader
+                  title="Roles & permissions"
+                  subtitle="Assignable per-org roles, and what your session can do"
+                  action={<ShieldCheck size={16} className="text-gold-400" />}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {rbacRoles.map((r: any, i: number) => (
+                    <span
+                      key={r.key || r.role || r.id || i}
+                      className="chip text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300"
+                      title={Array.isArray(r.permissions) ? r.permissions.join(", ") : undefined}
+                    >
+                      {r.label || r.name || r.key || r.role || `role ${i + 1}`}
+                    </span>
+                  ))}
+                </div>
+                {myPerms && (
+                  <p className="mt-3 text-[11px] text-slate-500">
+                    Your session role <strong className="text-slate-300">{myPerms.role || "—"}</strong> ·{" "}
+                    {myPerms.permissions?.length ?? 0} permissions
+                    {myPerms.is_initiator ? " · initiator" : ""}
+                    {myPerms.is_authorizer ? " · authorizer" : ""}
+                    {myPerms.can_operate ? " · can operate" : ""}
+                  </p>
+                )}
+              </Card>
+            </motion.div>
+          )}
+
           {/* Assignment card */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
             <Card className="border-gold-400/25">
@@ -116,7 +172,7 @@ export default function People() {
                   { slot: "Authorizer", user: authorizer, desc: "Approves pending actions and risk treatments" },
                 ].map((s) => (
                   <div key={s.slot} className="flex items-center gap-4 rounded-2xl border border-phantix-700/40 bg-phantix-950/50 p-4">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 text-gold-300 font-display text-base font-bold text-phantix-950">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 text-gold-300 font-display text-base font-bold">
                       {s.user?.full_name.slice(0, 1) ?? "?"}
                     </span>
                     <div className="min-w-0 flex-1">

@@ -1,7 +1,7 @@
 // ── Integrations Hub data layer (platform-app) ───────────────────────────────
 // Mirrors app/engines/control_plane/integrations (catalog + hub + sso/scim).
 // All endpoints are snake_case; paths are relative to /api/v1.
-import { api } from "./api";
+import { api, DEMO_MODE } from "./api";
 
 export interface HubConnector {
   connector_id: string;
@@ -70,6 +70,7 @@ export function splitConfigAndSecrets(raw: Record<string, string>): {
 }
 
 export async function loadHubCatalog(category?: string): Promise<HubConnector[]> {
+  if (DEMO_MODE) return [];
   const qs = category ? `?category=${encodeURIComponent(category)}` : "";
   const raw = await api.get<{ items?: HubConnector[]; total?: number } | HubConnector[]>(
     `/integrations/catalog${qs}`,
@@ -78,6 +79,7 @@ export async function loadHubCatalog(category?: string): Promise<HubConnector[]>
 }
 
 export async function loadHubInstallations(connectorId?: string): Promise<HubInstallation[]> {
+  if (DEMO_MODE) return [];
   const qs = connectorId ? `?connector_id=${encodeURIComponent(connectorId)}` : "";
   const raw = await api.get<{ items?: HubInstallation[]; total?: number } | HubInstallation[]>(
     `/integrations/installations${qs}`,

@@ -1,12 +1,25 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, Info } from "lucide-react";
+import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, Info, Lock, Sparkle } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { formatNaira, timeAgo, cx } from "@/lib/utils";
+import { UPSELL_FEATURES, upsellFor, upsellPlanLabel } from "@/lib/upsell";
 
-interface Entitlements { billing_enforcement: { enabled: boolean; mode: string; environment: string; free_asset_cap?: number; free_org_user_cap?: number; free_report_formats?: string[] }; premium_active: boolean; full_access_coupon: any; subscription: any; packs: any[]; message: string; }
+interface Entitlements {
+  billing_enforcement: { enabled: boolean; mode: string; environment: string; free_asset_cap?: number; free_org_user_cap?: number; free_report_formats?: string[] };
+  premium_active: boolean;
+  full_access_coupon: any;
+  subscription: any;
+  packs: any[];
+  message: string;
+  // Headroom left on the Free plan — same GET /billing/entitlements response
+  // the Command Centre app used to read these two fields from.
+  assets_remaining_free?: number | null;
+  org_users_remaining_free?: number | null;
+}
 interface PricingInfo { monthly_list_price_ngn: number; first_month_price_ngn: number; subsequent_monthly_price_ngn: number; yearly_price_ngn: number; first_month_discount_percent: number; }
 interface SubscriptionInfo { id: number; status: string; billing_cycle: string; grant_source: string; current_period_start: string; current_period_end: string; plan?: string; }
 interface PaymentInfo { id: number; reference: string; amount_due_ngn: number; status: string; purpose: string; discount_percent: number; created_at: string; }
@@ -70,6 +83,13 @@ function normalizePlans(raw: unknown): PlanInfo[] {
 
 export default function Billing() {
   const { state, toast, session, requireDualControl } = useStore();
+  const [params] = useSearchParams();
+  // Every upgrade CTA elsewhere in the product (Command Centre included) links
+  // here with ?feature=<key> so the page can say "this is what you were
+  // trying to do" instead of a generic pitch.
+  const featureKey = params.get("feature");
+  const upsellReason = params.get("reason");
+  const up = upsellFor(featureKey);
   const [loading, setLoading] = useState(true);
   const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
   const [pricing, setPricing] = useState<PricingInfo | null>(null);
@@ -79,6 +99,10 @@ export default function Billing() {
   const [payments, setPayments] = useState<PaymentInfo[]>([]);
   const [gatewayPublicKey, setGatewayPublicKey] = useState("");
   const [selectedCycle, setSelectedCycle] = useState<"monthly" | "yearly">("monthly");
+  // Which self-serve plan is being bought. The backend prices per plan, so the
+  // page must say which one — a single legacy price is what made "upgrade"
+  // impossible before.
+  const [selectedPlan, setSelectedPlan] = useState<"starter" | "growth">("starter");
   const [busy, setBusy] = useState(false);
   const [payingId, setPayingId] = useState<number | null>(null);
   const [showCoupon, setShowCoupon] = useState(false);
@@ -174,7 +198,11 @@ export default function Billing() {
     if (!(await requireDualControl("Subscribing requires a dual-control operate session."))) return;
     setBusy(true);
     try {
-      const res = await api.post<any>("/billing/subscribe", { billing_cycle: selectedCycle }, { dualControl: true });
+      const res = await api.post<any>(
+        "/billing/subscribe",
+        { billing_cycle: selectedCycle, plan: selectedPlan },
+        { dualControl: true },
+      );
       const paymentId = res?.payment?.id;
       if (paymentId) {
         setPayingId(paymentId);
@@ -259,13 +287,18 @@ export default function Billing() {
   const expiringSoon = isPremium && daysUntilEnd !== null && daysUntilEnd <= 5 && daysUntilEnd >= 0;
   const isCoupon = subscription?.grant_source === "coupon";
 
-  const listPrice = starterPlan?.list_price_ngn ?? pricing?.monthly_list_price_ngn ?? 9900;
-  const yearlyFromPlans = starterPlan?.list_price_ngn != null && starterPlan.list_price_ngn > 0
-    ? starterPlan.list_price_ngn * 10
-    : pricing?.yearly_price_ngn;
-  const displayMonthly = pricing?.first_month_price_ngn ?? listPrice;
-  const displaySubsequent = pricing?.subsequent_monthly_price_ngn ?? listPrice;
-  const displayYearly = yearlyFromPlans ?? pricing?.yearly_price_ngn ?? listPrice * 10;
+  // Only self-serve paid plans are purchasable here: Free needs no payment and
+  // Enterprise is a quote. Everything below prices the *selected* plan.
+  const purchasablePlans = plans.filter(
+    (p) => (p.key === "starter" || p.key === "growth") && (p.list_price_ngn ?? 0) > 0,
+  );
+  const chosenPlan = plans.find((p) => p.key === selectedPlan);
+  const isCurrentPlan = isPremium && planKey === selectedPlan;
+
+  const listPrice = chosenPlan?.list_price_ngn ?? starterPlan?.list_price_ngn ?? pricing?.monthly_list_price_ngn ?? 9900;
+  const displayMonthly = selectedPlan === "starter" ? (pricing?.first_month_price_ngn ?? listPrice) : listPrice;
+  const displaySubsequent = selectedPlan === "starter" ? (pricing?.subsequent_monthly_price_ngn ?? listPrice) : listPrice;
+  const displayYearly = listPrice * 10;
   const discountPct = pricing?.first_month_discount_percent ?? 50;
 
   const planLabel = activePlan?.name
@@ -276,14 +309,17 @@ export default function Billing() {
     ?? ["All 11 product engines", "Unlimited campaigns & scans", "Verified-only PDF/DOCX reports", "Dual-control + audit exports", "WA/Telegram alert channels", "AI-assisted remediation"];
 
   const enforcementOn = entitlements?.billing_enforcement?.enabled === true;
-  const freeFormats = new Set((entitlements?.billing_enforcement?.free_report_formats ?? ["json", "csv", "markdown", "md"]).map(f => f.toLowerCase()));
+  const ALL_REPORT_FORMATS = ["json", "csv", "markdown", "pdf", "docx", "xlsx", "html", "pptx"];
+  const freeFormats = new Set((entitlements?.billing_enforcement?.free_report_formats ?? ALL_REPORT_FORMATS).map(f => f.toLowerCase()));
   const reportFormats: { fmt: string; label: string; free: boolean }[] = [
     { fmt: "json", label: "JSON", free: freeFormats.has("json") },
     { fmt: "csv", label: "CSV", free: freeFormats.has("csv") },
     { fmt: "markdown", label: "Markdown", free: freeFormats.has("markdown") || freeFormats.has("md") },
-    { fmt: "pdf", label: "PDF", free: false },
-    { fmt: "docx", label: "DOCX", free: false },
-    { fmt: "xlsx", label: "XLSX", free: false },
+    { fmt: "pdf", label: "PDF", free: freeFormats.has("pdf") },
+    { fmt: "docx", label: "DOCX", free: freeFormats.has("docx") },
+    { fmt: "xlsx", label: "XLSX", free: freeFormats.has("xlsx") },
+    { fmt: "html", label: "HTML", free: freeFormats.has("html") },
+    { fmt: "pptx", label: "PPTX", free: freeFormats.has("pptx") },
   ];
   const canDownload = (fmt: string) => !enforcementOn || isPremium || freeFormats.has(fmt.toLowerCase());
 
@@ -298,6 +334,21 @@ export default function Billing() {
   return (
     <div className="mx-auto max-w-[1200px]">
       <PageHeader title="Billing" description="Manage your SecureGraph subscription, payments, and access" actions={<button onClick={loadData} className="btn-ghost"><RefreshCw size={15} /></button>} />
+
+      {/* What you tried to do — the reason this page opened. */}
+      {(up || upsellReason) && (
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-gold-400/30 bg-gold-400/[0.08] px-4 py-3">
+          <Lock size={15} className="shrink-0 text-gold-300" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-gold-200">
+              {up ? `${up.label} needs ${upsellPlanLabel(up.plan)}` : "Upgrade required"}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-5 text-gold-100/85">
+              {up?.blurb || upsellReason || "This action needs a higher plan."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Subscription alerts */}
       {isGrace && (
@@ -340,12 +391,50 @@ export default function Billing() {
         )}
       </div>
 
+      {/* Free headroom, so the ask is concrete rather than abstract. */}
+      {!isPremium && entitlements?.billing_enforcement?.enabled && (
+        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <BillingStat label="Plan" value={planLabel} tone="warn" />
+          <BillingStat
+            label="Free assets left"
+            value={entitlements.assets_remaining_free == null ? "—" : String(entitlements.assets_remaining_free)}
+            tone={entitlements.assets_remaining_free === 0 ? "warn" : "plain"}
+          />
+          <BillingStat
+            label="Free users left"
+            value={entitlements.org_users_remaining_free == null ? "—" : String(entitlements.org_users_remaining_free)}
+            tone={entitlements.org_users_remaining_free === 0 ? "warn" : "plain"}
+          />
+          <BillingStat label="Credits / month" value={credits?.ai_credits_mo != null ? String(credits.ai_credits_mo) : "—"} tone="plain" />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Plan selector */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
             <CardHeader title={isPremium ? "Your plan" : "Choose a plan"} subtitle={`${entitlements?.billing_enforcement?.enabled ? "Billing gates active" : "Dev mode — gates off"}${starterPlan ? ` · ${starterPlan.name}` : ""}`} />
             <div className="space-y-4">
+              {/* Plan — priced by the backend per plan, not by one legacy number. */}
+              <div className="flex gap-2">
+                {(purchasablePlans.length ? purchasablePlans : [{ key: "starter", name: "Starter", list_price_ngn: null }, { key: "growth", name: "Growth", list_price_ngn: null }]).map((p) => (
+                  <button
+                    key={p.key}
+                    onClick={() => setSelectedPlan(p.key as "starter" | "growth")}
+                    className={cx(
+                      "flex-1 rounded-md border py-3 text-sm font-semibold transition-colors",
+                      selectedPlan === p.key ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60",
+                    )}
+                  >
+                    {p.name}
+                    {p.list_price_ngn != null && p.list_price_ngn > 0 && (
+                      <span className="ml-1.5 text-[11px] font-normal text-slate-500">
+                        {formatNaira(p.list_price_ngn)}/mo
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
               <div className="flex gap-2 mb-4">
                 {(["monthly", "yearly"] as const).map(c => <button key={c} onClick={() => setSelectedCycle(c)} className={cx("flex-1 rounded-md border py-3 text-sm font-semibold transition-colors", selectedCycle === c ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60")}>{c === "monthly" ? "Monthly" : "Yearly"}</button>)}
               </div>
@@ -356,7 +445,13 @@ export default function Billing() {
                   {selectedCycle === "yearly" && listPrice > 0 && <p className="mt-1 text-xs text-emerald-400">Save ~{Math.round((1 - displayYearly / (listPrice * 12)) * 100)}% vs monthly</p>}
                 </div>
               )}
-              {!isPremium && <button onClick={handleSubscribe} disabled={busy} className="btn-primary w-full !py-3">{busy ? <Spinner className="h-4 w-4" /> : <><CreditCard size={15} /> Subscribe</>}</button>}
+              {isCurrentPlan ? (
+                <button disabled className="btn-ghost w-full !py-3 opacity-60">You are on {chosenPlan?.name ?? selectedPlan}</button>
+              ) : (
+                <button onClick={handleSubscribe} disabled={busy} className="btn-primary w-full !py-3">
+                  {busy ? <Spinner className="h-4 w-4" /> : <><CreditCard size={15} /> {isPremium ? `Switch to ${chosenPlan?.name ?? selectedPlan}` : `Subscribe to ${chosenPlan?.name ?? selectedPlan}`}</>}
+                </button>
+              )}
               {payingId && <button onClick={() => handleVerify(payingId)} className="btn-secondary w-full !py-2 text-sm"><CheckCircle2 size={14} /> Verify Payment #{payingId}</button>}
               {isPremium && subscription?.grant_source === "payment" && <button onClick={() => setShowCancelConfirm(true)} className="btn-ghost w-full text-sm text-severity-critical">Cancel auto-renew</button>}
             </div>
@@ -442,23 +537,42 @@ export default function Billing() {
       {/* Report formats */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-5">
         <Card>
-          <CardHeader title="Report export formats" subtitle="Which report formats your plan can download" />
+          <CardHeader title="Report export formats" subtitle="All formats are free on every plan" />
           <div className="flex flex-wrap gap-2">
             {reportFormats.map((r) => (
               <span key={r.fmt} className={cx("chip text-xs", canDownload(r.fmt) ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/40 bg-slate-500/10 text-slate-500")}>
                 <Download size={11} className="inline mr-1" />
                 {r.label}
-                {!canDownload(r.fmt) && <span className="ml-1 opacity-70">(Starter+)</span>}
               </span>
             ))}
           </div>
-          {enforcementOn && !isPremium && (
-            <p className="mt-2 text-xs text-slate-500">
-              JSON, CSV and Markdown exports stay free. Board-ready PDF/DOCX/XLSX require a paid plan.
-            </p>
-          )}
+          <p className="mt-2 text-xs text-slate-500">
+            PDF, DOCX, XLSX, HTML, PPTX, JSON, CSV and Markdown are available on every plan, Free included — reporting is never the paid lever.
+          </p>
         </Card>
       </motion.div>
+
+      {/* Strategic upsell — exactly what Free cannot do, and what unlocks it. */}
+      {!isPremium && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="mt-5">
+          <Card>
+            <CardHeader title="What Free cannot do" subtitle="Each line names the plan that unlocks it" />
+            <div className="divide-y divide-phantix-800/50">
+              {Object.values(UPSELL_FEATURES).map((f) => (
+                <div key={f.key} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-200">{f.label}</p>
+                    <p className="text-[11px] leading-5 text-slate-500">{f.blurb}</p>
+                  </div>
+                  <span className="chip shrink-0 border-gold-400/30 text-gold-300">
+                    <Sparkle size={11} className="mr-1 inline" /> {upsellPlanLabel(f.plan)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Coupon modal */}
       <Modal open={showCoupon} onClose={() => setShowCoupon(false)} title="Redeem beta code">
@@ -474,6 +588,30 @@ export default function Billing() {
           <button onClick={handleCancel} className="btn-danger w-full">Confirm cancellation</button>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function BillingStat({
+  label,
+  value,
+  tone = "plain",
+}: {
+  label: string;
+  value: string;
+  tone?: "plain" | "ok" | "warn";
+}) {
+  return (
+    <div className="rounded-md border border-phantix-700/50 bg-phantix-900/40 px-3 py-2.5">
+      <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+      <p
+        className={cx(
+          "mt-1 font-display text-lg font-semibold",
+          tone === "warn" ? "text-severity-medium" : tone === "ok" ? "text-emerald-400" : "text-white",
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }
