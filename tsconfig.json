@@ -16,7 +16,10 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@docs/*": ["../*"],
+      "@sg": ["../packages/sg-shared/src"],
+      "@sg/*": ["../packages/sg-shared/src/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

@@ -575,3 +575,38 @@ p {
     opacity: 0;
   }
 }
+
+/* ── Mermaid process-flow diagrams (how-to docs) ─────────────────────────── */
+/* Raw fenced blocks are swapped for rendered SVGs at runtime; keep the
+   container chrome consistent with the app cards in both palettes. */
+.mermaid-rendered {
+  margin: 1rem auto;
+  max-width: 880px;
+  padding: 0.75rem;
+  border: 1px solid rgb(var(--phantix-700) / 0.4);
+  border-radius: 0.75rem;
+  background: rgb(var(--phantix-950) / 0.4);
+  overflow-x: auto;
+  text-align: center;
+}
+.mermaid-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+:root[data-theme="light"] .mermaid-rendered {
+  border-color: rgb(228 228 231);
+  background: rgb(250 250 250);
+}
+
+/* ── Collapsible application sidebar (shared with Core/Attack/Defend/Code) ──── */
+.sg-sidebar[data-collapsed] .sg-hide-collapsed {
+  display: none !important;
+}
+.sg-sidebar[data-collapsed] .nav-item {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+.sg-sidebar[data-collapsed] nav {
+  overflow-x: hidden;
+}

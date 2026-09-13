@@ -3,11 +3,12 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
-  ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
+  ScrollText, LogOut, Lock, Unlock, ChevronDown, ChevronLeft, ChevronRight, Timer, KeyRound, Rocket,
   RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
   AlertTriangle, Activity, MoreHorizontal,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useSidebarCollapsed } from "@sg/useSidebarCollapsed";
 import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
 import { APP_URL } from "@/lib/links";
 import { cx } from "@/lib/utils";
@@ -80,7 +81,7 @@ const baseNavSections: { label: string; items: (NavLeafItem | NavDropdownItem)[]
  * Collapsible nav group. Opens itself whenever the current route is inside the
  * group, so deep-linking to a sub-page still shows where you are.
  */
-function NavDropdown({ label, icon, basePath, items }: NavDropdownItem) {
+function NavDropdown({ label, icon, basePath, items, collapsed }: NavDropdownItem & { collapsed?: boolean }) {
   const location = useLocation();
   const groupActive = basePath
     ? location.pathname.startsWith(basePath)
@@ -96,15 +97,16 @@ function NavDropdown({ label, icon, basePath, items }: NavDropdownItem) {
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
+        title={label}
         className={cx("nav-item w-full justify-between", groupActive && "active")}
       >
         <span className="flex items-center gap-3">
           {icon}
-          {label}
+          <span className="sg-hide-collapsed">{label}</span>
         </span>
         <ChevronDown
           size={14}
-          className={cx("text-slate-500 transition-transform duration-200", open && "rotate-180")}
+          className={cx("sg-hide-collapsed text-slate-500 transition-transform duration-200", open && "rotate-180")}
         />
       </button>
       <AnimatePresence initial={false}>
@@ -125,7 +127,7 @@ function NavDropdown({ label, icon, basePath, items }: NavDropdownItem) {
                   className={({ isActive }) => cx("nav-item !py-2", isActive && "active")}
                 >
                   {sub.icon}
-                  {sub.label}
+                  <span className="sg-hide-collapsed">{sub.label}</span>
                 </NavLink>
               ))}
             </div>
@@ -155,6 +157,7 @@ export default function Layout() {
   const { session, state, operate, lockOperate, logout, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
   const [userMenu, setUserMenu] = useState(false);
   const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
+  const { collapsed, toggle: toggleSidebar } = useSidebarCollapsed();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -226,29 +229,43 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen">
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-phantix-700/40 bg-[rgb(var(--surface-sidebar))]">
+      <aside
+        data-collapsed={collapsed ? "" : undefined}
+        className={cx(
+          "sg-sidebar fixed inset-y-0 left-0 z-40 flex flex-col border-r border-phantix-700/40 bg-[rgb(var(--surface-sidebar))]",
+          collapsed ? "w-[72px]" : "w-[248px]",
+        )}
+      >
         <div className="flex items-center gap-3 px-4 pb-3 pt-4">
-          <img src="/logo-white.png" alt="SecureGraph" className="h-8 w-8 object-contain" />
-          <div>
+          <img src="/logo-white.png" alt="SecureGraph" className="h-8 w-8 shrink-0 object-contain" />
+          <div className="sg-hide-collapsed">
             <p className="font-display text-[15px] font-bold leading-tight text-white">SecureGraph</p>
             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-gold-400">Platform</p>
           </div>
+          <button
+            onClick={toggleSidebar}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="ml-auto rounded-md border border-phantix-700 bg-phantix-900 p-1.5 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
         </div>
 
         <nav className="flex-1 space-y-1.5 overflow-y-auto px-2.5 pb-3">
           {navSections.map((section) => (
             <div key={section.label}>
-              <p className="nav-section-label">{section.label}</p>
+              <p className="nav-section-label sg-hide-collapsed">{section.label}</p>
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   if ("type" in item && item.type === "dropdown") {
-                    return <NavDropdown key={item.label} {...item} />;
+                    return <NavDropdown key={item.label} {...item} collapsed={collapsed} />;
                   }
                   const navItem = item as NavLeafItem;
                   return (
-                    <NavLink key={navItem.to} to={navItem.to} className={({ isActive }) => cx("nav-item", isActive && "active")}>
+                    <NavLink key={navItem.to} to={navItem.to} title={navItem.label} className={({ isActive }) => cx("nav-item", isActive && "active")}>
                       {navItem.icon}
-                      {navItem.label}
+                      <span className="sg-hide-collapsed">{navItem.label}</span>
                     </NavLink>
                   );
                 })}
@@ -258,9 +275,10 @@ export default function Layout() {
 
           {/* Danger zone — kept visually distinct and at the bottom of the rail */}
           <div className="pt-1">
-            <p className="nav-section-label">Account</p>
+            <p className="nav-section-label sg-hide-collapsed">Account</p>
             <NavLink
               to="/danger-zone"
+              title="Danger zone"
               className={({ isActive }) =>
                 cx(
                   "nav-item",
@@ -270,13 +288,13 @@ export default function Layout() {
                 )
               }
             >
-              <AlertTriangle size={17} /> Danger zone
+              <AlertTriangle size={17} /> <span className="sg-hide-collapsed">Danger zone</span>
             </NavLink>
           </div>
         </nav>
 
         {/* Command Centre link */}
-        <div className="px-2.5 pb-2.5">
+        <div className="sg-hide-collapsed px-2.5 pb-2.5">
           <a
             href={`${APP_URL}/dashboard`}
             target="_blank"
@@ -294,7 +312,7 @@ export default function Layout() {
         </div>
 
         {/* Dual-control widget */}
-        <div className="border-t border-phantix-700/40 p-2">
+        <div className="sg-hide-collapsed border-t border-phantix-700/40 p-2">
           <div className="rounded-md bg-phantix-900/70 border border-phantix-700/40 p-2">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold text-slate-500">Dual control</p>
@@ -340,7 +358,7 @@ export default function Layout() {
       </aside>
 
       {/* ── Main ────────────────────────────────────────────── */}
-      <div className="ml-[248px] flex min-h-screen flex-1 flex-col">
+      <div className={cx("flex min-h-screen flex-1 flex-col", collapsed ? "ml-[72px]" : "ml-[248px]")}>
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-phantix-700/40 bg-phantix-950/80 px-6 py-3 backdrop-blur-xl">
           <div className="flex items-center gap-2.5">
             <span className="font-display text-sm font-semibold text-slate-200">{state.org.name}</span>
