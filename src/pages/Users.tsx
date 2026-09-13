@@ -5,7 +5,7 @@ import {
   Users, UserPlus, ShieldCheck, Link2, KeyRound, ArrowRight, ArrowLeft,
   CheckCircle2, Copy, Unlock, Smartphone, AlertTriangle, Info, RefreshCw, Loader2,
 } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState, Spinner } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState, Spinner, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { timeAgo, maskEmail, cx } from "@/lib/utils";
@@ -18,6 +18,7 @@ export default function People() {
   const [reassignOpen, setReassignOpen] = useState(false);
   const [rbacRoles, setRbacRoles] = useState<any[]>([]);
   const [myPerms, setMyPerms] = useState<any>(null);
+  const [rbacLoading, setRbacLoading] = useState(!DEMO_MODE);
 
   // Per-org RBAC catalog + the current principal's permissions (GET /org-users/roles,
   // GET /org-users/me/permissions).
@@ -30,6 +31,7 @@ export default function People() {
       ]);
       setRbacRoles(Array.isArray(rolesRes?.roles) ? rolesRes.roles : []);
       setMyPerms(permsRes);
+      setRbacLoading(false);
     })();
   }, []);
 
@@ -123,7 +125,12 @@ export default function People() {
             </motion.div>
           )}
           {/* Roles & permissions */}
-          {rbacRoles.length > 0 && (
+          {rbacLoading && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+              <SkeletonCard />
+            </motion.div>
+          )}
+          {!rbacLoading && rbacRoles.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
               <Card>
                 <CardHeader
@@ -165,7 +172,7 @@ export default function People() {
                   { slot: "Authorizer", user: authorizer, desc: "Approves pending actions and risk treatments" },
                 ].map((s) => (
                   <div key={s.slot} className="flex items-center gap-4 rounded-2xl border border-phantix-700/40 bg-phantix-950/50 p-4">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 text-gold-300 font-display text-base font-bold text-phantix-950">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 text-gold-300 font-display text-base font-bold">
                       {s.user?.full_name.slice(0, 1) ?? "?"}
                     </span>
                     <div className="min-w-0 flex-1">

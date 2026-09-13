@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Wrench, CheckCircle2, Plus, Lock } from "lucide-react";
-import { PageHeader, Card, CardHeader, StatusBadge, EmptyState } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatusBadge, EmptyState, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE } from "@/lib/api";
 import { cx, timeAgo } from "@/lib/utils";
@@ -16,6 +16,7 @@ function toolLabel(t: { tier?: string; pricing_model?: string }): string {
 export default function Tools() {
   const { state, toggleTool, toast } = useStore();
   const [subs, setSubs] = useState<any[]>([]);
+  const [subsLoading, setSubsLoading] = useState(!DEMO_MODE);
 
   // Paid tool subscriptions for this org (GET /tools/subscriptions).
   useEffect(() => {
@@ -23,7 +24,8 @@ export default function Tools() {
     void api
       .get<any[]>("/tools/subscriptions")
       .then((rows) => setSubs(Array.isArray(rows) ? rows : []))
-      .catch(() => setSubs([]));
+      .catch(() => setSubs([]))
+      .finally(() => setSubsLoading(false));
   }, []);
 
   return (
@@ -36,7 +38,9 @@ export default function Tools() {
       <div className="mb-5">
         <Card>
           <CardHeader title="Your paid subscriptions" subtitle="Active tool add-ons and their status" action={<CheckCircle2 size={16} className="text-emerald-400" />} />
-          {subs.length === 0 ? (
+          {subsLoading ? (
+            <CardListSkeleton rows={3} />
+          ) : subs.length === 0 ? (
             <EmptyState icon={<Wrench size={20} />} title="No paid subscriptions" body="Subscribe to a paid add-on below to unlock its scanner or console." />
           ) : (
             <div className="overflow-x-auto">

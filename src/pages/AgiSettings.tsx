@@ -54,7 +54,7 @@ type Bootstrap = {
 // ── Demo fixtures ─────────────────────────────────────────────────────────────
 const demoBootstrap: Bootstrap = {
   settings: {
-    enabled_for_org: true, daily_session_limit: 5, max_session_minutes: 60, max_allowlist_targets: 10,
+    enabled_for_org: true, daily_session_limit: 5, max_session_minutes: 0, max_allowlist_targets: 10,
     allow_state_changing: true, require_dual_control_for_active: true, require_asset_backed_targets: true,
     default_target_environment: "staging", allow_production_testing: false, prefer_mailinator_test_emails: true,
     default_mobile_apk_asset_id: null, default_test_account_id: 1, notes: "Staging QA only",
@@ -149,7 +149,10 @@ export default function AgiSettings() {
     if (!s) return;
     void patchSettings({
       daily_session_limit: Number(s.daily_session_limit) || 5,
-      max_session_minutes: Number(s.max_session_minutes) || 60,
+      // 0 is meaningful here (uncapped), so it must not fall through `||`.
+      max_session_minutes: Number.isFinite(Number(s.max_session_minutes))
+        ? Number(s.max_session_minutes)
+        : 0,
       max_allowlist_targets: Number(s.max_allowlist_targets) || 10,
       default_target_environment: s.default_target_environment,
       allow_production_testing: s.allow_production_testing,
@@ -274,13 +277,26 @@ export default function AgiSettings() {
               </button>
             </div>
 
-            {/* Limits */}
-            <div className="mt-4 grid grid-cols-3 gap-3">
+            {/* Limits — the three figures an org admin owns. Each says what it
+                governs, because "Max minutes" alone does not tell an admin that
+                0 means uncapped or that targets are counted per session. */}
+            <div className="mt-4 space-y-3">
               {([
-                ["daily_session_limit", "Sessions / day", 1, 50],
-                ["max_session_minutes", "Max minutes", 15, 240],
-                ["max_allowlist_targets", "Max targets", 1, 50],
-              ] as const).map(([key, label, min, max]) => (
+                [
+                  "daily_session_limit",
+                  "Sessions per day",
+                  1,
+                  50,
+                  "How many pentest runs this organization may start in a calendar day.",
+                ],
+                [
+                  "max_allowlist_targets",
+                  "Max targets per session",
+                  1,
+                  50,
+                  "Ceiling on the allowlist a single session may run against. Defaults to 10.",
+                ],
+              ] as const).map(([key, label, min, max, hint]) => (
                 <div key={key}>
                   <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</label>
                   <input
@@ -291,8 +307,59 @@ export default function AgiSettings() {
                     onChange={(e) => setBootstrap((b) => b?.settings ? { ...b, settings: { ...b.settings, [key]: Number(e.target.value) } } : b)}
                     className="w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-sm text-slate-200 outline-none focus:border-gold-400/40"
                   />
+                  <p className="mt-1 text-[11px] leading-4 text-slate-500">{hint}</p>
                 </div>
               ))}
+
+              {/* Session length is uncapped by default: a run ends when the
+                  agent is done, and AI credits are the real limit. The input
+                  only appears once an admin opts into a hard stop. */}
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    Session length
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBootstrap((b) =>
+                        b?.settings
+                          ? {
+                              ...b,
+                              settings: {
+                                ...b.settings,
+                                max_session_minutes: Number(b.settings.max_session_minutes) > 0 ? 0 : 120,
+                              },
+                            }
+                          : b,
+                      )
+                    }
+                    className="text-[11px] text-gold-300 underline-offset-2 hover:underline"
+                  >
+                    {Number(s?.max_session_minutes) > 0 ? "Remove the cap" : "Set a hard stop"}
+                  </button>
+                </div>
+                {Number(s?.max_session_minutes) > 0 ? (
+                  <>
+                    <input
+                      type="number"
+                      min={15}
+                      max={1440}
+                      value={Number(s?.max_session_minutes) || 120}
+                      onChange={(e) => setBootstrap((b) => b?.settings ? { ...b, settings: { ...b.settings, max_session_minutes: Number(e.target.value) } } : b)}
+                      className="mt-1 w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-sm text-slate-200 outline-none focus:border-gold-400/40"
+                    />
+                    <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                      Sessions are torn down after this many minutes (15–1440).
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                    <span className="text-slate-300">Uncapped.</span> A session runs until the agent
+                    finishes, you stop it, or the organization's AI credits run out.
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Environment defaults */}

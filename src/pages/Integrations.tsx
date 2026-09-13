@@ -244,17 +244,21 @@ export default function Integrations() {
       )}
 
       {tab === "sso" && (
-        <SsoScimTab
-          connectors={ssoConnectors}
-          installations={ssoInstallations.length ? ssoInstallations : installations.data}
-          orgSlug={state.org.slug}
-          onInstall={() => {
-            setTab("catalog");
-            setInstallOpen("entra_oidc");
-          }}
-          revealSecret={revealSecret}
-          onChanged={refreshAll}
-        />
+        (catalog.loading && !catalog.data.length) || (installations.loading && !installations.data.length) ? (
+          <div className="mt-4"><CardListSkeleton rows={3} /></div>
+        ) : (
+          <SsoScimTab
+            connectors={ssoConnectors}
+            installations={ssoInstallations.length ? ssoInstallations : installations.data}
+            orgSlug={state.org.slug}
+            onInstall={() => {
+              setTab("catalog");
+              setInstallOpen("entra_oidc");
+            }}
+            revealSecret={revealSecret}
+            onChanged={refreshAll}
+          />
+        )
       )}
 
       {installOpen && (

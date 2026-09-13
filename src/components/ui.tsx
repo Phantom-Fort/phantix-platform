@@ -116,12 +116,12 @@ export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: Re
   return (
     <div className="mb-5 flex flex-wrap items-center gap-1 rounded-md bg-phantix-900/60 border border-phantix-700/40 p-1 w-fit">
       {tabs.map((t) => (
-        <button key={t.id} onClick={() => onChange(t.id)} className={cx("relative rounded-lg px-3.5 py-2 text-sm font-medium transition-colors", active === t.id ? "text-phantix-950" : "text-slate-400 hover:text-slate-100")}>
+        <button key={t.id} onClick={() => onChange(t.id)} className={cx("relative rounded-lg px-3.5 py-2 text-sm font-medium transition-colors", active === t.id ? "text-slate-100" : "text-slate-400 hover:text-slate-100")}>
           {active === t.id && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-md border border-gold-400/40 bg-phantix-800" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
           <span className="relative flex items-center gap-1.5">
             {t.label}
             {t.count !== undefined && (
-              <span className={cx("rounded-full px-1.5 py-0.5 text-[10px] font-bold", active === t.id ? "bg-phantix-950/20 text-phantix-950" : "bg-phantix-700/60 text-slate-300")}>{t.count}</span>
+              <span className={cx("rounded-full px-1.5 py-0.5 text-[10px] font-bold", active === t.id ? "bg-phantix-950/60 text-gold-300" : "bg-phantix-700/60 text-slate-300")}>{t.count}</span>
             )}
           </span>
         </button>

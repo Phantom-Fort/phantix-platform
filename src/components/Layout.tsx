@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, Timer, KeyRound, Rocket,
   RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
-  AlertTriangle, Activity,
+  AlertTriangle, Activity, MoreHorizontal,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
@@ -15,7 +15,30 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import SandboxBanner from "@/components/SandboxBanner";
 import { loadSandboxMe } from "@/lib/sandbox";
 
-const baseNavSections: { label: string; items: { to: string; label: string; icon: React.ReactNode }[] }[] = [
+type NavLeafItem = { to: string; label: string; icon: React.ReactNode };
+type NavDropdownItem = {
+  type: "dropdown";
+  label: string;
+  icon: React.ReactNode;
+  /** Route prefix that marks this group active. Omit for a group of otherwise
+   *  unrelated leaf routes — active state then falls back to an exact match
+   *  against one of the group's own items. */
+  basePath?: string;
+  items: NavLeafItem[];
+};
+
+const moreOrganizationSubItems: NavLeafItem[] = [
+  { to: "/companies", label: "Companies", icon: <Building2 size={17} /> },
+  { to: "/github", label: "GitHub", icon: <Github size={17} /> },
+];
+
+const moreGovernanceSubItems: NavLeafItem[] = [
+  ...(AGI_ENABLED ? [{ to: "/agi", label: "Autonomous Agent", icon: <Radar size={17} /> }] : []),
+  { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
+  { to: "/agent-activity", label: "Agent activity", icon: <Activity size={17} /> },
+];
+
+const baseNavSections: { label: string; items: (NavLeafItem | NavDropdownItem)[] }[] = [
   {
     label: "Overview",
     items: [{ to: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={17} /> }],
@@ -24,10 +47,9 @@ const baseNavSections: { label: string; items: { to: string; label: string; icon
     label: "Organization",
     items: [
       { to: "/identity", label: "Identity & Keys", icon: <KeyRound size={17} /> },
-      { to: "/companies", label: "Companies", icon: <Building2 size={17} /> },
       { to: "/users", label: "People & Control", icon: <Users size={17} /> },
       { to: "/connections", label: "Security Database", icon: <Database size={17} /> },
-      { to: "/github", label: "GitHub", icon: <Github size={17} /> },
+      { type: "dropdown", label: "More Organization", icon: <MoreHorizontal size={17} />, items: moreOrganizationSubItems },
     ],
   },
   {
@@ -42,10 +64,8 @@ const baseNavSections: { label: string; items: { to: string; label: string; icon
     label: "Governance",
     items: [
       { to: "/ai", label: "AI settings", icon: <Sparkles size={17} /> },
-      ...(AGI_ENABLED ? [{ to: "/agi", label: "Autonomous Agent", icon: <Radar size={17} /> }] : []),
       { to: "/alerts", label: "Alerts", icon: <BellRing size={17} /> },
-      { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
-      { to: "/agent-activity", label: "Agent activity", icon: <Activity size={17} /> },
+      { type: "dropdown", label: "More Governance", icon: <MoreHorizontal size={17} />, items: moreGovernanceSubItems },
     ],
   },
   {
@@ -55,6 +75,66 @@ const baseNavSections: { label: string; items: { to: string; label: string; icon
     ],
   },
 ];
+
+/**
+ * Collapsible nav group. Opens itself whenever the current route is inside the
+ * group, so deep-linking to a sub-page still shows where you are.
+ */
+function NavDropdown({ label, icon, basePath, items }: NavDropdownItem) {
+  const location = useLocation();
+  const groupActive = basePath
+    ? location.pathname.startsWith(basePath)
+    : items.some((i) => location.pathname === i.to);
+  const [open, setOpen] = useState(groupActive);
+
+  useEffect(() => {
+    if (groupActive) setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, basePath]);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={cx("nav-item w-full justify-between", groupActive && "active")}
+      >
+        <span className="flex items-center gap-3">
+          {icon}
+          {label}
+        </span>
+        <ChevronDown
+          size={14}
+          className={cx("text-slate-500 transition-transform duration-200", open && "rotate-180")}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="ml-7 mt-0.5 space-y-0.5 border-l border-phantix-700/50 pl-2.5">
+              {items.map((sub) => (
+                <NavLink
+                  key={sub.to}
+                  to={sub.to}
+                  end={basePath ? sub.to === basePath : true}
+                  className={({ isActive }) => cx("nav-item !py-2", isActive && "active")}
+                >
+                  {sub.icon}
+                  {sub.label}
+                </NavLink>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function OperateCountdown({ expiresAt }: { expiresAt: number }) {
   const [now, setNow] = useState(Date.now());
@@ -86,19 +166,9 @@ export default function Layout() {
     void loadSandboxMe().then((m) => setSandboxEnrolled(!!m?.enrolled));
   }, [session?.authenticated]);
 
-  const navSections = React.useMemo(() => {
-    if (!sandboxEnrolled) return baseNavSections;
-    return baseNavSections.map((section) => {
-      if (section.label !== "Overview") return section;
-      return {
-        ...section,
-        items: [
-          ...section.items,
-          { to: "/sandbox", label: "BETA sandbox", icon: <FlaskConical size={17} /> },
-        ],
-      };
-    });
-  }, [sandboxEnrolled]);
+  // BETA sandbox lives in the topbar now (icon beside the theme toggle), so
+  // the sidebar itself no longer needs a sandbox-enrolled variant.
+  const navSections = baseNavSections;
 
   // Auto-logout after inactivity --- uses backend's inactivity_expires_at if set, else 20 min
   useEffect(() => {
@@ -170,12 +240,18 @@ export default function Layout() {
             <div key={section.label}>
               <p className="nav-section-label">{section.label}</p>
               <div className="space-y-0.5">
-                {section.items.map((item) => (
-                  <NavLink key={item.to} to={item.to} className={({ isActive }) => cx("nav-item", isActive && "active")}>
-                    {item.icon}
-                    {item.label}
-                  </NavLink>
-                ))}
+                {section.items.map((item) => {
+                  if ("type" in item && item.type === "dropdown") {
+                    return <NavDropdown key={item.label} {...item} />;
+                  }
+                  const navItem = item as NavLeafItem;
+                  return (
+                    <NavLink key={navItem.to} to={navItem.to} className={({ isActive }) => cx("nav-item", isActive && "active")}>
+                      {navItem.icon}
+                      {navItem.label}
+                    </NavLink>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -272,6 +348,23 @@ export default function Layout() {
           </div>
 
           <div className="ml-auto flex items-center gap-2.5">
+            {sandboxEnrolled && (
+              <NavLink
+                to="/sandbox"
+                title="BETA sandbox"
+                className={({ isActive }) =>
+                  cx(
+                    "relative rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white",
+                    isActive && "border-gold-400/50 text-gold-300",
+                  )
+                }
+              >
+                <FlaskConical size={16} />
+                <span className="absolute -right-1 -top-1 rounded-full bg-gold-400 px-1 font-mono text-[8px] font-bold leading-[1.2] text-phantix-950">
+                  β
+                </span>
+              </NavLink>
+            )}
             <ThemeToggle />
             {securityDbReady ? (
               <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300">

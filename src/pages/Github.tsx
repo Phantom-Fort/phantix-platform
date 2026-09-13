@@ -539,21 +539,32 @@ function BranchReviewer({ repos }: { repos: Repo[] }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Card className="!p-4">
-          <div className="flex items-center gap-2">
-            <Wallet size={15} className="text-gold-400" />
-            <p className="text-2xl font-semibold text-white">₦{balanceNgn.toLocaleString()}</p>
-          </div>
-          <p className="mt-1 text-xs text-slate-400">Wallet balance</p>
-        </Card>
-        <Card className="!p-4">
-          <p className="text-2xl font-semibold text-emerald-400">{enabledCount}</p>
-          <p className="mt-1 text-xs text-slate-400">Repos watched</p>
-        </Card>
-        <Card className="!p-4">
-          <p className="text-2xl font-semibold text-slate-200">{repos.length}</p>
-          <p className="mt-1 text-xs text-slate-400">Synced repos</p>
-        </Card>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="!p-4">
+              <div className="skeleton h-7 w-20 rounded" />
+              <div className="skeleton mt-2 h-3 w-24 rounded" />
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card className="!p-4">
+              <div className="flex items-center gap-2">
+                <Wallet size={15} className="text-gold-400" />
+                <p className="text-2xl font-semibold text-white">₦{balanceNgn.toLocaleString()}</p>
+              </div>
+              <p className="mt-1 text-xs text-slate-400">Wallet balance</p>
+            </Card>
+            <Card className="!p-4">
+              <p className="text-2xl font-semibold text-emerald-400">{enabledCount}</p>
+              <p className="mt-1 text-xs text-slate-400">Repos watched</p>
+            </Card>
+            <Card className="!p-4">
+              <p className="text-2xl font-semibold text-slate-200">{repos.length}</p>
+              <p className="mt-1 text-xs text-slate-400">Synced repos</p>
+            </Card>
+          </>
+        )}
       </div>
 
       <Card>
