@@ -113,7 +113,7 @@ export default function Register() {
               <div>
                 <label className="label">Primary sign-in email</label>
                 <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@yourcompany.com" />
-                <p className="mt-1.5 text-[11px] text-slate-500">Verified by email OTP during setup --- phone OTP is not used.</p>
+                <p className="mt-1.5 text-[13px] text-slate-500">Verified by email OTP during setup --- phone OTP is not used.</p>
               </div>
               <div>
                 <label className="label">Industry</label>
@@ -167,7 +167,7 @@ export default function Register() {
             </motion.form>
           </div>
 
-          <p className="mt-5 text-center text-[11px] text-slate-600">
+          <p className="mt-5 text-center text-[13px] text-slate-600">
             By registering you agree to our{" "}
             <Link to="/terms" className="hover:text-slate-400">Terms of Service</Link>,
             {" "}<Link to="/aup" className="hover:text-slate-400">Acceptable Use Policy</Link>

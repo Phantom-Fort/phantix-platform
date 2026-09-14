@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Database, Plus, ShieldCheck, AlertTriangle, Loader2, Trash2, Zap, Info } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState } from "@/components/ui";
+import { PageHeader, Card, CollapsibleCard, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE } from "@/lib/api";
 import { timeAgo, cx } from "@/lib/utils";
@@ -44,7 +44,7 @@ export default function Connections() {
   };
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Security database"
         description="BYO dedicated database --- the bootstrap gate for scans, VAPT and findings. Config-inspection connections read security metadata only, never business rows."
@@ -78,24 +78,25 @@ export default function Connections() {
       </motion.div>
 
       {optionHints?.by_db_type && (
-        <Card className="mb-5">
-          <CardHeader
-            title="Connection options"
-            subtitle="Engine-specific options beyond username / password"
-            action={<Info size={16} className="text-slate-400" />}
-          />
+        <CollapsibleCard
+          className="mb-5"
+          title="Connection options"
+          subtitle="Engine-specific options beyond username / password"
+          action={<Info size={16} className="text-slate-400" />}
+          defaultOpen={false}
+        >
           {optionHints.note && <p className="text-xs leading-5 text-slate-400">{optionHints.note}</p>}
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(optionHints.by_db_type).map(([engine, opts]) => (
               <div key={engine} className="rounded-md border border-phantix-700/40 bg-phantix-950/40 p-2">
                 <p className="text-xs font-semibold capitalize text-slate-200">{engine}</p>
-                <p className="mt-1 break-words font-mono text-[10px] leading-4 text-slate-500">
+                <p className="mt-1 break-words font-mono text-[12px] leading-4 text-slate-500">
                   {Array.isArray(opts) ? opts.join(", ") : typeof opts === "object" ? Object.keys(opts as object).join(", ") : String(opts)}
                 </p>
               </div>
             ))}
           </div>
-        </Card>
+        </CollapsibleCard>
       )}
 
       {state.connections.length === 0 ? (
@@ -126,7 +127,7 @@ export default function Connections() {
                       {c.db_type} · {c.host}:{c.port}/{c.database_name} · schema {c.target_schema}
                       {c.schema_version ? ` · v${c.schema_version}` : ""}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-slate-600">
+                    <p className="mt-0.5 text-[13px] text-slate-600">
                       {c.connection_purpose === "security_data_storage"
                         ? "security_data_storage --- full CRUD inside the phantix schema only"
                         : "config_inspection --- roles, privileges, policies; never business rows"}
@@ -224,7 +225,7 @@ export default function Connections() {
               ));
             })()}
           </div>
-          <p className="mt-3 text-[11px] leading-4 text-slate-500">
+          <p className="mt-3 text-[13px] leading-4 text-slate-500">
             Credentials can be stored encrypted without the optional driver; live tests need the package. Connections
             need more than username+password --- see connection-option-hints (ssl_mode, search_path, odbc_driver...).
           </p>
@@ -327,7 +328,7 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
                 className={cx("rounded-md border p-3.5 text-left transition-all", purpose === v ? "border-gold-400/60 bg-gold-400/8" : "border-phantix-700/50 bg-phantix-950/40 hover:border-phantix-500/50")}
               >
                 <p className="text-sm font-semibold text-slate-200">{label}</p>
-                <p className="mt-1 text-[11px] leading-4 text-slate-500">{desc}</p>
+                <p className="mt-1 text-[13px] leading-4 text-slate-500">{desc}</p>
               </button>
             ))}
           </div>
@@ -343,8 +344,8 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           <div>
             <label className="label">Host</label>
             <input name="host" className="input font-mono" placeholder="10.20.0.14 or db.example.com" required />
-            {resolvingHost && <p className="text-[10px] text-phantix-400 mt-1 animate-pulse-soft">Resolving {resolvingHost} → IPv4...</p>}
-            <p className="text-[10px] text-slate-500 mt-0.5">Hostnames are auto-resolved to IPv4 via DNS before connecting</p>
+            {resolvingHost && <p className="text-[12px] text-phantix-400 mt-1 animate-pulse-soft">Resolving {resolvingHost} → IPv4...</p>}
+            <p className="text-[12px] text-slate-500 mt-0.5">Hostnames are auto-resolved to IPv4 via DNS before connecting</p>
           </div>
           <div>
             <label className="label">Port</label>

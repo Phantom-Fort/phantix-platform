@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import DocLink from "@/components/DocLink";
 import ApplicationAccessModal from "@/components/ApplicationAccessModal";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState, Spinner, SkeletonCard, PasswordInput } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Modal, EmptyState, Spinner, SkeletonCard, PasswordInput } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { timeAgo, maskEmail, cx } from "@/lib/utils";
@@ -88,7 +88,7 @@ export default function People() {
   const initiators = state.users.filter((u) => u.is_active && u.id !== dc.authorizer_user_id);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="People & dual control"
         description="Named users with role-based privileges. Any signed-in org user may operate with their role's grants; the authorizer is the only approver. org_admin/org_owner roles may sign in to the platform app with an admin-set password."
@@ -147,7 +147,16 @@ export default function People() {
               </div>
             </motion.div>
           )}
-          {/* Roles & permissions */}
+          {/* People first: this page is named for them, and everything below is
+              reference an admin consults occasionally, not the task they came
+              to do. */}
+          <UsersTable
+            onUnlock={() => void requireDualControl("This action requires a dual-control operate session.")}
+            roles={rbacRoles}
+            apps={appCatalog}
+          />
+
+          {/* Roles & permissions — a reference listing, collapsed by default */}
           {rbacLoading && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
               <SkeletonCard />
@@ -155,10 +164,10 @@ export default function People() {
           )}
           {!rbacLoading && (rbacRoles.length > 0 || canManageRoles) && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-              <Card>
-                <CardHeader
-                  title="Roles & permissions"
-                  subtitle={canManageRoles
+              <CollapsibleCard
+                defaultOpen={false}
+                title="Roles & permissions"
+                subtitle={canManageRoles
                     ? "Create and edit per-org roles and the privileges each one grants"
                     : "Assignable per-org roles, and what your session can do"}
                   action={
@@ -176,7 +185,7 @@ export default function People() {
                       <ShieldCheck size={16} className="text-gold-400" />
                     )
                   }
-                />
+              >
                 {rbacRoles.length === 0 ? (
                   <EmptyState icon={<ShieldCheck size={22} />} title="No roles yet" body="Create a role to grant a tailored set of privileges." />
                 ) : (
@@ -188,16 +197,16 @@ export default function People() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="font-medium text-slate-200">{r.name || r.key}</p>
-                              <span className="font-mono text-[11px] text-slate-500">{r.key}</span>
+                              <span className="font-mono text-[13px] text-slate-500">{r.key}</span>
                               {r.is_system && (
-                                <span className="chip !py-0 border-phantix-600/40 bg-phantix-800/50 text-[10px] text-slate-400"><Lock size={9} /> system</span>
+                                <span className="chip !py-0 border-phantix-600/40 bg-phantix-800/50 text-[12px] text-slate-400"><Lock size={9} /> system</span>
                               )}
                               {r.key === defaultRole && (
-                                <span className="chip !py-0 border-gold-400/30 bg-gold-400/10 text-[10px] text-gold-300">default</span>
+                                <span className="chip !py-0 border-gold-400/30 bg-gold-400/10 text-[12px] text-gold-300">default</span>
                               )}
                             </div>
-                            {r.description && <p className="mt-0.5 text-[11px] text-slate-500">{r.description}</p>}
-                            <p className="mt-1 text-[11px] text-slate-500" title={perms.join(", ")}>
+                            {r.description && <p className="mt-0.5 text-[13px] text-slate-500">{r.description}</p>}
+                            <p className="mt-1 text-[13px] text-slate-500" title={perms.join(", ")}>
                               {perms.length} {perms.length === 1 ? "permission" : "permissions"}
                               {perms.length > 0 && <span className="text-slate-600"> · {perms.slice(0, 6).join(", ")}{perms.length > 6 ? "…" : ""}</span>}
                             </p>
@@ -233,7 +242,7 @@ export default function People() {
                   </div>
                 )}
                 {myPerms && (
-                  <p className="mt-3 border-t border-phantix-800/50 pt-3 text-[11px] text-slate-500">
+                  <p className="mt-3 border-t border-phantix-800/50 pt-3 text-[13px] text-slate-500">
                     Your session role <strong className="text-slate-300">{myPerms.role || "—"}</strong> ·{" "}
                     {myPerms.permissions?.length ?? 0} permissions
                     {myPerms.is_initiator ? " · initiator" : ""}
@@ -241,18 +250,19 @@ export default function People() {
                     {myPerms.can_operate ? " · can operate" : ""}
                   </p>
                 )}
-              </Card>
+              </CollapsibleCard>
             </motion.div>
           )}
 
-          {/* Dual control: one authorizer (sole approver) + one or more initiators */}
+          {/* Dual control — configuration when unset, reference once it is set */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-            <Card className="border-gold-400/25">
-              <CardHeader
-                title="Dual control"
-                subtitle="A single authorizer approves; any number of initiators propose and execute"
-                action={<ShieldCheck size={17} className="text-gold-400" />}
-              />
+            <CollapsibleCard
+              className="border-gold-400/25"
+              defaultOpen={!dc.configured}
+              title="Dual control"
+              subtitle="A single authorizer approves; any number of initiators propose and execute"
+              action={<ShieldCheck size={17} className="text-gold-400" />}
+            >
 
               {/* Authorizer --- exactly one */}
               <div className="flex items-center gap-4 rounded-2xl border border-gold-400/30 bg-gold-400/5 p-4">
@@ -265,7 +275,7 @@ export default function People() {
                     <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">Authorizer · sole approver</span>
                   </div>
                   <p className="text-xs text-slate-500">{authorizer?.title} · {authorizer?.email}</p>
-                  <p className="mt-1 text-[11px] text-slate-600">The only person who approves pending actions and risk treatments. There is only ever one.</p>
+                  <p className="mt-1 text-[13px] text-slate-600">The only person who approves pending actions and risk treatments. There is only ever one.</p>
                 </div>
                 <button className="btn-ghost shrink-0 !px-3 !py-1.5 !text-xs" onClick={() => setReassignOpen(true)}>
                   <RefreshCw size={12} /> Change
@@ -297,24 +307,24 @@ export default function People() {
                   </button>
                 </div>
                 {initiators.length === 0 ? (
-                  <p className="rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3 text-[11px] text-slate-500">
+                  <p className="rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3 text-[13px] text-slate-500">
                     No initiators yet besides the authorizer. Add one to let people propose and execute mutations.
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {initiators.map((u) => (
                       <div key={u.id} className="flex items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-3 py-2.5">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 font-display text-[11px] font-bold text-phantix-200">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 font-display text-[13px] font-bold text-phantix-200">
                           {u.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <p className="truncate text-sm font-medium text-slate-200">{u.full_name}</p>
                             {u.id === dc.initiator_user_id && (
-                              <span className="chip !py-0 border-gold-400/30 bg-gold-400/10 text-[10px] text-gold-300">primary</span>
+                              <span className="chip !py-0 border-gold-400/30 bg-gold-400/10 text-[12px] text-gold-300">primary</span>
                             )}
                           </div>
-                          <p className="truncate text-[11px] text-slate-500">{u.email} · <span className="font-mono">{u.role}</span></p>
+                          <p className="truncate text-[13px] text-slate-500">{u.email} · <span className="font-mono">{u.role}</span></p>
                         </div>
                       </div>
                     ))}
@@ -324,14 +334,14 @@ export default function People() {
 
               <div className="mt-4 flex items-start gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
                 <Info size={14} className="mt-0.5 shrink-0 text-gold-400" />
-                <p className="text-[11px] leading-4 text-slate-500">
+                <p className="text-[13px] leading-4 text-slate-500">
                   Any active org user with an operate session initiates with their role's grants --- add as many initiators
                   as you need. Only the authorizer approves. Changing the authorizer revokes existing operate sessions;
                   affected users must log in again with purpose=dual_control. Use organization-domain emails (allowed
                   domains) or registration contact emails only.
                 </p>
               </div>
-            </Card>
+            </CollapsibleCard>
           </motion.div>
 
           {/* Authorizer approval queue */}
@@ -352,7 +362,7 @@ export default function People() {
                     <div key={p.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-100">{p.action_label}</p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[13px] text-slate-500">
                           {p.category} · initiated by {p.initiated_by} · {timeAgo(p.created_at)}
                         </p>
                       </div>
@@ -379,11 +389,6 @@ export default function People() {
             </Card>
           </motion.div>
 
-          <UsersTable
-            onUnlock={() => void requireDualControl("This action requires a dual-control operate session.")}
-            roles={rbacRoles}
-            apps={appCatalog}
-          />
           <LoginLinks />
           <ReassignModal
             open={reassignOpen}
@@ -491,7 +496,7 @@ function RoleEditorModal({
               onChange={(e) => setKey(e.target.value.toLowerCase())}
               placeholder="e.g. auditor"
             />
-            {mode === "edit" && <p className="mt-1 text-[11px] text-slate-600">The key is fixed once a role is created.</p>}
+            {mode === "edit" && <p className="mt-1 text-[13px] text-slate-600">The key is fixed once a role is created.</p>}
           </div>
           <div>
             <label className="label">Name</label>
@@ -503,7 +508,7 @@ function RoleEditorModal({
           <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this role is for" />
         </div>
         {role?.is_system && (
-          <div className="flex items-start gap-2 rounded-md border border-gold-400/25 bg-gold-400/5 px-3 py-2 text-[11px] leading-4 text-slate-400">
+          <div className="flex items-start gap-2 rounded-md border border-gold-400/25 bg-gold-400/5 px-3 py-2 text-[13px] leading-4 text-slate-400">
             <Lock size={12} className="mt-0.5 shrink-0 text-gold-300" />
             This is a system role. You can tune its privileges, but it cannot be renamed away or deleted.
           </div>
@@ -514,7 +519,7 @@ function RoleEditorModal({
             {catalog.length > 0 && (
               <button
                 type="button"
-                className="text-[11px] text-gold-300 hover:underline"
+                className="text-[13px] text-gold-300 hover:underline"
                 onClick={() => setPerms((prev) => prev.size === catalog.length ? new Set() : new Set(catalog.map((c) => c.permission)))}
               >
                 {perms.size === catalog.length ? "Clear all" : "Select all"}
@@ -538,7 +543,7 @@ function RoleEditorModal({
                   .filter((s) => s.items.length > 0)
                   .map((s) => (
                     <div key={s.key}>
-                      <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      <p className="px-2 pb-1 pt-1 text-[12px] font-semibold uppercase tracking-wider text-slate-500">
                         {s.label}
                       </p>
                       {s.items.map((c) => (
@@ -551,7 +556,7 @@ function RoleEditorModal({
                           />
                           <span className="min-w-0">
                             <span className="font-mono text-xs text-slate-300">{c.permission}</span>
-                            {c.description && <span className="block text-[11px] leading-4 text-slate-500">{c.description}</span>}
+                            {c.description && <span className="block text-[13px] leading-4 text-slate-500">{c.description}</span>}
                           </span>
                         </label>
                       ))}
@@ -647,7 +652,7 @@ function BootstrapWizard() {
           {["Welcome", "First initiator", "Authorizer", "Review & assign"].map((l, i) => (
             <React.Fragment key={l}>
               <div className={cx("flex items-center gap-2", i <= wizardStep ? "text-gold-300" : "text-slate-600")}>
-                <span className={cx("flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold", i < wizardStep ? "bg-emerald-400/20 text-emerald-400" : i === wizardStep ? "bg-gold-400/20 text-gold-300" : "bg-phantix-800/70 text-slate-600")}>
+                <span className={cx("flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold", i < wizardStep ? "bg-emerald-400/20 text-emerald-400" : i === wizardStep ? "bg-gold-400/20 text-gold-300" : "bg-phantix-800/70 text-slate-600")}>
                   {i < wizardStep ? "✓" : i + 1}
                 </span>
                 <span className="hidden text-xs font-medium sm:block">{l}</span>
@@ -677,11 +682,11 @@ function BootstrapWizard() {
                   <div className="mt-4 grid max-w-xl grid-cols-2 gap-3">
                     <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                       <p className="text-xs font-semibold text-gold-300">Initiators <span className="font-normal text-slate-500">· one or more</span></p>
-                      <p className="mt-1 text-[11px] leading-4 text-slate-500">Propose & execute (e.g. IT Admin). Add as many as you need.</p>
+                      <p className="mt-1 text-[13px] leading-4 text-slate-500">Propose & execute (e.g. IT Admin). Add as many as you need.</p>
                     </div>
                     <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                       <p className="text-xs font-semibold text-gold-300">Authorizer <span className="font-normal text-slate-500">· exactly one</span></p>
-                      <p className="mt-1 text-[11px] leading-4 text-slate-500">Sole approver of pending actions (e.g. CISO).</p>
+                      <p className="mt-1 text-[13px] leading-4 text-slate-500">Sole approver of pending actions (e.g. CISO).</p>
                     </div>
                   </div>
                   <button onClick={() => setPhase("initiator")} className="btn-primary mt-5">
@@ -753,13 +758,13 @@ function BootstrapWizard() {
                   { slot: "Authorizer", user: authorizer },
                 ].map((s) => (
                   <div key={s.slot} className="rounded-2xl border border-gold-400/25 bg-gold-400/5 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gold-400">{s.slot}</p>
+                    <p className="text-[12px] font-semibold uppercase tracking-wider text-gold-400">{s.slot}</p>
                     <p className="mt-1.5 font-semibold text-slate-100">{s.user.full_name}</p>
                     <p className="text-xs text-slate-500">{s.user.title} · {s.user.email}</p>
                   </div>
                 ))}
               </div>
-              <p className="mt-3 flex items-start gap-2 text-[11px] leading-4 text-slate-500">
+              <p className="mt-3 flex items-start gap-2 text-[13px] leading-4 text-slate-500">
                 <Info size={13} className="mt-0.5 shrink-0 text-gold-400" />
                 You can add more initiators from the People page after this. The authorizer stays a single, sole approver ---
                 change who it is anytime, but there is only ever one.
@@ -841,7 +846,7 @@ function PersonForm({
         <div className="sm:col-span-2">
           <label className="label">Work email</label>
           <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required autoComplete="email" />
-          <p className="mt-1.5 text-[11px] text-slate-500">
+          <p className="mt-1.5 text-[13px] text-slate-500">
             OTP-only (no password) --- recommended. Free-mail is rejected unless it matches a registration contact.
           </p>
         </div>
@@ -951,7 +956,7 @@ function UsersTable({
                     return (
                       <div className="flex flex-wrap gap-1">
                         {overrides.map(([k, v]) => (
-                          <span key={k} className="chip border-phantix-700 bg-phantix-850 text-[10px] text-slate-300">
+                          <span key={k} className="chip border-phantix-700 bg-phantix-850 text-[12px] text-slate-300">
                             {apps.find((a) => a.key === k)?.label || k}: {v}
                           </span>
                         ))}
@@ -1278,7 +1283,7 @@ function AddUserModal({
         }}
       >
         {isInitiator && (
-          <div className="flex items-start gap-2 rounded-md border border-gold-400/25 bg-gold-400/5 px-3 py-2 text-[11px] leading-4 text-slate-400">
+          <div className="flex items-start gap-2 rounded-md border border-gold-400/25 bg-gold-400/5 px-3 py-2 text-[13px] leading-4 text-slate-400">
             <ShieldCheck size={13} className="mt-0.5 shrink-0 text-gold-300" />
             An initiator proposes and executes mutations with their role's grants. There is no separate "authorizer"
             role --- the authorizer is a single designated slot, changed from the Dual control card.

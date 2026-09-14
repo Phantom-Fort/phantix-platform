@@ -116,13 +116,13 @@ export default function SetupWizard() {
           <BrandLogo className="h-10 w-10" />
           <div className="min-w-0 flex-1">
             <p className="font-display text-[15px] font-bold text-white">Organization setup</p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-gold-400">{state.org.name || "Your organization"}</p>
+            <p className="text-[12px] uppercase tracking-[0.18em] text-gold-400">{state.org.name || "Your organization"}</p>
           </div>
           <ThemeToggle />
         </div>
 
         <div className="mt-6">
-          <div className="mb-1.5 flex justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <div className="mb-1.5 flex justify-between text-[12px] font-semibold uppercase tracking-wider text-slate-500">
             <span>Progress</span>
             <span className="text-gold-400">{progress}%</span>
           </div>
@@ -170,9 +170,9 @@ export default function SetupWizard() {
                   <span>
                     <span className={cx("block text-sm font-medium", active ? "text-white" : done ? "text-slate-300" : "text-slate-500")}>
                       {m.label}
-                      {m.optional && <span className="ml-1.5 text-[10px] font-normal text-slate-600">optional</span>}
+                      {m.optional && <span className="ml-1.5 text-[12px] font-normal text-slate-600">optional</span>}
                     </span>
-                    <span className="block text-[11px] text-slate-600">
+                    <span className="block text-[13px] text-slate-600">
                       {done ? "Done" : active ? "In progress" : m.id > currentStep ? "Locked" : "Pending"}
                     </span>
                   </span>
@@ -182,7 +182,7 @@ export default function SetupWizard() {
           })}
         </div>
 
-        <div className="rounded-md border border-phantix-700/40 bg-phantix-900/60 p-4 text-[11px] leading-5 text-slate-500">
+        <div className="rounded-md border border-phantix-700/40 bg-phantix-900/60 p-4 text-[13px] leading-5 text-slate-500">
           <Info size={13} className="mb-1.5 text-gold-400" />
           Rehydrates from <span className="font-mono text-slate-400">GET /organizations/me/setup</span>.
           Required: privacy + email OTP. Domain / CAC / manual review are optional.
@@ -314,7 +314,7 @@ function PrivacyStep({ privacyNotice }: { privacyNotice: Record<string, unknown>
         )}
         {!pn && !summary && <p className="text-slate-500">Loading privacy notice...</p>}
       </div>
-      {version && <p className="mt-2 text-[11px] text-slate-600">Notice version: {version}</p>}
+      {version && <p className="mt-2 text-[13px] text-slate-600">Notice version: {version}</p>}
       <label
         className={cx(
           "mt-4 flex items-start gap-3 rounded-md border p-4 transition-colors",
@@ -512,7 +512,7 @@ function OtpStep({ privacyNotice }: { privacyNotice: Record<string, unknown> | n
         <div className="mt-6 space-y-4">
           {devOtp && import.meta.env.DEV && (
             <div className="rounded-md border border-gold-400/30 bg-gold-400/8 p-3.5 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-gold-400/80">Dev mode --- your code</p>
+              <p className="text-[12px] uppercase tracking-wider text-gold-400/80">Dev mode --- your code</p>
               <p className="mt-1 font-mono text-2xl font-bold tracking-[0.4em] text-gold-300">{devOtp}</p>
             </div>
           )}
@@ -602,10 +602,10 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
         {verified && (
           <div className="mt-4 flex items-center gap-2.5 rounded-md border border-emerald-400/30 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-300">
             <CheckCircle2 size={16} /> Company verified
-            {s.domain_dns_ok && <span className="chip border-emerald-400/30 text-[10px]">DNS</span>}
-            {s.domain_http_ok && <span className="chip border-emerald-400/30 text-[10px]">HTTP</span>}
-            {s.cac_submitted && <span className="chip border-emerald-400/30 text-[10px]">CAC</span>}
-            {s.manual_review === "approved" && <span className="chip border-emerald-400/30 text-[10px]">Manual</span>}
+            {s.domain_dns_ok && <span className="chip border-emerald-400/30 text-[12px]">DNS</span>}
+            {s.domain_http_ok && <span className="chip border-emerald-400/30 text-[12px]">HTTP</span>}
+            {s.cac_submitted && <span className="chip border-emerald-400/30 text-[12px]">CAC</span>}
+            {s.manual_review === "approved" && <span className="chip border-emerald-400/30 text-[12px]">Manual</span>}
           </div>
         )}
 
@@ -686,7 +686,7 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                               <Copy size={14} />
                             </button>
                           </div>
-                          <p className="mt-1.5 text-[10px] text-slate-500">
+                          <p className="mt-1.5 text-[12px] text-slate-500">
                             {dnsRecordType} record on <span className="font-mono text-slate-400">{dnsHost || "@"}</span>
                             {instr.dns?.hint && <span className="block mt-0.5">{instr.dns.hint}</span>}
                           </p>
@@ -708,10 +708,10 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
                               <Copy size={14} />
                             </button>
                           </div>
-                          <p className="mt-1.5 text-[10px] text-slate-500">{instr.http?.content_type ? `${instr.http.content_type}` : ""}{instr.http?.hint && <span className="block mt-0.5">{instr.http.hint}</span>}</p>
+                          <p className="mt-1.5 text-[12px] text-slate-500">{instr.http?.content_type ? `${instr.http.content_type}` : ""}{instr.http?.hint && <span className="block mt-0.5">{instr.http.hint}</span>}</p>
                           {httpBody && (
                             <>
-                              <p className="mt-1.5 text-[11px] text-slate-500">File body must be exactly: <code className="font-mono text-gold-300 text-[11px]">{httpBody.slice(0, 50)}{httpBody.length > 50 ? "..." : ""}</code></p>
+                              <p className="mt-1.5 text-[13px] text-slate-500">File body must be exactly: <code className="font-mono text-gold-300 text-[13px]">{httpBody.slice(0, 50)}{httpBody.length > 50 ? "..." : ""}</code></p>
                               <button type="button" className="mt-1 text-xs text-gold-400 hover:text-gold-300" onClick={() => copy(httpBody, "Token body")}>
                                 Copy token body
                               </button>
@@ -956,7 +956,7 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
         {rows.map((r) => (
           <div key={r.label} className="flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
             <span className="text-sm text-slate-300">
-              {r.label} {r.required && <span className="ml-1 text-[10px] text-slate-600">required</span>}
+              {r.label} {r.required && <span className="ml-1 text-[12px] text-slate-600">required</span>}
             </span>
             {r.ok ? <CheckCircle2 size={16} className="text-emerald-400" /> : <span className="text-xs text-slate-600">{r.required ? "missing" : "skipped"}</span>}
           </div>
@@ -995,7 +995,7 @@ function CompleteStep({ privacyNotice }: { privacyNotice: Record<string, unknown
 function StepTitle({ icon, kicker, title }: { icon: React.ReactNode; kicker: string; title: string }) {
   return (
     <div>
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-400">
+      <div className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.18em] text-gold-400">
         {icon} {kicker}
       </div>
       <h2 className="mt-2 font-display text-2xl font-bold text-white">{title}</h2>
@@ -1023,7 +1023,7 @@ function PrivacyRef({ notice }: { notice: Record<string, unknown> | null }) {
     <div className="mt-4 rounded-md border border-phantix-700/30 bg-phantix-950/40 p-3 text-xs text-slate-500">
       <p className="font-medium text-slate-400">{title}</p>
       {summary && <p className="mt-0.5 line-clamp-2">{summary}</p>}
-      <p className="mt-1 text-[10px] text-slate-600">
+      <p className="mt-1 text-[12px] text-slate-600">
         This privacy model applies to all organization data stored by SecureGraph.
         <span className="ml-1">Your data lives in your dedicated security database --- we never store business rows.</span>
       </p>

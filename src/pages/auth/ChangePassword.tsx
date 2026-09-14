@@ -71,7 +71,7 @@ export default function ChangePassword() {
         <div className="card p-7">
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-gold-400/30 bg-gold-400/8 px-3 py-2">
             <ShieldCheck size={15} className="mt-0.5 shrink-0 text-gold-300" />
-            <p className="text-[11px] leading-5 text-slate-400">
+            <p className="text-[13px] leading-5 text-slate-400">
               Platform access is role-based. Changing your password does not change your role or
               privileges.
             </p>

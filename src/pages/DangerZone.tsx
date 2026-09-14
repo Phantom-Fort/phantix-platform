@@ -88,7 +88,7 @@ export default function DangerZone() {
   ) : null;
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div>
       <PageHeader
         title="Danger zone"
         description="Irreversible account deletions. These actions are intentionally separated from every other setting and require explicit confirmation."
@@ -103,7 +103,7 @@ export default function DangerZone() {
             <h2 className="font-display text-[13px] font-bold uppercase tracking-[0.14em] text-severity-critical">
               Danger zone
             </h2>
-            <span className="ml-auto hidden text-[11px] text-severity-critical/70 sm:block">
+            <span className="ml-auto hidden text-[13px] text-severity-critical/70 sm:block">
               Deletions are gated by dual control when configured
             </span>
           </div>
@@ -154,7 +154,7 @@ export default function DangerZone() {
                       <Building2 size={14} className="text-slate-500" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-200">{c.name}</p>
-                        <p className="font-mono text-[11px] text-slate-500">#{c.id} · {c.slug}</p>
+                        <p className="font-mono text-[13px] text-slate-500">#{c.id} · {c.slug}</p>
                       </div>
                       <button
                         className="btn-danger !px-3 !py-1.5 !text-xs"
@@ -206,9 +206,9 @@ export default function DangerZone() {
                               <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">Authorizer</span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-500">{u.email} · {u.title}</p>
+                          <p className="text-[13px] text-slate-500">{u.email} · {u.title}</p>
                           {isSlot && (
-                            <p className="mt-1 text-[11px] text-severity-medium">
+                            <p className="mt-1 text-[13px] text-severity-medium">
                               Assigned dual-control slot — reassign before deleting to avoid locking yourself out.
                             </p>
                           )}

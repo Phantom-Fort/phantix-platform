@@ -236,7 +236,7 @@ export default function GithubIntegration() {
   const filtered = repos.filter((r) => r.full_name.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <div>
       <PageHeader
         title="GitHub"
         description="Connect the SecureGraph GitHub App to inventory and analyze your repositories. Primary integration — PAT is legacy."
@@ -280,7 +280,7 @@ export default function GithubIntegration() {
                       <Github size={15} className="shrink-0 text-gold-400" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-slate-200">{d.account_login}</p>
-                        <p className="text-[10px] text-slate-500">{d.account_type || "GitHub App"}{d.repository_selection ? ` · ${d.repository_selection}` : ""}</p>
+                        <p className="text-[12px] text-slate-500">{d.account_type || "GitHub App"}{d.repository_selection ? ` · ${d.repository_selection}` : ""}</p>
                       </div>
                       <button
                         onClick={() => void linkInstall(d.installation_id)}
@@ -414,7 +414,7 @@ export default function GithubIntegration() {
                   <GitBranch size={15} className="shrink-0 text-gold-400" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-slate-200">{r.full_name}</p>
-                    <p className="text-[11px] text-slate-500">branch: {r.default_branch}</p>
+                    <p className="text-[13px] text-slate-500">branch: {r.default_branch}</p>
                   </div>
                   {r.private ? <span className="chip border-amber-400/30 bg-amber-400/10 text-amber-300"><Lock size={10} className="mr-1 inline" /> Private</span> : <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300"><Unlock size={10} className="mr-1 inline" /> Public</span>}
                   {r.requires_premium && <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300"><ShieldCheck size={10} className="mr-1 inline" /> Premium</span>}
@@ -612,7 +612,7 @@ function BranchReviewer({ repos }: { repos: Repo[] }) {
                       <p className="truncate font-medium text-slate-200">{repo.full_name}</p>
                       {configured && (s!.enabled ? <StatusBadge status="active" /> : <StatusBadge status="draft" />)}
                     </div>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[13px] text-slate-500">
                       watch: <span className="font-mono text-gold-300">{s?.watched_branch ?? repo.default_branch}</span>
                       {s?.post_github_comment ? " · posts PR comment" : ""}
                     </p>

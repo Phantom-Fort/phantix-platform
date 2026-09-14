@@ -26,7 +26,9 @@ const severityMeta: Record<Severity, string> = {
 
 export default function Alerts() {
   const { state, operate, requireDualControl, sendTestAlert, updateAlertSettings, toast } = useStore();
-  const [tab, setTab] = useState("log");
+  // Land on the interactive configuration — the delivery log is reference
+  // material and stays one click away.
+  const [tab, setTab] = useState("channels");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [channelsOpen, setChannelsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -46,7 +48,7 @@ export default function Alerts() {
   };
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Alerts"
         description="Delivery log and channel configuration --- SMTP, WhatsApp, Telegram"
@@ -83,7 +85,7 @@ export default function Alerts() {
             <Card className="!p-0 overflow-hidden">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-phantix-700/40 text-left text-[11px] uppercase tracking-wider text-slate-500">
+                  <tr className="border-b border-phantix-700/40 text-left text-[13px] uppercase tracking-wider text-slate-500">
                     <th className="px-5 py-3 font-medium">Event</th>
                     <th className="px-5 py-3 font-medium">Severity</th>
                     <th className="px-5 py-3 font-medium">Channels</th>
@@ -174,7 +176,7 @@ export default function Alerts() {
                     </tbody>
                   </table>
                 </div>
-                <p className="mt-3 text-[11px] leading-5 text-slate-500">
+                <p className="mt-3 text-[13px] leading-5 text-slate-500">
                   WhatsApp and Telegram fire on critical only. Add Slack or Teams from the Integrations Hub to widen critical + high delivery.
                 </p>
               </Card>
@@ -189,11 +191,11 @@ export default function Alerts() {
                 {alertSettings.smtp.enabled ? (
                   <>
                     <div className="rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-slate-500">Server</p>
+                      <p className="text-[12px] uppercase tracking-wider text-slate-500">Server</p>
                       <p className="mt-1 font-mono text-xs text-slate-300">{alertSettings.smtp.host}:{alertSettings.smtp.port}</p>
                     </div>
                     <div className="rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-slate-500">From</p>
+                      <p className="text-[12px] uppercase tracking-wider text-slate-500">From</p>
                       <p className="mt-1 text-xs text-slate-300">{alertSettings.smtp.from_name} &lt;{alertSettings.smtp.from_email}&gt;</p>
                     </div>
                   </>
@@ -392,7 +394,7 @@ function SMTPForm({
         <div>
           <label className="label">SMTP Password</label>
           <input className="input font-mono text-sm" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Leave blank to keep existing" />
-          <p className="text-[10px] text-slate-500 mt-1">Password is encrypted at rest. Leave empty to keep current password unchanged.</p>
+          <p className="text-[12px] text-slate-500 mt-1">Password is encrypted at rest. Leave empty to keep current password unchanged.</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -456,7 +458,7 @@ function ChannelsForm({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-slate-200">WhatsApp</p>
-            <p className="text-[10px] text-slate-500">Meta Cloud API</p>
+            <p className="text-[12px] text-slate-500">Meta Cloud API</p>
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={waEnabled} onChange={(e) => setWaEnabled(e.target.checked)} className="rounded accent-gold-400" />
@@ -476,7 +478,7 @@ function ChannelsForm({
             <div>
               <label className="label">Recipients (E.164 phone numbers)</label>
               <input className="input text-sm font-mono" value={waRecipients} onChange={(e) => setWaRecipients(e.target.value)} placeholder="+2348012345678, +2348098765432" />
-              <p className="text-[10px] text-slate-500 mt-1">International format (+[country][number]). Requires a Meta-approved utility template for business-initiated messages.</p>
+              <p className="text-[12px] text-slate-500 mt-1">International format (+[country][number]). Requires a Meta-approved utility template for business-initiated messages.</p>
             </div>
           </div>
         )}
@@ -487,7 +489,7 @@ function ChannelsForm({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-slate-200">Telegram</p>
-            <p className="text-[10px] text-slate-500">Bot API</p>
+            <p className="text-[12px] text-slate-500">Bot API</p>
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={tgEnabled} onChange={(e) => setTgEnabled(e.target.checked)} className="rounded accent-gold-400" />
@@ -507,12 +509,12 @@ function ChannelsForm({
             <div>
               <label className="label">Bot Token</label>
               <input className="input text-sm font-mono" type="password" value={tgBotToken} onChange={(e) => setTgBotToken(e.target.value)} placeholder="123456:ABC-DEF..." />
-              <p className="text-[10px] text-slate-500 mt-1">Leave blank to use platform default. Create with @BotFather.</p>
+              <p className="text-[12px] text-slate-500 mt-1">Leave blank to use platform default. Create with @BotFather.</p>
             </div>
             <div>
               <label className="label">Recipients (chat IDs / group IDs / @usernames)</label>
               <input className="input text-sm font-mono" value={tgRecipients} onChange={(e) => setTgRecipients(e.target.value)} placeholder="-1001234567890, @phantix_security" />
-              <p className="text-[10px] text-slate-500 mt-1">Start the bot first. Group IDs start with -100. @usernames must include prefix.</p>
+              <p className="text-[12px] text-slate-500 mt-1">Start the bot first. Group IDs start with -100. @usernames must include prefix.</p>
             </div>
           </div>
         )}

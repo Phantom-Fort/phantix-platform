@@ -50,7 +50,7 @@ export default function Privacy() {
             <div>
               <h1 className="font-display text-3xl font-bold text-white">{notice?.title || "Privacy notice"}</h1>
               <p className="text-sm text-slate-500">{notice?.summary || "How SecureGraph handles your data --- the short, honest version"}</p>
-              {notice?.version && <p className="mt-1 text-[11px] font-mono text-slate-600">version {notice.version}</p>}
+              {notice?.version && <p className="mt-1 text-[13px] font-mono text-slate-600">version {notice.version}</p>}
             </div>
           </div>
         </motion.div>

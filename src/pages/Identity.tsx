@@ -212,7 +212,7 @@ export default function Identity() {
   };
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Identity & profile"
         description="Company tenant profile from GET /organizations/me --- identity, contacts, security posture, branding, and service key."
@@ -464,7 +464,7 @@ export default function Identity() {
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-mono text-sm text-slate-200">{key.prefix}</span>
-                        <p className="mt-0.5 text-[10px] text-slate-600">De-identified --- the full key was shown only at creation</p>
+                        <p className="mt-0.5 text-[12px] text-slate-600">De-identified --- the full key was shown only at creation</p>
                       </div>
                       <StatusBadge status="active" />
                     </div>
@@ -559,7 +559,7 @@ export default function Identity() {
                       </span>
                       <span>
                         <span className="block text-sm font-medium text-slate-200">{s.name}</span>
-                        <span className="block text-[11px] text-slate-500">{s.desc}</span>
+                        <span className="block text-[13px] text-slate-500">{s.desc}</span>
                       </span>
                     </button>
                   );
@@ -814,7 +814,7 @@ function DataSubjectPanel() {
                   )}
                 >
                   <p className={cx("text-sm font-medium", type === r.id ? "text-gold-300" : "text-slate-200")}>{r.label}</p>
-                  <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{r.helper}</p>
+                  <p className="mt-0.5 text-[13px] leading-4 text-slate-500">{r.helper}</p>
                 </button>
               ))}
             </div>
@@ -852,9 +852,9 @@ function DataSubjectPanel() {
                         <span className="mx-2 text-slate-600">·</span>
                         {DSR_TYPES.find((t) => t.id === r.request_type)?.label ?? r.request_type}
                       </p>
-                      {r.details && <p className="mt-0.5 truncate text-[11px] text-slate-500">{r.details}</p>}
+                      {r.details && <p className="mt-0.5 truncate text-[13px] text-slate-500">{r.details}</p>}
                     </div>
-                    <span className={cx("chip !px-2 !py-0.5 text-[10px] capitalize", DSR_STATUS_CLASSES[r.status] ?? "border-phantix-700/60 bg-phantix-800/60 text-slate-300")}>
+                    <span className={cx("chip !px-2 !py-0.5 text-[12px] capitalize", DSR_STATUS_CLASSES[r.status] ?? "border-phantix-700/60 bg-phantix-800/60 text-slate-300")}>
                       {r.status.replace(/_/g, " ")}
                     </span>
                   </div>

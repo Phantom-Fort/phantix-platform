@@ -97,7 +97,7 @@ export default function Integrations() {
   const revealSecret = (title: string, value: string) => setShowSecret({ title, value });
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Integrations Hub"
         description="Connect alert channels, SSO providers and automation webhooks. Secrets are never stored in plain text and rotate without disruption."
@@ -145,7 +145,7 @@ export default function Integrations() {
                             <p className="text-sm font-medium text-slate-100">{conn.display_name}</p>
                             <StatusBadge status={existing ? existing.status : conn.status} />
                           </div>
-                          <p className="mt-0.5 text-[11px] text-slate-400">
+                          <p className="mt-0.5 text-[13px] text-slate-400">
                             {catIcons[conn.category]} {conn.category}
                             {conn.wave ? ` · wave ${conn.wave}` : ""}
                           </p>
@@ -154,13 +154,13 @@ export default function Integrations() {
                       <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">{conn.description}</p>
                       <div className="mt-3 flex flex-wrap items-center gap-1.5">
                         {conn.auth_modes.map((m) => (
-                          <span key={m} className="rounded bg-phantix-800/80 px-1.5 py-0.5 font-mono text-[9px] text-slate-400">{m}</span>
+                          <span key={m} className="rounded bg-phantix-800/80 px-1.5 py-0.5 font-mono text-[11px] text-slate-400">{m}</span>
                         ))}
                         <span className="ml-auto">
                           {existing ? (
-                            <span className="text-[11px] text-emerald-400">{existing.status === "active" ? "Connected" : existing.status}</span>
+                            <span className="text-[13px] text-emerald-400">{existing.status === "active" ? "Connected" : existing.status}</span>
                           ) : (
-                            <button onClick={() => setInstallOpen(conn.connector_id)} className="btn-primary !px-3 !py-1 !text-[11px]">
+                            <button onClick={() => setInstallOpen(conn.connector_id)} className="btn-primary !px-3 !py-1 !text-[13px]">
                               <Plug size={12} /> Install
                             </button>
                           )}
@@ -192,10 +192,10 @@ export default function Integrations() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-slate-100">{inst.label || hubConnectorMeta[inst.connector_id]?.short || inst.connector_id}</p>
                       {inst.has_secrets && (
-                        <span className="inline-flex items-center gap-1 rounded bg-phantix-800/80 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-slate-400"><Lock size={9} /> secrets</span>
+                        <span className="inline-flex items-center gap-1 rounded bg-phantix-800/80 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-slate-400"><Lock size={9} /> secrets</span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[13px] text-slate-500">
                       {inst.connector_id} · {inst.auth_mode}
                       {inst.created_at ? ` · added ${timeAgo(inst.created_at)}` : ""}
                       {inst.health?.last_test_at ? ` · last test ${timeAgo(String(inst.health.last_test_at))}` : ""}
@@ -204,7 +204,7 @@ export default function Integrations() {
                   <StatusBadge status={inst.status} />
                   <div className="flex flex-wrap items-center gap-1.5">
                     {inst.status === "pending_auth" && (
-                      <button className="btn-secondary !px-2.5 !py-1 !text-[11px]" onClick={async () => {
+                      <button className="btn-secondary !px-2.5 !py-1 !text-[13px]" onClick={async () => {
                         try {
                           const oauth = await startHubOAuth(inst.id);
                           const w = window.open(oauth.authorize_url, "_blank", "popup,width=560,height=720");
@@ -214,11 +214,11 @@ export default function Integrations() {
                         <ExternalLink size={11} /> Resume OAuth
                       </button>
                     )}
-                    <button className="btn-ghost !px-2.5 !py-1 !text-[11px]" onClick={() => void runTest(inst)}>
+                    <button className="btn-ghost !px-2.5 !py-1 !text-[13px]" onClick={() => void runTest(inst)}>
                       <TestTube size={11} /> Test
                     </button>
                     {inst.has_secrets && inst.connector_id !== "slack" && inst.connector_id !== "teams" && (
-                      <button className="btn-ghost !px-2.5 !py-1 !text-[11px]" onClick={async () => {
+                      <button className="btn-ghost !px-2.5 !py-1 !text-[13px]" onClick={async () => {
                         if (!(await requireDualControl("Rotating a secret requires a dual-control operate session."))) return;
                         try {
                           const res = await rotateHubSecret(inst.id, true);
@@ -236,7 +236,7 @@ export default function Integrations() {
                         <RotateCcw size={11} /> Rotate
                       </button>
                     )}
-                    <button className="btn-ghost !px-2.5 !py-1 !text-[11px] text-severity-critical" onClick={() => void confirmUninstall(inst)}>
+                    <button className="btn-ghost !px-2.5 !py-1 !text-[13px] text-severity-critical" onClick={() => void confirmUninstall(inst)}>
                       <Trash2 size={11} />
                     </button>
                   </div>
@@ -329,10 +329,10 @@ function SsoScimTab({
                   </span>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-slate-100">{inst.label || hubConnectorMeta[inst.connector_id]?.short || inst.connector_id}</p>
-                    <p className="text-[11px] text-slate-500">issuer: {String(inst.config?.issuer ?? "—")}</p>
+                    <p className="text-[13px] text-slate-500">issuer: {String(inst.config?.issuer ?? "—")}</p>
                   </div>
                   <div className="flex gap-1.5">
-                    <button className="btn-ghost !px-2.5 !py-1 !text-[11px]" onClick={async () => {
+                    <button className="btn-ghost !px-2.5 !py-1 !text-[13px]" onClick={async () => {
                       if (!(await requireDualControl("Minting a SCIM token requires a dual-control operate session."))) return;
                       try {
                         const res = await mintHubScimToken(inst.id, true);
@@ -347,7 +347,7 @@ function SsoScimTab({
                     }}>
                       <KeyRound size={11} /> Mint SCIM token
                     </button>
-                    <button className="btn-ghost !px-2.5 !py-1 !text-[11px] text-severity-critical" onClick={async () => {
+                    <button className="btn-ghost !px-2.5 !py-1 !text-[13px] text-severity-critical" onClick={async () => {
                       if (!(await requireDualControl("Disconnecting SSO requires a dual-control operate session."))) return;
                       try {
                         const res = await uninstallHubIntegration(inst.id, true);
@@ -364,8 +364,8 @@ function SsoScimTab({
             </div>
           )}
           <div className="mt-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-3 py-2.5">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Start URL (send your team here)</p>
-            <p className="mt-1 break-all font-mono text-[11px] text-gold-300">{base}</p>
+            <p className="text-[13px] font-medium uppercase tracking-wider text-slate-500">Start URL (send your team here)</p>
+            <p className="mt-1 break-all font-mono text-[13px] text-gold-300">{base}</p>
           </div>
         </Card>
       </div>
@@ -380,12 +380,12 @@ function SsoScimTab({
               `${scimBase}/Users`,
               `${scimBase}/Users/{id}`,
             ].map((u) => (
-              <div key={u} className="rounded-md bg-phantix-950/50 border border-phantix-700/40 px-3 py-2 font-mono text-[11px] text-slate-300">{u}</div>
+              <div key={u} className="rounded-md bg-phantix-950/50 border border-phantix-700/40 px-3 py-2 font-mono text-[13px] text-slate-300">{u}</div>
             ))}
           </div>
           <div className="mt-3 flex items-start gap-2 rounded-md border border-gold-400/25 bg-gold-400/5 p-3">
             <Info size={14} className="mt-0.5 shrink-0 text-gold-400" />
-            <p className="text-[11px] leading-5 text-slate-400">Enable automatic user provisioning in your IdP using the SCIM base URL and the bearer token you mint here. One active IdP per org.</p>
+            <p className="text-[13px] leading-5 text-slate-400">Enable automatic user provisioning in your IdP using the SCIM base URL and the bearer token you mint here. One active IdP per org.</p>
           </div>
         </Card>
 
@@ -397,7 +397,7 @@ function SsoScimTab({
                 <span className="flex h-8 w-8 items-center justify-center rounded-md border border-phantix-600/50 bg-phantix-800/70 text-slate-300">{connectorGlyph(inst.connector_id)}</span>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-100">{inst.label}</p>
-                  <p className="text-[11px] text-slate-500">{inst.connector_id} · {inst.auth_mode}</p>
+                  <p className="text-[13px] text-slate-500">{inst.connector_id} · {inst.auth_mode}</p>
                 </div>
                 <StatusBadge status={inst.status} />
               </div>
@@ -520,7 +520,7 @@ function InstallModal({ connectorId, connector, onClose, onDone }: {
               onChange={(e) => setSecret(e.target.value)}
             />
             {authMode === "webhook_secret" && (
-              <p className="mt-1 text-[11px] text-slate-500">If left blank the backend generates one (shown once after install).</p>
+              <p className="mt-1 text-[13px] text-slate-500">If left blank the backend generates one (shown once after install).</p>
             )}
           </div>
         )}
@@ -528,7 +528,7 @@ function InstallModal({ connectorId, connector, onClose, onDone }: {
         {authMode === "oauth2" && (
           <div className="flex items-start gap-2 rounded-md border border-phantix-700/50 bg-phantix-950/50 p-3">
             <ExternalLink size={14} className="mt-0.5 shrink-0 text-gold-400" />
-            <p className="text-[11px] leading-5 text-slate-400">After the authorizer approves, a popup opens to complete OAuth with the provider. The installation stays <code className="font-mono">pending_auth</code> until then.</p>
+            <p className="text-[13px] leading-5 text-slate-400">After the authorizer approves, a popup opens to complete OAuth with the provider. The installation stays <code className="font-mono">pending_auth</code> until then.</p>
           </div>
         )}
 

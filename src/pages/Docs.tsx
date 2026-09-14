@@ -26,7 +26,7 @@ export default function Docs() {
   const featured = docs.filter((d) => d.badge);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="mx-auto w-full max-w-[1200px]">
       {/* Hero */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="relative mb-10 overflow-hidden rounded-3xl border border-phantix-700/40 bg-gradient-to-b from-phantix-800/60 to-phantix-900/60 px-8 py-12">
         <div className="pointer-events-none absolute inset-0 bg-grid-faint bg-grid opacity-30 [mask-image:radial-gradient(ellipse_60%_80%_at_50%_0%,black,transparent)]" />

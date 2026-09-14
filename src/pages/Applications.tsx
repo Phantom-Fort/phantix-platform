@@ -100,7 +100,7 @@ export default function Applications() {
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Applications"
         description="One backend, four applications. Choose which ones this company uses — Core is always on, and each operator still only sees the applications their role allows."
@@ -133,7 +133,7 @@ export default function Applications() {
                       <span className="flex items-center gap-2">
                         {card.label}
                         {card.base && (
-                          <span className="rounded bg-phantix-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+                          <span className="rounded bg-phantix-800 px-1.5 py-0.5 text-[12px] uppercase tracking-wide text-slate-400">
                             always on
                           </span>
                         )}
@@ -180,7 +180,7 @@ export default function Applications() {
                       {card.capabilities.map((c) => (
                         <span
                           key={c}
-                          className="rounded border border-phantix-700/60 bg-phantix-900 px-2 py-0.5 text-[11px] text-slate-300"
+                          className="rounded border border-phantix-700/60 bg-phantix-900 px-2 py-0.5 text-[13px] text-slate-300"
                         >
                           {c}
                         </span>

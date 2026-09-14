@@ -199,7 +199,7 @@ export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: Re
           <span className="relative flex items-center gap-1.5">
             {t.label}
             {t.count !== undefined && (
-              <span className={cx("rounded-full px-1.5 py-0.5 text-[10px] font-bold", active === t.id ? "bg-phantix-950/60 text-gold-300" : "bg-phantix-700/60 text-slate-300")}>{t.count}</span>
+              <span className={cx("rounded-full px-1.5 py-0.5 text-[12px] font-bold", active === t.id ? "bg-phantix-950/60 text-gold-300" : "bg-phantix-700/60 text-slate-300")}>{t.count}</span>
             )}
           </span>
         </button>
@@ -455,9 +455,9 @@ export function CopyChip({ value, label }: { value: string; label?: string }) {
       className="group inline-flex items-center gap-2 rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-1.5 font-mono text-xs text-slate-300 transition-colors hover:border-gold-400/40 hover:text-gold-300"
       title="Copy"
     >
-      {label && <span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">{label}</span>}
+      {label && <span className="font-sans text-[12px] uppercase tracking-wider text-slate-500">{label}</span>}
       {value}
-      <span className="text-[10px] text-slate-600 group-hover:text-gold-400">{copied ? "✓ copied" : "copy"}</span>
+      <span className="text-[12px] text-slate-600 group-hover:text-gold-400">{copied ? "✓ copied" : "copy"}</span>
     </button>
   );
 }

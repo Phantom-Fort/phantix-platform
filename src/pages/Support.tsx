@@ -15,7 +15,7 @@ export default function Support() {
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <div>
       <PageHeader
         title="Support"
         description="Tickets route to the SecureGraph support desk. Quote your tenant ID and slug for faster resolution."
