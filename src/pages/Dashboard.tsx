@@ -36,7 +36,7 @@ export default function Dashboard() {
   const doneCount = checklist.filter((c) => c.done).length;
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">{state.org.name}</p>

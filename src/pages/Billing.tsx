@@ -271,7 +271,7 @@ export default function Billing() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <div>
         <PageHeaderSkeleton actions />
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <div className="skeleton h-6 w-28 rounded-full" />
@@ -341,7 +341,7 @@ export default function Billing() {
       ];
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Billing"
         description="Manage your SecureGraph subscription, payments, and access"
@@ -361,7 +361,7 @@ export default function Billing() {
             <p className="text-xs font-semibold text-gold-200">
               {up ? `${up.label} needs ${upsellPlanLabel(up.plan)}` : "Upgrade required"}
             </p>
-            <p className="mt-0.5 text-[11px] leading-5 text-gold-100/85">
+            <p className="mt-0.5 text-[13px] leading-5 text-gold-100/85">
               {up?.blurb || upsellReason || "This action needs a higher plan."}
             </p>
           </div>
@@ -446,7 +446,7 @@ export default function Billing() {
                   >
                     {p.name}
                     {p.list_price_ngn != null && p.list_price_ngn > 0 && (
-                      <span className="ml-1.5 text-[11px] font-normal text-slate-500">
+                      <span className="ml-1.5 text-[13px] font-normal text-slate-500">
                         {formatNaira(p.list_price_ngn)}/mo
                       </span>
                     )}
@@ -580,7 +580,7 @@ export default function Billing() {
                 <div key={f.key} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-slate-200">{f.label}</p>
-                    <p className="text-[11px] leading-5 text-slate-500">{f.blurb}</p>
+                    <p className="text-[13px] leading-5 text-slate-500">{f.blurb}</p>
                   </div>
                   <span className="chip shrink-0 border-gold-400/30 text-gold-300">
                     <Sparkle size={11} className="mr-1 inline" /> {upsellPlanLabel(f.plan)}
@@ -621,7 +621,7 @@ function BillingStat({
 }) {
   return (
     <div className="rounded-md border border-phantix-700/50 bg-phantix-900/40 px-3 py-2.5">
-      <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-[12px] uppercase tracking-wider text-slate-500">{label}</p>
       <p
         className={cx(
           "mt-1 font-display text-lg font-semibold",

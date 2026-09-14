@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, CheckCircle2, Loader2, Bot, ToggleLeft, ToggleRight, ShieldCheck, GitPullRequest } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, Modal } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, Modal } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
@@ -200,7 +200,7 @@ export default function AiSettings() {
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="AI governance"
         description="Org AI settings and usage. Narratives only --- AI never determines security facts or scores. GET /ai/settings · GET /ai/usage"
@@ -219,7 +219,7 @@ export default function AiSettings() {
                 ["Pentest AI", ai.ai_pentest_ready ? "Ready" : "Gated"],
               ].map(([k, v]) => (
                 <div key={k} className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500">{k}</p>
+                  <p className="text-[12px] uppercase tracking-wider text-slate-500">{k}</p>
                   <p className="mt-1 font-medium capitalize text-slate-200">{v}</p>
                 </div>
               ))}
@@ -269,26 +269,7 @@ export default function AiSettings() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="space-y-5">
-          <Card>
-            <CardHeader title="Usage this month" subtitle="Cost visibility --- every call audited with prompt version + model" />
-            <div className="flex items-end gap-8">
-              <div>
-                <p className="font-display text-3xl font-bold text-white">{ai.monthly_tokens.toLocaleString()}</p>
-                <p className="text-xs text-slate-500">tokens</p>
-              </div>
-              <div>
-                <p className="font-display text-3xl font-bold text-gold-300">${ai.monthly_cost_usd.toFixed(2)}</p>
-                <p className="text-xs text-slate-500">estimated cost</p>
-              </div>
-            </div>
-            <div className="mt-5 space-y-2 text-xs leading-5 text-slate-400">
-              <p>· PII is redacted before any provider call</p>
-              <p>· Hallucination heuristics + cost/budget gates on every request</p>
-              <p>· AI pentesting activates only when a DeepSeek key is configured</p>
-              <p>· Finding explanations and executive summaries land in reports via the bus</p>
-            </div>
-          </Card>
-
+          {/* Interactive controls first — the usage figures below are reference. */}
           {/* SecureGraph Agent toggle */}
           <Card className="border-gold-400/25">
             <CardHeader title="SecureGraph Agent" subtitle="Conversational security assistant for the Command Centre" action={<Bot size={16} className="text-gold-400" />} />
@@ -335,7 +316,7 @@ export default function AiSettings() {
                   </button>
                 </div>
                 {!ai.free_models_enabled && (
-                  <p className="mt-3 text-[11px] leading-4 text-slate-500">
+                  <p className="mt-3 text-[13px] leading-4 text-slate-500">
                     Enabling requires accepting the free-tier agreement and a dual-control session.
                   </p>
                 )}
@@ -359,10 +340,35 @@ export default function AiSettings() {
                 {cpSaving ? <Loader2 size={22} className="animate-spin text-gold-400" /> : ai.continuous_pr_enabled ? <ToggleRight size={26} className="text-emerald-400" /> : <ToggleLeft size={26} className="text-slate-500" />}
               </button>
             </div>
-            <p className="mt-3 text-[11px] leading-4 text-slate-500">
+            <p className="mt-3 text-[13px] leading-4 text-slate-500">
               Requires the GitHub App write permissions (requested on demand) and a deployment signing key. Every PR is parked for an authorizer before it runs, and only your developers merge.
             </p>
           </Card>
+
+          {/* Reference info — collapsed by default so the controls above are
+              reachable without scrolling. */}
+          <CollapsibleCard
+            title="Usage this month"
+            subtitle="Cost visibility — every call audited with prompt version + model"
+            defaultOpen={false}
+          >
+            <div className="flex items-end gap-8">
+              <div>
+                <p className="font-display text-3xl font-bold text-white">{ai.monthly_tokens.toLocaleString()}</p>
+                <p className="text-xs text-slate-500">tokens</p>
+              </div>
+              <div>
+                <p className="font-display text-3xl font-bold text-gold-300">${ai.monthly_cost_usd.toFixed(2)}</p>
+                <p className="text-xs text-slate-500">estimated cost</p>
+              </div>
+            </div>
+            <div className="mt-5 space-y-2 text-xs leading-5 text-slate-400">
+              <p>· PII is redacted before any provider call</p>
+              <p>· Hallucination heuristics + cost/budget gates on every request</p>
+              <p>· AI pentesting activates only when a DeepSeek key is configured</p>
+              <p>· Finding explanations and executive summaries land in reports via the bus</p>
+            </div>
+          </CollapsibleCard>
         </motion.div>
       </div>
 
@@ -381,11 +387,11 @@ export default function AiSettings() {
             {(freeAgreement?.sections ?? []).map((s) => (
               <div key={s.id}>
                 <p className="text-xs font-semibold text-slate-200">{s.title}</p>
-                <p className="mt-0.5 text-[11px] leading-5 text-slate-400">{s.body}</p>
+                <p className="mt-0.5 text-[13px] leading-5 text-slate-400">{s.body}</p>
               </div>
             ))}
           </div>
-          <p className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-2 text-[11px] leading-4 text-slate-300">
+          <p className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-2 text-[13px] leading-4 text-slate-300">
             {freeAgreement?.acceptance_required_copy}
           </p>
           <div className="flex justify-end gap-3">

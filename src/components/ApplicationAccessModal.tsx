@@ -112,7 +112,7 @@ export default function ApplicationAccessModal({
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-100">{app.label}</p>
-                    <p className="text-[11px] text-slate-500">{app.tagline}</p>
+                    <p className="text-[13px] text-slate-500">{app.tagline}</p>
                   </div>
                   <select
                     className="input !w-48 !py-2 !text-xs"
@@ -134,13 +134,13 @@ export default function ApplicationAccessModal({
                     perms.map((p) => (
                       <span
                         key={p}
-                        className="chip border-phantix-700 bg-phantix-850 font-mono text-[10px] text-slate-400"
+                        className="chip border-phantix-700 bg-phantix-850 font-mono text-[12px] text-slate-400"
                       >
                         {p}
                       </span>
                     ))
                   ) : (
-                    <span className="text-[11px] text-slate-600">
+                    <span className="text-[13px] text-slate-600">
                       {app.key === "core"
                         ? "Core is always available to active users."
                         : "No access with this role."}

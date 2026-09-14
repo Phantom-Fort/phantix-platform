@@ -27,7 +27,7 @@ function NewsletterField() {
 
   return (
     <div className="border-t border-phantix-700/40 pt-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">
         Security insights in your inbox
       </p>
       {subscribed ? (
@@ -202,7 +202,7 @@ export default function Login() {
                       <Link to="/register" className="text-gold-400 hover:text-gold-300">Register your organization</Link>
                     </p>
                     <NewsletterField />
-                    <p className="text-center text-[11px] text-slate-600">
+                    <p className="text-center text-[13px] text-slate-600">
                       <Link to="/terms" className="hover:text-slate-400">Terms of Service</Link>
                       {" · "}
                       <Link to="/aup" className="hover:text-slate-400">AUP</Link>

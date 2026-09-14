@@ -181,7 +181,7 @@ export default function DualControlOverlay() {
 
             <div className="relative space-y-4 px-6 py-5">
               {(initiator || authorizer) && (
-                <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 px-3.5 py-3 text-[11px] leading-5 text-slate-400">
+                <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 px-3.5 py-3 text-[13px] leading-5 text-slate-400">
                   <p className="mb-1 font-semibold uppercase tracking-wider text-slate-500">Assigned controllers</p>
                   {initiator && (
                     <p>
@@ -236,7 +236,7 @@ export default function DualControlOverlay() {
                   </div>
                   {devOtp && (
                     <div className="rounded-md border border-gold-400/30 bg-gold-400/8 p-3 text-center">
-                      <p className="text-[10px] uppercase tracking-wider text-gold-400/80">Dev OTP</p>
+                      <p className="text-[12px] uppercase tracking-wider text-gold-400/80">Dev OTP</p>
                       <p className="mt-1 font-mono text-xl font-bold tracking-[0.35em] text-gold-300">{devOtp}</p>
                     </div>
                   )}

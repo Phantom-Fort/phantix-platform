@@ -16,7 +16,7 @@ export default function Companies() {
   const [keyModal, setKeyModal] = useState<{ company: string; secret: string } | null>(null);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Companies"
         description="A group of startups = multiple child companies. Each company gets exactly one service key --- keys and data stay isolated per company."

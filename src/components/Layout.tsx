@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, ChevronLeft, ChevronRight, Timer, KeyRound, Rocket,
   RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
-  AlertTriangle, Activity, MoreHorizontal, LayoutGrid,
+  AlertTriangle, Activity, MoreHorizontal, LayoutGrid, ArrowLeft,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useSidebarCollapsed } from "@/lib/useSidebarCollapsed";
@@ -147,7 +147,7 @@ function OperateCountdown({ expiresAt }: { expiresAt: number }) {
   }, []);
   const left = Math.max(0, Math.floor((expiresAt - now) / 1000));
   return (
-    <span className="inline-flex items-center gap-1 font-mono text-[11px] text-gold-300">
+    <span className="inline-flex items-center gap-1 font-mono text-[13px] text-gold-300">
       <Timer size={12} />
       {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
     </span>
@@ -241,7 +241,7 @@ export default function Layout() {
           <img src="/logo-white.png" alt="SecureGraph" className="h-8 w-8 shrink-0 object-contain" />
           <div className="sg-hide-collapsed">
             <p className="font-display text-[15px] font-bold leading-tight text-white">SecureGraph</p>
-            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-gold-400">Platform</p>
+            <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-gold-400">Platform</p>
           </div>
           <button
             onClick={toggleSidebar}
@@ -307,7 +307,7 @@ export default function Layout() {
             </span>
             <span>
               <span className="block text-xs font-semibold text-gold-300">Command Centre</span>
-              <span className="block text-[10px] text-slate-500">Launch the product app</span>
+              <span className="block text-[12px] text-slate-500">Launch the product app</span>
             </span>
           </a>
         </div>
@@ -316,17 +316,17 @@ export default function Layout() {
         <div className="sg-hide-collapsed border-t border-phantix-700/40 p-2">
           <div className="rounded-md bg-phantix-900/70 border border-phantix-700/40 p-2">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-slate-500">Dual control</p>
+              <p className="text-[13px] font-semibold text-slate-500">Dual control</p>
               {operate.unlocked ? <Unlock size={13} className="text-emerald-400" /> : <Lock size={13} className="text-slate-500" />}
             </div>
             {operate.unlocked ? (
               <div className="mt-1 space-y-1">
                 <p className="text-xs font-medium text-emerald-300">Operating as {operate.actingUser}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] capitalize text-slate-500">{operate.actingRole}</span>
+                  <span className="text-[13px] capitalize text-slate-500">{operate.actingRole}</span>
                   {operate.expiresAt && <OperateCountdown expiresAt={operate.expiresAt} />}
                 </div>
-                <button onClick={lockOperate} className="mt-1 w-full rounded-lg bg-phantix-700/50 py-1 text-[11px] font-medium text-slate-300 hover:bg-phantix-700/80">
+                <button onClick={lockOperate} className="mt-1 w-full rounded-lg bg-phantix-700/50 py-1 text-[13px] font-medium text-slate-300 hover:bg-phantix-700/80">
                   Lock session
                 </button>
               </div>
@@ -334,20 +334,20 @@ export default function Layout() {
               <div className="mt-1">
                 {dc.configured ? (
                   <>
-                    <p className="text-[11px] leading-4 text-slate-500">
+                    <p className="text-[13px] leading-4 text-slate-500">
                       {(initiator?.full_name || "Initiator").split(" ")[0]} + {(authorizer?.full_name || "Authorizer").split(" ")[0]} assigned
                     </p>
                     <button
                       onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
-                      className="btn-primary mt-1 w-full !px-3 !py-1 !text-[11px]"
+                      className="btn-primary mt-1 w-full !px-3 !py-1 !text-[13px]"
                     >
                       <Unlock size={12} /> Unlock operate
                     </button>
                   </>
                 ) : (
                   <>
-                    <p className="text-[11px] leading-4 text-slate-500">Not configured --- bootstrap required</p>
-                    <button onClick={() => navigate("/users")} className="btn-secondary mt-1 w-full !px-3 !py-1 !text-[11px]">
+                    <p className="text-[13px] leading-4 text-slate-500">Not configured --- bootstrap required</p>
+                    <button onClick={() => navigate("/users")} className="btn-secondary mt-1 w-full !px-3 !py-1 !text-[13px]">
                       <ShieldCheck size={12} /> Set up dual control
                     </button>
                   </>
@@ -361,6 +361,20 @@ export default function Layout() {
       {/* ── Main ────────────────────────────────────────────── */}
       <div className={cx("flex min-h-screen flex-1 flex-col", collapsed ? "ml-[72px]" : "ml-[248px]")}>
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-phantix-700/40 bg-phantix-950/80 px-6 py-3 backdrop-blur-xl">
+          {location.pathname.startsWith("/docs") && (
+            <>
+              <button
+                onClick={() => navigate(-1)}
+                title="Back"
+                aria-label="Back"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-phantix-600 hover:text-white"
+              >
+                <ArrowLeft size={16} />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+              <span className="h-6 w-px bg-phantix-700/40" aria-hidden="true" />
+            </>
+          )}
           <div className="flex items-center gap-2.5">
             <span className="font-display text-sm font-semibold text-slate-200">{state.org.name}</span>
             <span className="chip border-phantix-600/50 bg-phantix-800/60 font-mono text-slate-400">{state.org.slug}</span>
@@ -379,7 +393,7 @@ export default function Layout() {
                 }
               >
                 <FlaskConical size={16} />
-                <span className="absolute -right-1 -top-1 rounded-full bg-gold-400 px-1 font-mono text-[8px] font-bold leading-[1.2] text-phantix-950">
+                <span className="absolute -right-1 -top-1 rounded-full bg-gold-400 px-1 font-mono text-[11px] font-bold leading-[1.2] text-phantix-950">
                   β
                 </span>
               </NavLink>
@@ -406,7 +420,7 @@ export default function Layout() {
                 </span>
                 <span className="text-left">
                   <span className="block text-xs font-semibold leading-tight text-slate-200">Company account</span>
-                  <span className="block max-w-[150px] truncate text-[10px] leading-tight text-slate-500">{session?.email}</span>
+                  <span className="block max-w-[150px] truncate text-[12px] leading-tight text-slate-500">{session?.email}</span>
                 </span>
                 <ChevronDown size={14} className="text-slate-500" />
               </button>
@@ -449,11 +463,15 @@ export default function Layout() {
         </header>
 
         <main className="flex-1 px-6 py-6 lg:px-8">
-          {session?.authenticated && <SandboxBanner />}
-          <Outlet />
+          {/* The one content measure for this app: pages fill it, and 1600px
+              stops an ultrawide display stretching a table across the glass. */}
+          <div className="mx-auto w-full max-w-[1600px]">
+            {session?.authenticated && <SandboxBanner />}
+            <Outlet />
+          </div>
         </main>
 
-        <footer className="border-t border-phantix-700/30 px-8 py-4 text-[11px] text-slate-600 flex items-center justify-between">
+        <footer className="border-t border-phantix-700/30 px-8 py-4 text-[13px] text-slate-600 flex items-center justify-between">
           <span>SecureGraph Platform · organization management --- keys and people live here; product operations live in the Command Centre</span>
           <span className="font-mono">api/v1 · tenant #{state.org.id}</span>
         </footer>

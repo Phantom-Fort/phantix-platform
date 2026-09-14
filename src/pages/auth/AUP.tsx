@@ -71,7 +71,7 @@ export default function AcceptableUsePolicy() {
             <div>
               <h1 className="font-display text-3xl font-bold text-white">{aup?.title || "Acceptable Use Policy"}</h1>
               <p className="text-sm text-slate-500">{aup?.effective || aup?.summary || "Rules for using the SecureGraph platform lawfully and only on authorized systems"}</p>
-              {aup?.version && <p className="mt-1 text-[11px] font-mono text-slate-600">version {aup.version}</p>}
+              {aup?.version && <p className="mt-1 text-[13px] font-mono text-slate-600">version {aup.version}</p>}
             </div>
           </div>
         </motion.div>

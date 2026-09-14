@@ -30,7 +30,7 @@ export default function Tools() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div>
       <PageHeader
         title="Tool catalog"
         description="Scanner tooling subscriptions --- separate from platform membership. Staff curate the catalog; you subscribe per company."
@@ -58,7 +58,7 @@ export default function Tools() {
                   {subs.map((s: any) => (
                     <tr key={s.id} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
                       <td className="td text-sm text-slate-200">{s.tool_name || s.tool_key || `Tool #${s.tool_id}`}</td>
-                      <td className="td"><span className="chip text-[10px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">{s.status || "active"}</span></td>
+                      <td className="td"><span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">{s.status || "active"}</span></td>
                       <td className="td text-xs text-slate-500">{s.created_at ? timeAgo(s.created_at) : "—"}</td>
                     </tr>
                   ))}
@@ -81,10 +81,10 @@ export default function Tools() {
                   <StatusBadge status={t.subscribed ? "subscribed" : locked ? "pending" : "draft"} />
                 </div>
                 <h3 className="mt-3 font-display text-base font-semibold text-slate-100">{t.name}</h3>
-                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-slate-600">{t.category}</p>
+                <p className="mt-0.5 text-[13px] font-medium uppercase tracking-wider text-slate-600">{t.category}</p>
                 <p className="mt-2 text-[13px] leading-5 text-slate-400">{t.description}</p>
                 {locked && t.eligibility_reason && (
-                  <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-4 text-amber-300/80">
+                  <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-4 text-amber-300/80">
                     <Lock size={11} className="mt-0.5 shrink-0" /> {t.eligibility_reason}
                   </p>
                 )}
