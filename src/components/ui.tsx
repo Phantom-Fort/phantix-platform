@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { cx, statusColor, titleCase } from "@/lib/utils";
 
 export function StatusBadge({ status }: { status: string | null | undefined }) {
@@ -13,10 +13,88 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
   );
 }
 
+/** Password input with a show/hide toggle --- `leadingIcon` renders inside the
+ *  same relative wrapper as the pre-existing left-icon inputs on auth pages. */
+export function PasswordInput({
+  leadingIcon,
+  className,
+  ...props
+}: { leadingIcon?: React.ReactNode; className?: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      {leadingIcon}
+      <input {...props} type={visible ? "text" : "password"} className={cx(className, "!pr-10")} />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+      >
+        {visible ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
+    </div>
+  );
+}
+
 export function Card({ children, className, hover }: { children: React.ReactNode; className?: string; hover?: boolean }) {
   return (
     <div className={cx("card p-5", hover && "transition-all duration-300 hover:border-phantix-500/60 hover:border-gold-400/60-blue hover:-translate-y-0.5", className)}>
       {children}
+    </div>
+  );
+}
+
+/** Card whose body can be collapsed away --- for informational/reference
+ *  content (checklists, ID lookups, static feature lists) that a user only
+ *  needs occasionally and otherwise just occupies vertical space. */
+export function CollapsibleCard({
+  title,
+  subtitle,
+  action,
+  defaultOpen = true,
+  className,
+  children,
+}: {
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  action?: React.ReactNode;
+  defaultOpen?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={cx("card p-5", className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-start justify-between gap-4 text-left"
+        aria-expanded={open}
+      >
+        <div>
+          <h3 className="font-display text-[15px] font-semibold text-slate-100">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {action}
+          <ChevronDown size={16} className={cx("text-slate-500 transition-transform", open && "rotate-180")} />
+        </div>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="pt-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

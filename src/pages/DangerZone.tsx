@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AlertTriangle, Trash2, Building2, Users, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/ui";
+import DocLink from "@/components/DocLink";
 import TypeToConfirm from "@/components/TypeToConfirm";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
@@ -91,6 +92,7 @@ export default function DangerZone() {
       <PageHeader
         title="Danger zone"
         description="Irreversible account deletions. These actions are intentionally separated from every other setting and require explicit confirmation."
+        actions={<DocLink docId="howto-platform-index" label="Platform how-to index" />}
       />
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>

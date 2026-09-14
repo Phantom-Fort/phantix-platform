@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Building2, Plus, KeyRound, Copy } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, StatusBadge, Modal, EmptyState, CopyChip } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/utils";
@@ -19,7 +20,12 @@ export default function Companies() {
       <PageHeader
         title="Companies"
         description="A group of startups = multiple child companies. Each company gets exactly one service key --- keys and data stay isolated per company."
-        actions={<button className="btn-primary" onClick={() => setCreateOpen(true)}><Plus size={15} /> Onboard a company</button>}
+        actions={
+          <>
+            <DocLink docId="howto-platform-index" label="Companies how-to" />
+            <button className="btn-primary" onClick={() => setCreateOpen(true)}><Plus size={15} /> Onboard a company</button>
+          </>
+        }
       />
 
       {/* Parent company */}

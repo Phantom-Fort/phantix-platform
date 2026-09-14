@@ -5,6 +5,7 @@ import {
   ExternalLink, TestTube, RotateCcw, Loader2, Copy, ChevronRight, Info,
   MessageSquare, Send, Webhook, Lock, Unlock,
 } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, StatusBadge, Tabs, EmptyState, Modal, CopyChip, SkeletonCard, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { isPendingApproval } from "@/lib/api";
@@ -101,9 +102,12 @@ export default function Integrations() {
         title="Integrations Hub"
         description="Connect alert channels, SSO providers and automation webhooks. Secrets are never stored in plain text and rotate without disruption."
         actions={
-          <button onClick={refreshAll} className="btn-ghost">
-            <RefreshCw size={15} />
-          </button>
+          <>
+            <DocLink docId="howto-platform-12" label="Integrations how-to" />
+            <button onClick={refreshAll} className="btn-ghost">
+              <RefreshCw size={15} />
+            </button>
+          </>
         }
       />
 

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { LifeBuoy, Plus, MessageSquare } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/utils";
@@ -18,7 +19,12 @@ export default function Support() {
       <PageHeader
         title="Support"
         description="Tickets route to the SecureGraph support desk. Quote your tenant ID and slug for faster resolution."
-        actions={<button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> New ticket</button>}
+        actions={
+          <>
+            <DocLink docId="howto-platform-index" label="Platform how-to index" />
+            <button className="btn-primary" onClick={() => setOpen(true)}><Plus size={15} /> New ticket</button>
+          </>
+        }
       />
 
       {state.tickets.length === 0 ? (

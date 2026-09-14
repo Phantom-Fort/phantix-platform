@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BellRing, Send, Settings, ShieldCheck, Cable } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, StatusBadge, Tabs, Modal } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo, cx } from "@/lib/utils";
@@ -50,9 +51,12 @@ export default function Alerts() {
         title="Alerts"
         description="Delivery log and channel configuration --- SMTP, WhatsApp, Telegram"
         actions={
-          <button className="btn-primary" onClick={handleTest} disabled={busy}>
-            <Send size={15} /> {busy ? "Sending..." : "Send test alert"}
-          </button>
+          <>
+            <DocLink docId="howto-platform-12" label="Alerts how-to" />
+            <button className="btn-primary" onClick={handleTest} disabled={busy}>
+              <Send size={15} /> {busy ? "Sending..." : "Send test alert"}
+            </button>
+          </>
         }
       />
 

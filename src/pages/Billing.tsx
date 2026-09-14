@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, Info, Lock, Sparkle } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -149,13 +150,21 @@ export default function Billing() {
 
   const handleVerify = useCallback(async (paymentId: number, opts?: { silent?: boolean }) => {
     try {
-      await api.post(`/billing/payments/${paymentId}/verify`, {}, { dualControl: true });
+      // authClearOn401: false --- a declined/expired gateway verification comes
+      // back as a 401 from this endpoint, but it's a payment outcome, not an
+      // auth failure. Without this the global 401 handler would tear down the
+      // whole org session, signing the user out mid-session over a failed
+      // payment check (see api.ts's `request`).
+      await api.post(`/billing/payments/${paymentId}/verify`, {}, { dualControl: true, authClearOn401: false });
       if (!opts?.silent) toast("success", "Payment verified");
       try { sessionStorage.removeItem(PENDING_PAYMENT_KEY); } catch { /* ignore */ }
       setPayingId(null);
       await loadData();
     } catch (e) {
-      if (!opts?.silent) toast("error", "Verification failed", e instanceof Error ? e.message : undefined);
+      if (!opts?.silent) {
+        toast("error", "Verification failed", e instanceof Error ? e.message : undefined);
+        window.open("/docs/howto-platform-11", "_blank", "noopener,noreferrer");
+      }
     }
   }, [loadData, toast]);
 
@@ -333,7 +342,16 @@ export default function Billing() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <PageHeader title="Billing" description="Manage your SecureGraph subscription, payments, and access" actions={<button onClick={loadData} className="btn-ghost"><RefreshCw size={15} /></button>} />
+      <PageHeader
+        title="Billing"
+        description="Manage your SecureGraph subscription, payments, and access"
+        actions={
+          <>
+            <DocLink docId="howto-platform-11" label="Billing how-to" />
+            <button onClick={loadData} className="btn-ghost"><RefreshCw size={15} /></button>
+          </>
+        }
+      />
 
       {/* What you tried to do — the reason this page opened. */}
       {(up || upsellReason) && (

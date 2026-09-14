@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Github, Plus, RefreshCw, Lock, Unlock, ExternalLink, Search, Loader2, GitBranch, ShieldCheck, Clock, CheckCircle2, Wallet, Settings2, ArrowRight } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, Tabs, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE, delay, isPendingApproval } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -239,7 +240,12 @@ export default function GithubIntegration() {
       <PageHeader
         title="GitHub"
         description="Connect the SecureGraph GitHub App to inventory and analyze your repositories. Primary integration — PAT is legacy."
-        actions={<button onClick={load} className="btn-ghost"><RefreshCw size={15} /></button>}
+        actions={
+          <>
+            <DocLink docId="howto-platform-10" label="GitHub how-to" />
+            <button onClick={load} className="btn-ghost"><RefreshCw size={15} /></button>
+          </>
+        }
       />
 
       {loadError && (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Wrench, CheckCircle2, Plus, Lock } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, StatusBadge, EmptyState, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE } from "@/lib/api";
@@ -33,6 +34,7 @@ export default function Tools() {
       <PageHeader
         title="Tool catalog"
         description="Scanner tooling subscriptions --- separate from platform membership. Staff curate the catalog; you subscribe per company."
+        actions={<DocLink docId="howto-platform-index" label="Platform how-to index" />}
       />
 
       <div className="mb-5">

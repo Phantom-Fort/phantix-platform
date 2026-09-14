@@ -5,7 +5,8 @@ import {
   CheckCircle2, Circle, Users, Database, Building2, KeyRound, ArrowRight,
   ShieldCheck, ScrollText, Rocket, AlertTriangle, Copy,
 } from "lucide-react";
-import { Card, CardHeader, AnimatedNumber, StatusBadge } from "@/components/ui";
+import DocLink from "@/components/DocLink";
+import { Card, CardHeader, CollapsibleCard, AnimatedNumber, StatusBadge } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { useSmartPoll } from "@/lib/usePolling";
 import { APP_URL } from "@/lib/links";
@@ -36,10 +37,13 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">{state.org.name}</p>
-        <h1 className="mt-1 font-display text-[26px] font-bold tracking-tight text-white">Tenant overview</h1>
-        <p className="mt-1 text-sm text-slate-400">Management home --- keys, people and connections. Product operations live in the Command Centre.</p>
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">{state.org.name}</p>
+          <h1 className="mt-1 font-display text-[26px] font-bold tracking-tight text-white">Tenant overview</h1>
+          <p className="mt-1 text-sm text-slate-400">Management home --- keys, people and connections. Product operations live in the Command Centre.</p>
+        </div>
+        <DocLink docId="howto-platform-index" label="Platform how-to index" />
       </motion.div>
 
       {/* Security DB gate */}
@@ -64,8 +68,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Checklist */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-          <Card className="h-full">
-            <CardHeader title="Getting started" subtitle={`${doneCount} of ${checklist.length} complete`} action={<ShieldCheck size={16} className="text-gold-400" />} />
+          <CollapsibleCard
+            className="h-full"
+            title="Getting started"
+            subtitle={`${doneCount} of ${checklist.length} complete`}
+            action={<ShieldCheck size={16} className="text-gold-400" />}
+            defaultOpen={doneCount < checklist.length}
+          >
             <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-phantix-700/50">
               <motion.div
                 initial={{ width: 0 }}
@@ -90,7 +99,7 @@ export default function Dashboard() {
                 </button>
               ))}
             </div>
-          </Card>
+          </CollapsibleCard>
         </motion.div>
 
         {/* Stats */}
@@ -111,8 +120,7 @@ export default function Dashboard() {
 
         {/* Identity quick card */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="h-full">
-            <CardHeader title="Tenant identity" subtitle="Quote these on support tickets" />
+          <CollapsibleCard className="h-full" title="Tenant identity" subtitle="Quote these on support tickets" defaultOpen={false}>
             <div className="space-y-2.5">
               {[
                 ["Tenant ID", `#${state.org.id}`],
@@ -133,7 +141,7 @@ export default function Dashboard() {
             <Link to="/identity" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-400 hover:text-gold-300">
               Manage identity & keys <ArrowRight size={12} />
             </Link>
-          </Card>
+          </CollapsibleCard>
         </motion.div>
       </div>
 
@@ -141,8 +149,7 @@ export default function Dashboard() {
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Recent audit */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
-          <Card>
-            <CardHeader title="Recent activity" action={<ScrollText size={15} className="text-slate-500" />} />
+          <CollapsibleCard title="Recent activity" action={<ScrollText size={15} className="text-slate-500" />}>
             <div className="space-y-3">
               {state.audit.slice(0, 4).map((e) => (
                 <div key={e.id} className="flex items-start gap-3 text-sm">
@@ -158,7 +165,7 @@ export default function Dashboard() {
             <Link to="/audit" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-400 hover:text-gold-300">
               Full audit trail <ArrowRight size={12} />
             </Link>
-          </Card>
+          </CollapsibleCard>
         </motion.div>
 
         {/* Next step / launch */}
