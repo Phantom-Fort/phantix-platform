@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, ChevronLeft, ChevronRight, Timer, KeyRound, Rocket,
   RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
-  AlertTriangle, Activity, MoreHorizontal,
+  AlertTriangle, Activity, MoreHorizontal, LayoutGrid,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useSidebarCollapsed } from "@sg/useSidebarCollapsed";
@@ -50,6 +50,7 @@ const baseNavSections: { label: string; items: (NavLeafItem | NavDropdownItem)[]
       { to: "/identity", label: "Identity & Keys", icon: <KeyRound size={17} /> },
       { to: "/users", label: "People & Control", icon: <Users size={17} /> },
       { to: "/connections", label: "Security Database", icon: <Database size={17} /> },
+      { to: "/applications", label: "Applications", icon: <LayoutGrid size={17} /> },
       { type: "dropdown", label: "More Organization", icon: <MoreHorizontal size={17} />, items: moreOrganizationSubItems },
     ],
   },

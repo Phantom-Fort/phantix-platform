@@ -20,6 +20,7 @@ import Companies from "@/pages/Companies";
 import Users from "@/pages/Users";
 import Connections from "@/pages/Connections";
 import GithubIntegration from "@/pages/Github";
+import Applications from "@/pages/Applications";
 import Tools from "@/pages/Tools";
 import Billing from "@/pages/Billing";
 import AiSettings from "@/pages/AiSettings";
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/connections" element={<RequireManagement><Connections /></RequireManagement>} />
             <Route path="/github" element={<RequireManagement><GithubIntegration /></RequireManagement>} />
             <Route path="/integrations/github/callback" element={<RequireManagement><GithubIntegration /></RequireManagement>} />
+            <Route path="/applications" element={<RequireManagement><Applications /></RequireManagement>} />
             <Route path="/tools" element={<RequireManagement><Tools /></RequireManagement>} />
             <Route path="/billing" element={<RequireManagement><Billing /></RequireManagement>} />
             <Route path="/ai" element={<RequireManagement><AiSettings /></RequireManagement>} />
