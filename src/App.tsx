@@ -41,26 +41,38 @@ import DocPage from "@/pages/DocPage";
 function RequireManagement({ children }: { children: React.ReactNode }) {
   const { session, state, sessionLoading } = useStore();
   const location = useLocation();
-  if (!session?.authenticated) return <Navigate to="/login" state={{ from: location }} replace />;
-  // Admin-assigned password: change it before touching any management screen.
-  if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
+  // Verify the session before rendering OR redirecting — no flash of the app
+  // or of the login page while the stored session is still being restored.
   if (sessionLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-phantix-500 border-t-gold-400" />
-          <p className="mt-3 text-sm text-slate-400">Restoring session...</p>
+          <p className="mt-3 text-sm text-slate-400">Verifying access...</p>
         </div>
       </div>
     );
   }
+  if (!session?.authenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  // Admin-assigned password: change it before touching any management screen.
+  if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (!state.setup.setup_complete) return <Navigate to="/setup" replace />;
   return <>{children}</>;
 }
 
 // Setup wizard requires auth; once complete there is nothing to resume
 function SetupRoute() {
-  const { session, state } = useStore();
+  const { session, state, sessionLoading } = useStore();
+  if (sessionLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-phantix-500 border-t-gold-400" />
+          <p className="mt-3 text-sm text-slate-400">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
   if (!session?.authenticated) return <Navigate to="/login" replace />;
   if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (state.setup.setup_complete) return <Navigate to="/dashboard" replace />;
