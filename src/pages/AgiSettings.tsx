@@ -4,6 +4,7 @@ import {
   Radar, ShieldCheck, Loader2, Plus, Pencil, Trash2, CheckCircle2,
   RefreshCw, Lock, Mail, Globe2, Star, ToggleLeft, ToggleRight, KeyRound,
 } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, Modal, EmptyState, StatusBadge, PageHeaderSkeleton, SettingsSkeleton } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -242,7 +243,10 @@ export default function AgiSettings() {
         title="Autonomous Agent"
         description="Configure the autonomous pentest agent for your organization: enable it, set environment defaults, and store reusable test login + registration credentials. GET /agi/org/settings/bootstrap"
         actions={
-          <button onClick={() => void load()} className="btn-ghost text-sm px-3 py-1.5"><RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh</button>
+          <>
+            <DocLink docId="howto-platform-index" label="Platform how-to index" />
+            <button onClick={() => void load()} className="btn-ghost text-sm px-3 py-1.5"><RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh</button>
+          </>
         }
       />
 

@@ -22,7 +22,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
-        "@sg": path.resolve(__dirname, "../packages/sg-shared/src"),
         // Platform how-to guides live in the monorepo-root docs/ tree, shared
         // with the Command Centre app --- not duplicated per app.
         "@docs": path.resolve(__dirname, ".."),

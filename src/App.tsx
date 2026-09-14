@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import DualControlOverlay from "@/components/DualControlOverlay";
 import CookieConsent from "@/components/CookieConsent";
 import Login from "@/pages/auth/Login";
+import ChangePassword from "@/pages/auth/ChangePassword";
 import DeviceConfirm from "@/pages/DeviceConfirm";
 import Register from "@/pages/auth/Register";
 import Privacy from "@/pages/auth/Privacy";
@@ -33,12 +34,16 @@ import Alerts from "@/pages/Alerts";
 import Integrations from "@/pages/Integrations";
 import Sandbox from "@/pages/Sandbox";
 import DangerZone from "@/pages/DangerZone";
+import Docs from "@/pages/Docs";
+import DocPage from "@/pages/DocPage";
 
 // Authenticated + setup-complete gate for management routes
 function RequireManagement({ children }: { children: React.ReactNode }) {
   const { session, state, sessionLoading } = useStore();
   const location = useLocation();
   if (!session?.authenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  // Admin-assigned password: change it before touching any management screen.
+  if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (sessionLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -57,6 +62,7 @@ function RequireManagement({ children }: { children: React.ReactNode }) {
 function SetupRoute() {
   const { session, state } = useStore();
   if (!session?.authenticated) return <Navigate to="/login" replace />;
+  if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (state.setup.setup_complete) return <Navigate to="/dashboard" replace />;
   return <SetupWizard />;
 }
@@ -67,6 +73,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/device-confirm" element={<DeviceConfirm />} />
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<Privacy />} />
@@ -96,6 +103,8 @@ export default function App() {
             <Route path="/alerts" element={<RequireManagement><Alerts /></RequireManagement>} />
             <Route path="/integrations" element={<RequireManagement><Integrations /></RequireManagement>} />
             <Route path="/danger-zone" element={<RequireManagement><DangerZone /></RequireManagement>} />
+            <Route path="/docs" element={<Docs />} />
+            <Route path="/docs/:docId" element={<DocPage />} />
             <Route path="/settings" element={<Navigate to="/identity" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

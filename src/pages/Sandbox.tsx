@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { marked } from "marked";
 import { FlaskConical, Star, Megaphone, CheckCircle2, RefreshCw, AlertTriangle, ExternalLink, Rocket } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, Modal, Spinner, EmptyState, StatusBadge, PageHeaderSkeleton, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { APP_URL } from "@/lib/links";
@@ -142,6 +143,7 @@ export default function Sandbox() {
         description={`${me.program?.name ?? "Launch cohort"} · rate Platform & Command Centre builds`}
         actions={
           <div className="flex flex-wrap gap-2">
+            <DocLink docId="howto-platform-13" label="Sandbox how-to" className="!text-xs px-3 py-1.5" />
             <a href={`${APP_URL}/sandbox`} className="btn-secondary !text-xs" target="_blank" rel="noreferrer">
               <Rocket size={14} /> Command Centre sandbox
             </a>

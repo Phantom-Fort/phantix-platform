@@ -126,7 +126,7 @@ export function clearCorrelationId(): void {
 async function request<T>(
   method: string,
   path: string,
-  opts: { body?: unknown; dualControl?: boolean; form?: Record<string, string> } = {},
+  opts: { body?: unknown; dualControl?: boolean; form?: Record<string, string>; authClearOn401?: boolean } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   headers["X-Device-Id"] = deviceId();
@@ -179,7 +179,13 @@ async function request<T>(
         // Dual-control header missing (not a broken session): prompt re-unlock.
         window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: msg || undefined }));
       }
-      if (res.status === 401 && !dcSessionIssue) {
+      // A 401 here almost always means the bearer token itself is invalid, so
+      // the whole org session is torn down. But a handful of endpoints (e.g.
+      // payment verification) use 401 to report a business-logic outcome
+      // against a gateway/reference, not an auth failure --- those pass
+      // `authClearOn401: false` so a declined verification doesn't abruptly
+      // sign out a user who is still mid-session and otherwise fully authed.
+      if (res.status === 401 && !dcSessionIssue && opts.authClearOn401 !== false) {
         tokens.platform = null;
         tokens.orgUser = null;
         tokens.email = null;

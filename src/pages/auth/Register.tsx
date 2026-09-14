@@ -5,6 +5,7 @@ import { ArrowRight, Building2, ShieldCheck, Database, EyeOff, CheckCircle2 } fr
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
 import { DEMO_MODE } from "@/lib/api";
+import { PasswordInput } from "@/components/ui";
 
 const slide = { initial: { opacity: 0, x: 30 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } };
 
@@ -138,11 +139,11 @@ export default function Register() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="label">Password</label>
-                  <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="min. 8 characters" />
+                  <PasswordInput className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="min. 8 characters" />
                 </div>
                 <div>
                   <label className="label">Confirm password</label>
-                  <input type="password" className="input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" />
+                  <PasswordInput className="input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" />
                 </div>
               </div>
               <div>

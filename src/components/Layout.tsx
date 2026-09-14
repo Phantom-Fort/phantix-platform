@@ -8,7 +8,7 @@ import {
   AlertTriangle, Activity, MoreHorizontal, LayoutGrid,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { useSidebarCollapsed } from "@sg/useSidebarCollapsed";
+import { useSidebarCollapsed } from "@/lib/useSidebarCollapsed";
 import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
 import { APP_URL } from "@/lib/links";
 import { cx } from "@/lib/utils";

@@ -8,6 +8,7 @@ import { APP_DEMO_URL } from "@/lib/links";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import AuthShowcase from "@/components/AuthShowcase";
+import { PasswordInput } from "@/components/ui";
 
 function NewsletterField() {
   const [email, setEmail] = useState("");
@@ -116,6 +117,7 @@ export default function Login() {
           if (res.destinationMasked) setDestinationMasked(res.destinationMasked);
           setStage("mfa");
         }
+        else if (res.mustChangePassword) navigate("/change-password", { replace: true });
         else navigate(destination());
       } else {
         await verifyMfa(code);
@@ -163,7 +165,7 @@ export default function Login() {
               </motion.div>
               <h1 className="mt-5 font-display text-2xl font-bold text-white">SecureGraph Platform</h1>
               <p className="mt-1.5 text-sm text-slate-400">
-                Company sign-in · <span className="font-mono text-xs">type=access</span>
+                Company or admin sign-in · <span className="font-mono text-xs">type=access</span>
               </p>
             </div>
 
@@ -172,7 +174,7 @@ export default function Login() {
                 {stage === "password" ? (
                   <motion.form key="pw" initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -14 }} onSubmit={submit} className="space-y-4">
                     <div>
-                      <label className="label">Company email</label>
+                      <label className="label">Company or admin email</label>
                       <div className="relative">
                         <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                         <input className="input !pl-10" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
@@ -180,10 +182,13 @@ export default function Login() {
                     </div>
                     <div>
                       <label className="label">Password</label>
-                      <div className="relative">
-                        <KeyRound size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input type="password" className="input !pl-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
-                      </div>
+                      <PasswordInput
+                        leadingIcon={<KeyRound size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />}
+                        className="input !pl-10"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                      />
                     </div>
                     {error && <p className="text-sm text-severity-critical">{lockedMessage()}</p>}
                     <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0}>

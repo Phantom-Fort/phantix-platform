@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Download, ArrowRight, Loader2, RefreshCw, ChevronLeft, ChevronRight, Search, ShieldAlert } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, TableCardSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
@@ -161,6 +162,7 @@ export default function Audit() {
         description="Immutable platform-DB trail of user activities — every action with initiator, authorizer, status, and timeline for compliance."
         actions={
           <div className="flex items-center gap-2">
+            <DocLink docId="howto-platform-index" label="Platform how-to index" />
             <button className="btn-ghost" onClick={() => { setReloadKey((k) => k + 1); }} title="Refresh audit trail"><RefreshCw size={15} /></button>
             <button className="btn-secondary" onClick={() => void handleExport()} disabled={exporting}>
               {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export CSV

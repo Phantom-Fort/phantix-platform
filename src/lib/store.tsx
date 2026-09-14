@@ -142,7 +142,16 @@ function clearOperateMeta(): void {
 type ToastKind = "success" | "error" | "info" | "warning";
 type Toast = { id: number; kind: ToastKind; title: string; body?: string };
 
-type Session = { authenticated: boolean; email: string } | null;
+type Session = {
+  authenticated: boolean;
+  email: string;
+  /** Org user signed in to the platform app (role-based access). */
+  platformAccess?: boolean;
+  /** Role that granted platform access. */
+  role?: string;
+  /** Admin assigned a password — force a change before anything else. */
+  mustChangePassword?: boolean;
+} | null;
 
 interface PersistedState {
   org: Organization;
@@ -466,7 +475,8 @@ type Store = {
   billingEntitlements: Record<string, any> | null;
   // auth
   register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<{ mfaRequired: boolean }>;
-  login: (email: string, password: string) => Promise<{ mfaRequired: boolean; destinationMasked?: string }>;
+  login: (email: string, password: string) => Promise<{ mfaRequired: boolean; destinationMasked?: string; mustChangePassword?: boolean; platformAccess?: boolean; role?: string }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   verifyMfa: (code: string) => Promise<void>;
   resendLoginOtp: (email: string, password: string) => Promise<{ destinationMasked: string }>;
   resendRegisterOtp: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: { title: string; name: string }) => Promise<void>;
@@ -916,14 +926,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       destination_masked?: string;
       organization_id?: number;
       organization_slug?: string;
+      platform_access?: boolean;
+      must_change_password?: boolean;
+      role?: string;
       experience?: { organization_name?: string };
     }>("/organizations/login", { username: email, password });
     if (res.access_token) {
       tokens.platform = res.access_token;
       tokens.orgUser = null;
       tokens.email = email;
+      const mustChangePassword = Boolean(res.must_change_password);
       setState(emptyState());
-      setSession({ authenticated: true, email });
+      setSession({
+        authenticated: true,
+        email,
+        mustChangePassword,
+        platformAccess: Boolean(res.platform_access),
+        role: res.role,
+      });
       persist((s) => ({
         ...s,
         org: {
@@ -936,12 +956,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         },
         setup: emptySetup(),
       }));
-      await hydrateSession(email);
-      return { mfaRequired: false, destinationMasked: "" };
+      // A forced change short-circuits the normal hydrate → setup redirect.
+      if (!mustChangePassword) await hydrateSession(email);
+      return {
+        mfaRequired: false,
+        destinationMasked: "",
+        mustChangePassword,
+        platformAccess: Boolean(res.platform_access),
+        role: res.role,
+      };
     }
     sessionStorage.setItem("mfa_token", res.mfa_token ?? "");
     return { mfaRequired: true, destinationMasked: res.destination_masked || "" };
   }, [persist, hydrateSession]);
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      if (DEMO_MODE) {
+        await delay(400);
+        setSession((s) => (s ? { ...s, mustChangePassword: false } : s));
+        return;
+      }
+      await api.post("/org-users/auth/change-password", {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setSession((s) => (s ? { ...s, mustChangePassword: false } : s));
+    },
+    [],
+  );
 
   const verifyMfa = useCallback(async (code: string) => {
     if (DEMO_MODE) {
@@ -1026,7 +1069,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const acceptPrivacy = useCallback(async (version?: string) => {
     if (DEMO_MODE) {
       await delay(400);
-      persist((s) => ({ ...s, setup: { ...s.setup, privacy_accepted: true, privacy_accepted_at: new Date().toISOString() } }));
+      persist((s) => ({ ...s, setup: { ...s.setup, privacy_accepted: true, privacy_accepted_at: new Date().toISOString(), next_step: "email_otp" } }));
       logAudit("setup.privacy_accept", "setup", "Accepted the privacy notice");
       return;
     }
@@ -1215,6 +1258,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             identity_verified: true,
             email_verified: true,
             can_complete_setup: s.setup.privacy_accepted,
+            next_step: "complete",
           },
         }));
         logAudit("setup.email_otp", "setup", "Verified company email via OTP");
@@ -2415,7 +2459,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       session, state, operate, securityDbReady, sessionLoading, billingEntitlements,
-      register, login, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession,
+      register, login, changePassword, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession,
       acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
@@ -2427,7 +2471,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       toasts, toast, dismissToast,
     }),
     [session, state, operate, securityDbReady, toasts, dualControlPrompt,
-      register, login, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
+      register, login, changePassword, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
       startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
       requireDualControl, closeDualControlPrompt, requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice,

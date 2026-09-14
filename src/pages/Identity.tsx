@@ -5,6 +5,7 @@ import {
   ShieldCheck, Download, Loader2, Send, FileText,
 } from "lucide-react";
 import TypeToConfirm from "@/components/TypeToConfirm";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, CopyChip, Tabs, EmptyState, Spinner } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, mediaUrl } from "@/lib/api";
@@ -31,6 +32,11 @@ const DEFAULT_SERVICE_CATALOG = [
 ];
 
 const ALLOWED_SERVICES = new Set(DEFAULT_SERVICE_CATALOG.map((s) => s.key));
+
+/** Allowed by PUT /organizations/me (infrastructure_types enum). Anything
+ *  outside this set (e.g. a stale "container"/"serverless" pick from before
+ *  the enum changed) gets dropped before saving, or the whole PUT 422s. */
+const INFRASTRUCTURE_TYPES = ["cloud", "on_prem", "hybrid", "saas", "ot_ics", "mobile"];
 
 const industries = [
   "technology", "financial_services", "fintech", "healthcare", "government",
@@ -185,7 +191,18 @@ export default function Identity() {
     }
     setBusy(true);
     try {
-      await updateOrgProfile(form);
+      // Drop any infrastructure_types value the backend no longer accepts
+      // (e.g. a stale "container"/"serverless" pick from before the enum
+      // changed to cloud/on_prem/hybrid/saas/ot_ics/mobile) --- otherwise a
+      // profile saved under the old options can never be saved again.
+      const normalized = {
+        ...form,
+        infrastructure_types: (form.infrastructure_types ?? []).filter((v) => INFRASTRUCTURE_TYPES.includes(v)),
+      };
+      await updateOrgProfile(normalized);
+      if (normalized.infrastructure_types.length !== (form.infrastructure_types ?? []).length) {
+        setForm(normalized);
+      }
       toast("success", "Profile saved", "PUT /organizations/me");
     } catch (err) {
       toast("error", "Save failed", err instanceof Error ? err.message : "Could not update profile");
@@ -199,6 +216,7 @@ export default function Identity() {
       <PageHeader
         title="Identity & profile"
         description="Company tenant profile from GET /organizations/me --- identity, contacts, security posture, branding, and service key."
+        actions={<DocLink docId="howto-platform-08" label="Identity how-to" />}
       />
 
       <Tabs
@@ -418,7 +436,7 @@ export default function Identity() {
             />
             <ChipGroup
               title="Infrastructure"
-              options={["cloud", "on_prem", "hybrid", "saas", "container", "serverless"]}
+              options={INFRASTRUCTURE_TYPES}
               selected={form.infrastructure_types ?? []}
               onToggle={(v) => toggleList("infrastructure_types", v)}
             />
@@ -651,6 +669,8 @@ function ChipGroup({
     pii: "PII", phi: "PHI", pci: "PCI", financial: "Financial",
     credentials: "Credentials", intellectual_property: "Intellectual Property",
     government: "Government", biometric: "Biometric",
+    cloud: "Cloud", on_prem: "On-Premises", hybrid: "Hybrid", saas: "SaaS",
+    ot_ics: "OT/ICS", mobile: "Mobile",
   };
   return (
     <div className="mt-5">

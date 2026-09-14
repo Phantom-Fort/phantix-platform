@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, CheckCircle2, Loader2, Bot, ToggleLeft, ToggleRight, ShieldCheck, GitPullRequest } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, Modal } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -203,6 +204,7 @@ export default function AiSettings() {
       <PageHeader
         title="AI governance"
         description="Org AI settings and usage. Narratives only --- AI never determines security facts or scores. GET /ai/settings · GET /ai/usage"
+        actions={<DocLink docId="howto-platform-index" label="Platform how-to index" />}
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

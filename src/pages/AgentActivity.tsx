@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Activity, Bot, ChevronLeft, ChevronRight, KeyRound, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, TableCardSkeleton } from "@/components/ui";
 import {
   isDenied,
@@ -104,9 +105,12 @@ export default function AgentActivity() {
         title="Agent activity"
         description="What the agent did for this organization — run, domain, intent, authorization and outcome for every action."
         actions={
-          <button className="btn-ghost" onClick={() => void load()} title="Refresh">
-            <RefreshCw size={15} className={cx(loading && "animate-spin")} />
-          </button>
+          <>
+            <DocLink docId="howto-platform-index" label="Platform how-to index" />
+            <button className="btn-ghost" onClick={() => void load()} title="Refresh">
+              <RefreshCw size={15} className={cx(loading && "animate-spin")} />
+            </button>
+          </>
         }
       />
 

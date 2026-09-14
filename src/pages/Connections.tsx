@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Database, Plus, ShieldCheck, AlertTriangle, Loader2, Trash2, Zap, Info } from "lucide-react";
+import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE } from "@/lib/api";
@@ -48,9 +49,12 @@ export default function Connections() {
         title="Security database"
         description="BYO dedicated database --- the bootstrap gate for scans, VAPT and findings. Config-inspection connections read security metadata only, never business rows."
         actions={
-          <button className="btn-primary" onClick={async () => { if (await guard()) setCreateOpen(true); }}>
-            <Plus size={15} /> Add connection
-          </button>
+          <>
+            <DocLink docId="howto-platform-06" label="Connections how-to" />
+            <button className="btn-primary" onClick={async () => { if (await guard()) setCreateOpen(true); }}>
+              <Plus size={15} /> Add connection
+            </button>
+          </>
         }
       />
 

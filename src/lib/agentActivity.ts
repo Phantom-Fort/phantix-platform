@@ -2,7 +2,7 @@
 // Mirrors GET /ai/agent/activity (agent.py). Rows are written by the executor
 // for both allowed and denied actions, so this is a record of what was *asked*
 // as well as what happened.
-import { api } from "./api";
+import { api, DEMO_MODE } from "./api";
 
 export interface AgentAction {
   id: number;
@@ -57,6 +57,9 @@ export function buildAgentActivityQuery(filter: AgentActivityFilter): string {
 }
 
 export async function loadAgentActivity(filter: AgentActivityFilter = {}) {
+  // Unauthenticated in demo mode --- a real fetch here 401s against the proxied
+  // backend and the global 401 handler signs the whole demo session out.
+  if (DEMO_MODE) return { items: [], total: 0, limit: filter.limit ?? 0, offset: filter.offset ?? 0 } as AgentActivityResponse;
   return api.get<AgentActivityResponse>(`/ai/agent/activity${buildAgentActivityQuery(filter)}`);
 }
 
