@@ -379,7 +379,11 @@ export default function People() {
             </Card>
           </motion.div>
 
-          <UsersTable onUnlock={() => void requireDualControl("This action requires a dual-control operate session.")} />
+          <UsersTable
+            onUnlock={() => void requireDualControl("This action requires a dual-control operate session.")}
+            roles={rbacRoles}
+            apps={appCatalog}
+          />
           <LoginLinks />
           <ReassignModal
             open={reassignOpen}
@@ -852,7 +856,15 @@ function PersonForm({
 }
 
 // ── Users table ───────────────────────────────────────────────────────────────
-function UsersTable({ onUnlock }: { onUnlock: () => void }) {
+function UsersTable({
+  onUnlock,
+  roles,
+  apps,
+}: {
+  onUnlock: () => void;
+  roles: Array<{ key: string; name: string; permissions: string[] }>;
+  apps: Array<{ key: string; label: string; permissions: string[] }>;
+}) {
   const { state, issueLoginLink, clearDevice, operate, toast } = useStore();
   const [link, setLink] = useState<{ user: string; url: string } | null>(null);
   const [linkingId, setLinkingId] = useState<number | null>(null);
@@ -861,7 +873,22 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
   const [pwd, setPwd] = useState("");
   const [appUser, setAppUser] = useState<OrgUser | null>(null);
   const [savingPwd, setSavingPwd] = useState(false);
+  const [appFilter, setAppFilter] = useState<string>("all");
   const dc = state.dualControl;
+
+  const appByKey = (k: string) => apps.find((a) => a.key === k);
+  const rolePermsFor = (u: OrgUser, appKey: string): string[] => {
+    const roleKey = u.application_roles?.[appKey] || u.role;
+    const role = roles.find((r) => r.key === roleKey);
+    const app = appByKey(appKey);
+    if (!role || !app) return [];
+    return role.permissions.filter((p) => app.permissions.includes(p));
+  };
+  const canAccess = (u: OrgUser, appKey: string): boolean =>
+    appKey === "core" || rolePermsFor(u, appKey).length > 0;
+  const visibleUsers = state.users.filter(
+    (u) => appFilter === "all" || canAccess(u, appFilter),
+  );
 
   if (state.users.length === 0) {
     return <Card><EmptyState icon={<Users size={22} />} title="No users yet" /></Card>;
@@ -869,12 +896,31 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+      {apps.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {[{ key: "all", label: "All users" }, ...apps].map((a) => (
+            <button
+              key={a.key}
+              onClick={() => setAppFilter(a.key)}
+              className={cx(
+                "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                appFilter === a.key
+                  ? "border-gold-400/50 bg-gold-400/10 text-gold-300"
+                  : "border-phantix-700/50 text-slate-400 hover:border-phantix-500/50 hover:text-slate-200",
+              )}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
       <Card className="!p-0 overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-phantix-700/40">
               <th className="th">User</th>
               <th className="th">Role</th>
+              <th className="th">App access</th>
               <th className="th">Slot</th>
               <th className="th">Auth</th>
               <th className="th">Last login</th>
@@ -882,7 +928,7 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
             </tr>
           </thead>
           <tbody>
-            {state.users.map((u) => (
+            {visibleUsers.map((u) => (
               <tr key={u.id} className="border-b border-phantix-800/40 hover:bg-phantix-800/35">
                 <td className="td">
                   <div className="flex items-center gap-3">
@@ -896,6 +942,23 @@ function UsersTable({ onUnlock }: { onUnlock: () => void }) {
                   </div>
                 </td>
                 <td className="td"><span className="font-mono text-xs text-slate-400">{u.role}</span></td>
+                <td className="td">
+                  {(() => {
+                    const overrides = Object.entries(u.application_roles || {});
+                    if (overrides.length === 0) {
+                      return <span className="text-xs text-slate-600">Global ({u.role})</span>;
+                    }
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {overrides.map(([k, v]) => (
+                          <span key={k} className="chip border-phantix-700 bg-phantix-850 text-[10px] text-slate-300">
+                            {apps.find((a) => a.key === k)?.label || k}: {v}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td className="td">
                   {dc.initiator_user_id === u.id ? (
                     <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">Initiator</span>
