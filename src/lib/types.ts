@@ -82,6 +82,8 @@ export interface OrgUser {
   otp_only: boolean;
   is_active: boolean;
   last_login_at: string | null;
+  /** Per-application role override: { application: role_key }. */
+  application_roles?: Record<string, string>;
 }
 
 export interface ChildCompany {
