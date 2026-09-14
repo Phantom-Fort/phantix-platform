@@ -23,6 +23,7 @@ export default function People() {
   const [rbacRoles, setRbacRoles] = useState<any[]>([]);
   const [permCatalog, setPermCatalog] = useState<Array<{ permission: string; description?: string }>>([]);
   const [defaultRole, setDefaultRole] = useState<string>("viewer");
+  const [appCatalog, setAppCatalog] = useState<Array<{ key: string; label: string; permissions: string[] }>>([]);
   const [myPerms, setMyPerms] = useState<any>(null);
   const [rbacLoading, setRbacLoading] = useState(!DEMO_MODE);
   const [roleEditor, setRoleEditor] = useState<{ mode: "create" | "edit"; role: any | null } | null>(null);
@@ -31,13 +32,15 @@ export default function People() {
   // Load the per-org roles + editable-privilege catalog (GET /org-users/roles) and
   // the current principal's permissions (GET /org-users/me/permissions).
   const loadRbac = React.useCallback(async () => {
-    const [rolesRes, permsRes] = await Promise.all([
+    const [rolesRes, permsRes, appsRes] = await Promise.all([
       api.get<any>("/org-users/roles").catch(() => null),
       api.get<any>("/org-users/me/permissions").catch(() => null),
+      api.get<any>("/org-users/applications").catch(() => null),
     ]);
     // Backend returns OrganizationRoleListResponse { items, total, permissions, default_role }.
     setRbacRoles(Array.isArray(rolesRes?.items) ? rolesRes.items : []);
     setPermCatalog(Array.isArray(rolesRes?.permissions) ? rolesRes.permissions : []);
+    setAppCatalog(Array.isArray(appsRes?.applications) ? appsRes.applications : []);
     if (typeof rolesRes?.default_role === "string") setDefaultRole(rolesRes.default_role);
     setMyPerms(permsRes);
     setRbacLoading(false);
@@ -395,6 +398,7 @@ export default function People() {
         mode={roleEditor?.mode ?? "create"}
         role={roleEditor?.role ?? null}
         catalog={permCatalog}
+        applications={appCatalog}
         onClose={() => setRoleEditor(null)}
         onSaved={async () => { setRoleEditor(null); await loadRbac(); }}
       />
@@ -410,12 +414,13 @@ export default function People() {
 
 // ── Role editor (create / edit per-org role + privileges) ─────────────────────
 function RoleEditorModal({
-  open, mode, role, catalog, onClose, onSaved,
+  open, mode, role, catalog, applications, onClose, onSaved,
 }: {
   open: boolean;
   mode: "create" | "edit";
   role: any | null;
   catalog: Array<{ permission: string; description?: string }>;
+  applications: Array<{ key: string; label: string; permissions: string[] }>;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
@@ -512,23 +517,44 @@ function RoleEditorModal({
               </button>
             )}
           </div>
-          <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-phantix-700/40 bg-phantix-950/50 p-2">
+          <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-phantix-700/40 bg-phantix-950/50 p-2">
             {catalog.length === 0 ? (
               <p className="px-2 py-3 text-xs text-slate-500">No permission catalog available.</p>
-            ) : catalog.map((c) => (
-              <label key={c.permission} className="flex cursor-pointer items-start gap-2.5 rounded px-2 py-1.5 hover:bg-phantix-800/40">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-gold-400"
-                  checked={perms.has(c.permission)}
-                  onChange={() => toggle(c.permission)}
-                />
-                <span className="min-w-0">
-                  <span className="font-mono text-xs text-slate-300">{c.permission}</span>
-                  {c.description && <span className="block text-[11px] leading-4 text-slate-500">{c.description}</span>}
-                </span>
-              </label>
-            ))}
+            ) : (
+              (() => {
+                const used = new Set<string>();
+                const sections = applications.map((app) => {
+                  const items = catalog.filter((c) => app.permissions.includes(c.permission));
+                  items.forEach((c) => used.add(c.permission));
+                  return { key: app.key, label: app.label, items };
+                });
+                const other = catalog.filter((c) => !used.has(c.permission));
+                if (other.length) sections.push({ key: "shared", label: "Shared / platform", items: other });
+                return sections
+                  .filter((s) => s.items.length > 0)
+                  .map((s) => (
+                    <div key={s.key}>
+                      <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                        {s.label}
+                      </p>
+                      {s.items.map((c) => (
+                        <label key={c.permission} className="flex cursor-pointer items-start gap-2.5 rounded px-2 py-1.5 hover:bg-phantix-800/40">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-gold-400"
+                            checked={perms.has(c.permission)}
+                            onChange={() => toggle(c.permission)}
+                          />
+                          <span className="min-w-0">
+                            <span className="font-mono text-xs text-slate-300">{c.permission}</span>
+                            {c.description && <span className="block text-[11px] leading-4 text-slate-500">{c.description}</span>}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ));
+              })()
+            )}
           </div>
         </div>
         {error && <p className="text-sm text-severity-critical">{error}</p>}
