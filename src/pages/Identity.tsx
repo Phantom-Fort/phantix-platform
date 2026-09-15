@@ -10,6 +10,7 @@ import { PageHeader, Card, CardHeader, StatusBadge, Modal, CopyChip, Tabs, Empty
 import { useStore } from "@/lib/store";
 import { api, mediaUrl } from "@/lib/api";
 import type { Organization, OrgContact } from "@/lib/types";
+import { COMPANY_TYPES, COMPANY_TYPE_LABELS } from "@/lib/org";
 import { timeAgo, cx } from "@/lib/utils";
 
 /** Allowed by PUT /organizations/me/preferred-services (API enum). */
@@ -45,7 +46,8 @@ const industries = [
 
 const employeeRanges = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+", ""];
 const revenueRanges = ["under-100k", "100k-1m", "1m-10m", "10m-50m", "50m+", ""];
-const companyTypes = ["private_limited", "public_limited", "llc", "sole_proprietor", "nonprofit", "government", ""];
+// Company type is a backend enum (PUT /organizations/me) — the canonical list
+// and its labels live in lib/org.ts so every surface stays in lockstep.
 const maturityLevels = ["initial", "developing", "defined", "managed", "optimizing", ""];
 const contactTitles = ["mr", "mrs", "ms", "miss", "dr", "prof", "eng"];
 
@@ -316,7 +318,7 @@ export default function Identity() {
               <Field label="Company type">
                 <select className="input" value={form.company_type ?? ""} onChange={(e) => set("company_type", e.target.value || null)}>
                   <option value="">---</option>
-                  {companyTypes.filter(Boolean).map((t) => <option key={t} value={t}>{t}</option>)}
+                  {COMPANY_TYPES.map((t) => <option key={t} value={t}>{COMPANY_TYPE_LABELS[t]}</option>)}
                 </select>
               </Field>
               <Field label="Year founded"><input className="input" type="number" value={form.year_founded ?? ""} onChange={(e) => set("year_founded", e.target.value ? Number(e.target.value) : null)} /></Field>
