@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Building2, ShieldCheck, Database, EyeOff, CheckCircle2 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { cx } from "@/lib/utils";
+import { cx, humanize } from "@/lib/utils";
 import { DEMO_MODE } from "@/lib/api";
 import { PasswordInput } from "@/components/ui";
 
@@ -118,7 +118,7 @@ export default function Register() {
               <div>
                 <label className="label">Industry</label>
                 <select className="input" value={industry} onChange={(e) => setIndustry(e.target.value)}>
-                  {['financial_services','fintech','banking','insurance','healthcare','technology','telecommunications','energy','manufacturing','retail','ecommerce','education','government','defense','legal','real_estate','logistics','media','hospitality','agriculture','other'].map(i=><option key={i} value={i}>{i}</option>)}
+                  {['financial_services','fintech','banking','insurance','healthcare','technology','telecommunications','energy','manufacturing','retail','ecommerce','education','government','defense','legal','real_estate','logistics','media','hospitality','agriculture','other'].map(i=><option key={i} value={i}>{humanize(i)}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -130,7 +130,7 @@ export default function Register() {
                   <label className="label">Primary contact</label>
                   <div className="flex gap-2">
                     <select className="input w-20" value={primaryContact.title} onChange={e=>setPrimaryContact({...primaryContact,title:e.target.value})}>
-                      {['mr','mrs','ms','dr','prof','eng','chief','other'].map(t=><option key={t} value={t}>{t}</option>)}
+                      {['mr','mrs','ms','dr','prof','eng','chief','other'].map(t=><option key={t} value={t}>{humanize(t)}</option>)}
                     </select>
                     <input className="input" placeholder="Full name" value={primaryContact.name} onChange={e=>setPrimaryContact({...primaryContact,name:e.target.value})} />
                   </div>

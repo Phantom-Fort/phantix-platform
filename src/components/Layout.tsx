@@ -429,7 +429,7 @@ export default function Layout() {
                   <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-md glass-bright shadow-card">
                     <div className="border-b border-phantix-700/40 px-4 py-3">
                       <p className="text-sm font-semibold text-slate-100">{state.org.name}</p>
-                      <p className="text-xs text-slate-500 font-mono">type=access · company JWT</p>
+                      <p className="text-xs text-slate-500">Signed in as organization admin</p>
                     </div>
                     <div className="p-1.5">
                       {DEMO_MODE ? (
@@ -473,7 +473,7 @@ export default function Layout() {
 
         <footer className="border-t border-phantix-700/30 px-8 py-4 text-[13px] text-slate-600 flex items-center justify-between">
           <span>SecureGraph Platform · organization management --- keys and people live here; product operations live in the Command Centre</span>
-          <span className="font-mono">api/v1 · tenant #{state.org.id}</span>
+          <span className="font-mono">Tenant #{state.org.id}</span>
         </footer>
       </div>
     </div>

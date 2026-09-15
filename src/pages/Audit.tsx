@@ -182,13 +182,13 @@ export default function Audit() {
             className="w-72 rounded-lg border border-phantix-700/50 bg-phantix-950/70 py-1.5 pl-8 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-gold-400/50"
           />
         </div>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-lg border border-phantix-700/50 bg-phantix-950/70 px-2.5 py-1.5 text-xs text-slate-300 outline-none focus:border-gold-400/50">
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className="input !w-auto !py-1.5 !text-xs">
           <option value="all">All categories</option>
           {["auth", "data_access", "mutation", "people", "billing", "security", "agi"].map((c) => (
             <option key={c} value={c}>{categoryLabel(c)}</option>
           ))}
         </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-lg border border-phantix-700/50 bg-phantix-950/70 px-2.5 py-1.5 text-xs text-slate-300 outline-none focus:border-gold-400/50">
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="input !w-auto !py-1.5 !text-xs">
           <option value="all">All statuses</option>
           <option value="completed">Completed</option>
           <option value="pending">Pending / initiated</option>
@@ -332,7 +332,7 @@ export default function Audit() {
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Dual-control audit lives on the platform DB per organization — never written into your customer security database.
+        Dual-control audit records are kept per organization — never written into your security database.
       </p>
     </div>
   );

@@ -96,7 +96,7 @@ export default function Tools() {
                     onClick={async () => {
                       try {
                         await toggleTool(t);
-                        toast("success", t.subscribed ? "Disabled locally" : `${t.name} activated`, t.subscribed ? "No cancel endpoint yet — status shown for this session." : "Subscription request sent");
+                        toast("success", t.subscribed ? "Disabled locally" : `${t.name} activated`, t.subscribed ? "Cancelling isn't available yet — the change applies for this session only." : "Subscription request sent");
                       } catch (err) {
                         toast("error", "Action failed", err instanceof Error ? err.message : "Could not update tool subscription");
                       }

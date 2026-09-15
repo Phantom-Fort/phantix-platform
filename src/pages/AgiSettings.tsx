@@ -8,7 +8,7 @@ import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, Modal, EmptyState, StatusBadge, PageHeaderSkeleton, SettingsSkeleton } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
-import { cx } from "@/lib/utils";
+import { cx, humanize } from "@/lib/utils";
 
 // ── Types (mirror backend customer_api / org_test_accounts) ──────────────────
 type OrgSettings = {
@@ -376,7 +376,7 @@ export default function AgiSettings() {
                 <select
                   value={s?.default_target_environment ?? "staging"}
                   onChange={(e) => setBootstrap((b) => b?.settings ? { ...b, settings: { ...b.settings, default_target_environment: e.target.value as "staging" | "production" } } : b)}
-                  className="rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-gold-400/40"
+                  className="input !w-auto !py-1.5 !text-xs"
                 >
                   <option value="staging">Staging</option>
                   <option value="production">Production</option>
@@ -388,7 +388,7 @@ export default function AgiSettings() {
                 ["prefer_mailinator_test_emails", "Mailinator test emails", "Auto-generate *@mailinator.com test addresses and poll public inbox for OTP."],
                 ["allow_state_changing", "Allow state-changing steps", "Approve/reject active steps proposed by the agent."],
                 ["require_dual_control_for_active", "Dual control for active steps", "A second, different user must approve state-changing actions."],
-                ["require_asset_backed_targets", "Asset-backed targets", "Only targets that exist in your Asset Engine inventory are allowlisted."],
+                ["require_asset_backed_targets", "Asset-backed targets", "Only targets already in your asset inventory are allowed."],
               ] as const).map(([key, label, hint]) => (
                 <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-phantix-700/40 px-3 py-2.5">
                   <div>
@@ -439,14 +439,14 @@ export default function AgiSettings() {
                       <span className="font-mono text-[13px] font-semibold text-white">{a.label}</span>
                       {a.is_default && <span className="chip border-gold-400/40 bg-gold-400/10 text-[12px] text-gold-300"><Star size={10} className="mr-1 inline" /> default</span>}
                       <StatusBadge status={a.is_active ? "active" : "rejected"} />
-                      <span className="chip border-phantix-600/40 bg-phantix-800/50 text-[12px] text-slate-400">{a.account_kind}</span>
-                      <span className={cx("chip text-[12px]", a.target_environment === "production" ? "border-severity-medium/40 bg-severity-medium/10 text-severity-medium" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300")}>{a.target_environment}</span>
+                      <span className="chip border-phantix-600/40 bg-phantix-800/50 text-[12px] text-slate-400">{humanize(a.account_kind)}</span>
+                      <span className={cx("chip text-[12px]", a.target_environment === "production" ? "border-severity-medium/40 bg-severity-medium/10 text-severity-medium" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300")}>{humanize(a.target_environment)}</span>
                     </div>
                     <div className="mt-2 grid gap-1 text-[13px] text-slate-400 sm:grid-cols-2">
                       {a.login_url && <p className="flex items-center gap-1.5 truncate"><Globe2 size={11} className="shrink-0 text-gold-400" /> login: {a.login_url}</p>}
                       {a.register_url && <p className="flex items-center gap-1.5 truncate"><Mail size={11} className="shrink-0 text-gold-400" /> register: {a.register_url}</p>}
                       <p className="flex items-center gap-1.5"><KeyRound size={11} /> {a.username || a.email || "—"}</p>
-                      <p className="flex items-center gap-1.5"><Lock size={11} /> {a.password_set ? "password set" : "no password"} · OTP {a.otp_mode}</p>
+                      <p className="flex items-center gap-1.5"><Lock size={11} /> {a.password_set ? "password set" : "no password"} · OTP {humanize(a.otp_mode)}</p>
                     </div>
                     {a.notes && <p className="mt-2 text-[12px] italic text-slate-500">{a.notes}</p>}
                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -521,7 +521,7 @@ function TestAccountModal({
           </div>
           <div>
             <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wider text-slate-500">Environment</label>
-            <select value={form.target_environment} onChange={(e) => setForm({ ...form, target_environment: e.target.value as any })} className={field}>
+            <select value={form.target_environment} onChange={(e) => setForm({ ...form, target_environment: e.target.value as any })} className="input !py-2 !text-xs">
               <option value="staging">Staging</option>
               <option value="production">Production</option>
               <option value="any">Any</option>
@@ -532,7 +532,7 @@ function TestAccountModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wider text-slate-500">Kind</label>
-            <select value={form.account_kind} onChange={(e) => setForm({ ...form, account_kind: e.target.value as any })} className={field}>
+            <select value={form.account_kind} onChange={(e) => setForm({ ...form, account_kind: e.target.value as any })} className="input !py-2 !text-xs">
               <option value="login">Login</option>
               <option value="registration">Registration</option>
               <option value="both">Both</option>
@@ -540,7 +540,7 @@ function TestAccountModal({
           </div>
           <div>
             <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wider text-slate-500">OTP mode</label>
-            <select value={form.otp_mode} onChange={(e) => setForm({ ...form, otp_mode: e.target.value as any })} className={field}>
+            <select value={form.otp_mode} onChange={(e) => setForm({ ...form, otp_mode: e.target.value as any })} className="input !py-2 !text-xs">
               <option value="interactive">Interactive (human OTP)</option>
               <option value="mailinator">Mailinator (public inbox)</option>
             </select>
@@ -591,7 +591,7 @@ function TestAccountModal({
           </button>
           <button onClick={onClose} className="btn-ghost !px-4 !py-2.5 !text-xs">Cancel</button>
         </div>
-        <p className="flex items-center gap-1.5 text-[12px] text-slate-500"><Lock size={10} /> Passwords are Fernet-encrypted at rest and never returned by the API.</p>
+        <p className="flex items-center gap-1.5 text-[12px] text-slate-500"><Lock size={10} /> Passwords are encrypted at rest and never shown again.</p>
       </div>
     </Modal>
   );

@@ -128,7 +128,7 @@ export default function AgentActivity() {
         <select
           value={status}
           onChange={(e) => { setStatus(e.target.value); setPage(0); }}
-          className="rounded-lg border border-phantix-700/50 bg-phantix-950/70 px-2.5 py-1.5 text-xs text-slate-300 outline-none focus:border-gold-400/50"
+          className="input !w-auto !py-1.5 !text-xs"
         >
           <option value="all">All outcomes</option>
           <option value="completed">Completed</option>
@@ -137,7 +137,7 @@ export default function AgentActivity() {
         <select
           value={domain}
           onChange={(e) => { setDomain(e.target.value); setPage(0); }}
-          className="rounded-lg border border-phantix-700/50 bg-phantix-950/70 px-2.5 py-1.5 text-xs text-slate-300 outline-none focus:border-gold-400/50"
+          className="input !w-auto !py-1.5 !text-xs"
         >
           <option value="all">All domains</option>
           {Object.keys(DOMAIN_LABEL).map((d) => (

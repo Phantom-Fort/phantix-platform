@@ -216,6 +216,58 @@ export function ProgressBar({ value, color = "#E8B54D" }: { value: number; color
   );
 }
 
+/** Doughnut completion gauge with the percentage in the middle. */
+export function CompletionDonut({
+  value,
+  size = 156,
+  label,
+  sublabel,
+}: {
+  value: number;
+  size?: number;
+  label?: string;
+  sublabel?: string;
+}) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  const stroke = 10;
+  const r = 50 - stroke / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+  return (
+    <div className="relative mx-auto flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label={`${pct}% complete`}>
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          className="text-phantix-700/50"
+        />
+        <motion.circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke="#E8B54D"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          initial={{ strokeDashoffset: c }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+        <span className="font-mono text-[30px] font-semibold leading-none text-white">{pct}%</span>
+        {label && <span className="mt-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</span>}
+        {sublabel && <span className="mt-0.5 text-[12px] text-slate-500">{sublabel}</span>}
+      </div>
+    </div>
+  );
+}
+
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-2.5 p-4">

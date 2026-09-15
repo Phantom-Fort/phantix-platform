@@ -103,7 +103,7 @@ export default function Applications() {
     <div>
       <PageHeader
         title="Applications"
-        description="One backend, four applications. Choose which ones this company uses — Core is always on, and each operator still only sees the applications their role allows."
+        description="Choose which applications this company uses — Core is always on, and each operator still only sees the applications their role allows."
         actions={<DocLink docId="howto-platform-index" label="Platform how-to index" />}
       />
 
@@ -232,7 +232,7 @@ export default function Applications() {
       )}
 
       <p className="mt-5 text-xs text-slate-500">
-        Disabling an application hides it for everyone in this company and blocks its API routes —
+        Disabling an application hides it for everyone in this company and blocks access to it —
         work already done there is kept and reappears if you switch it back on. Who may enter an
         enabled application is decided by each person's role on People &amp; Control.
       </p>

@@ -133,6 +133,8 @@ async function request<T>(
   const bearer = tokens.orgUser ?? tokens.platform;
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   const sentDualControl = !!tokens.dualControl && opts.dualControl === true;
+  // Operate-scoped requests must not be mistaken for a dead company session.
+  const dualControlScoped = opts.dualControl === true || sentDualControl;
   if (sentDualControl) headers["X-Dual-Control-Session"] = tokens.dualControl!;
 
   let body: BodyInit | undefined;
@@ -170,13 +172,15 @@ async function request<T>(
       // out when only the dual-control operate session is gone/missing.
       const dcSessionIssue =
         detailObj?.error === "dual_control_session_required" ||
+        detailObj?.error === "dual_control_session_expired" ||
         (detailObj as Record<string, unknown> | null)?.["required_header"] === "X-Dual-Control-Session" ||
-        /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
+        /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg) ||
+        (res.status === 401 && dualControlScoped);
       if ((res.status === 401 || res.status === 403) && sentDualControl && dcSessionIssue) {
         tokens.dualControl = null;
         window.dispatchEvent(new CustomEvent("phantix:dual-control-session-expired", { detail: msg || "Operate session ended." }));
-      } else if (res.status === 403 && dcSessionIssue) {
-        // Dual-control header missing (not a broken session): prompt re-unlock.
+      } else if ((res.status === 401 || res.status === 403) && dualControlScoped && dcSessionIssue) {
+        // Dual-control header missing or expired (not a broken session): prompt re-unlock.
         window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: msg || undefined }));
       }
       // A 401 here almost always means the bearer token itself is invalid, so
@@ -185,7 +189,7 @@ async function request<T>(
       // against a gateway/reference, not an auth failure --- those pass
       // `authClearOn401: false` so a declined verification doesn't abruptly
       // sign out a user who is still mid-session and otherwise fully authed.
-      if (res.status === 401 && !dcSessionIssue && opts.authClearOn401 !== false) {
+      if (res.status === 401 && !dcSessionIssue && !dualControlScoped && opts.authClearOn401 !== false) {
         tokens.platform = null;
         tokens.orgUser = null;
         tokens.email = null;

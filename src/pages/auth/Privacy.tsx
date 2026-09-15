@@ -114,8 +114,8 @@ export default function Privacy() {
             <ul className="mt-4 space-y-2.5">
               {[
                 "Tenancy: organization profile, users, roles and dual-control assignments",
-                "Encrypted credentials for your database connections (Fernet) --- never plaintext",
-                "Billing, plan and rate-limit state bound to your company (organization_id)",
+                "Encrypted credentials for your database connections --- never plaintext",
+                "Billing, plan and usage state bound to your company",
                 "Dual-control audit metadata: who initiated, who authorized, when",
               ].map((t) => (
                 <li key={t} className="flex items-start gap-2.5 text-sm text-slate-300">
@@ -143,8 +143,8 @@ export default function Privacy() {
               ))}
             </ul>
             <p className="mt-4 rounded-md bg-phantix-950/60 border border-phantix-700/40 p-3.5 text-xs leading-5 text-slate-400">
-              Everything is written only to the <span className="font-mono text-gold-300">phantix</span> schema in a
-              database you own. SecureGraph connects dynamically per request --- there is no copy on our side.
+              Everything is written only to a dedicated schema in a database you own. SecureGraph connects on
+              demand --- there is no copy on our side.
             </p>
           </div>
 

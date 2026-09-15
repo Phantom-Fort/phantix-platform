@@ -169,7 +169,7 @@ export default function DualControlOverlay() {
                   <p id="dc-overlay-title" className="font-display text-lg font-bold text-white">
                     Dual-control required
                   </p>
-                  <p className="text-xs text-slate-400">Operate session · purpose=dual_control</p>
+                  <p className="text-xs text-slate-400">Operate session</p>
                 </div>
               </div>
               {reason && (
