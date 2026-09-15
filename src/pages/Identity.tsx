@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import TypeToConfirm from "@/components/TypeToConfirm";
 import DocLink from "@/components/DocLink";
+import DomainVerificationCard from "@/components/DomainVerificationCard";
+import ProfileCompletionNotice from "@/components/ProfileCompletionNotice";
 import { PageHeader, Card, CardHeader, StatusBadge, Modal, CopyChip, Tabs, EmptyState, Spinner } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, mediaUrl } from "@/lib/api";
@@ -113,7 +115,7 @@ export default function Identity() {
     setLogoBusy(true);
     try {
       await uploadLogo(file);
-      toast("success", "Logo uploaded", "POST /organizations/me/logo --- used on report covers and footers.");
+      toast("success", "Logo uploaded", "Your logo now appears on report covers and footers.");
     } catch (err) {
       const st = (err as { status?: number })?.status;
       toast("error", st === 502 || st === 503 ? "Storage unavailable" : "Upload failed", st === 502 || st === 503 ? "Storage unavailable — retry." : err instanceof Error ? err.message : "Could not upload logo");
@@ -137,7 +139,7 @@ export default function Identity() {
     setLogoBusy(true);
     try {
       await deleteLogo();
-      toast("success", "Logo removed", "DELETE /organizations/me/logo");
+      toast("success", "Logo removed", "Your logo was removed from reports and footers.");
     } catch (err) {
       const st = (err as { status?: number })?.status;
       toast("error", st === 502 || st === 503 ? "Storage unavailable" : "Remove failed", st === 502 || st === 503 ? "Storage unavailable — retry." : err instanceof Error ? err.message : "Could not remove logo");
@@ -205,7 +207,7 @@ export default function Identity() {
       if (normalized.infrastructure_types.length !== (form.infrastructure_types ?? []).length) {
         setForm(normalized);
       }
-      toast("success", "Profile saved", "PUT /organizations/me");
+      toast("success", "Profile saved", "Your company profile has been updated.");
     } catch (err) {
       toast("error", "Save failed", err instanceof Error ? err.message : "Could not update profile");
     } finally {
@@ -217,9 +219,11 @@ export default function Identity() {
     <div>
       <PageHeader
         title="Identity & profile"
-        description="Company tenant profile from GET /organizations/me --- identity, contacts, security posture, branding, and service key."
+        description="Your company profile — identity, contacts, security posture, branding, and service key."
         actions={<DocLink docId="howto-platform-08" label="Identity how-to" />}
       />
+
+      <ProfileCompletionNotice />
 
       <Tabs
         tabs={[
@@ -237,7 +241,7 @@ export default function Identity() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
-              <CardHeader title="Tenant identity" subtitle="GET /organizations/me/identity" action={<Building2 size={16} className="text-slate-500" />} />
+              <CardHeader title="Tenant identity" subtitle="Registered identity details for this organization" action={<Building2 size={16} className="text-slate-500" />} />
               <div className="space-y-2.5">
                 {[
                   ["Organization", state.org.name],
@@ -309,7 +313,7 @@ export default function Identity() {
       {tab === "profile" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
           <Card>
-            <CardHeader title="Company details" subtitle="PUT /organizations/me" />
+            <CardHeader title="Company details" subtitle="Legal and registration details for this organization" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Name"><input className="input" value={form.name} onChange={(e) => set("name", e.target.value)} /></Field>
               <Field label="Legal name"><input className="input" value={form.legal_name ?? ""} onChange={(e) => set("legal_name", e.target.value || null)} /></Field>
@@ -501,9 +505,13 @@ export default function Identity() {
             </Card>
           </motion.div>
 
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
+            <DomainVerificationCard />
+          </motion.div>
+
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <Card>
-              <CardHeader title="Report branding" subtitle="POST/DELETE /organizations/me/logo --- PNG/JPEG/WebP/SVG, max 2MB" action={<ImagePlus size={16} className="text-slate-500" />} />
+              <CardHeader title="Report branding" subtitle="PNG, JPEG, WebP or SVG — up to 2 MB, shown on report covers and footers" action={<ImagePlus size={16} className="text-slate-500" />} />
               <div className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
                 <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-md bg-phantix-800/70">
                   {state.org.logo_url ? (
@@ -575,7 +583,7 @@ export default function Identity() {
                   }
                   try {
                     await savePreferredServices(preferred);
-                    toast("success", "Preferences saved", "PUT /organizations/me/preferred-services");
+                    toast("success", "Preferences saved", "Your preferred services were saved.");
                   } catch (err) {
                     toast("error", "Save failed", err instanceof Error ? err.message : "Request failed");
                   }

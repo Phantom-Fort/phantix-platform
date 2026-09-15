@@ -140,7 +140,6 @@ export default function Companies() {
           </div>
           <div className="rounded-md border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">
             The child company is a separate tenant: its own service key, users, security database and billing scope.
-            POST /organizations/me/companies.
           </div>
           <button className="btn-primary w-full" disabled={busy || !name.trim()}>{busy ? "Creating..." : "Create company"}</button>
         </form>

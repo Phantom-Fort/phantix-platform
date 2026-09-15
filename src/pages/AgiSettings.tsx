@@ -241,7 +241,7 @@ export default function AgiSettings() {
     <div>
       <PageHeader
         title="Autonomous Agent"
-        description="Configure the autonomous pentest agent for your organization: enable it, set environment defaults, and store reusable test login + registration credentials. GET /agi/org/settings/bootstrap"
+        description="Configure the autonomous pentest agent for your organization: enable it, set environment defaults, and store reusable test login + registration credentials."
         actions={
           <>
             <DocLink docId="howto-platform-index" label="Platform how-to index" />

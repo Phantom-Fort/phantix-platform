@@ -57,7 +57,7 @@ export default function SetupWizard() {
       setPrivacyNotice({
         version: s.privacy_notice_version || "2026-07-10",
         title: "How SecureGraph handles your organization's data",
-        summary: "Demo privacy notice --- connect the live API for copy from GET /organizations/privacy.",
+        summary: "Demo privacy notice --- connect the live API for the official copy.",
         highlights: [
           { id: "1", label: "Security data", text: "Findings and assets live only in your dedicated security database." },
           { id: "2", label: "Platform data", text: "We store account, billing, and setup state only." },
@@ -184,11 +184,12 @@ export default function SetupWizard() {
 
         <div className="rounded-md border border-phantix-700/40 bg-phantix-900/60 p-4 text-[13px] leading-5 text-slate-500">
           <Info size={13} className="mb-1.5 text-gold-400" />
-          Rehydrates from <span className="font-mono text-slate-400">GET /organizations/me/setup</span>.
-          Required: privacy + email OTP. Domain / CAC / manual review are optional.
+          Your progress is saved as you go — leave and return at any time.
+          Required: privacy acceptance, email verification and company verification (domain, registry
+          details, or a manual review).
           {s.next_step && (
             <span className="mt-2 block text-slate-400">
-              Server next step: <span className="font-mono text-gold-400/90">{s.next_step}</span>
+              Next step: <span className="font-mono text-gold-400/90">{s.next_step}</span>
             </span>
           )}
         </div>
@@ -594,9 +595,10 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
   return (
     <div className="space-y-4">
       <div className="card p-7">
-        <StepTitle icon={<Globe size={18} />} kicker="Step 4 of 5 · optional" title="Prove company control" />
+        <StepTitle icon={<Globe size={18} />} kicker="Step 4 of 5 · required" title="Prove company control" />
         <p className="mt-2 text-sm text-slate-400">
-          Any <strong>one</strong> mode marks the company as verified. You can skip --- only privacy + email OTP are required to complete setup.
+          Choose any <strong>one</strong> mode to verify your company — usually the domain. Verification is required
+          before setup can be completed, and you can switch modes at any time.
         </p>
 
         {verified && (
@@ -890,9 +892,29 @@ function VerifyStep({ onContinue, privacyNotice }: { onContinue: () => void; pri
         <PrivacyRef notice={privacyNotice} />
       </div>
 
-      <button type="button" onClick={onContinue} className="btn-primary w-full !py-3.5">
-        {verified ? "Continue to complete" : "Skip verification & continue"} <ArrowRight size={15} />
+      <button
+        type="button"
+        onClick={onContinue}
+        disabled={!verified && s.manual_review !== "pending"}
+        title={
+          verified || s.manual_review === "pending"
+            ? undefined
+            : "Verify your company to continue — domain, registry details or a staff review"
+        }
+        className="btn-primary w-full !py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {verified
+          ? "Continue to complete"
+          : s.manual_review === "pending"
+            ? "Continue (review pending)"
+            : "Verify your company to continue"}{" "}
+        <ArrowRight size={15} />
       </button>
+      {!verified && s.manual_review !== "pending" && (
+        <p className="mt-2 text-center text-xs text-slate-500">
+          Company verification is required to finish setup.
+        </p>
+      )}
     </div>
   );
 }

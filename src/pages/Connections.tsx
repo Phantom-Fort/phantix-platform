@@ -209,7 +209,7 @@ export default function Connections() {
         <Card>
           <div className="mb-3 flex items-center gap-2">
             <Info size={14} className="text-gold-400" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Driver availability (GET /db-connections/drivers)</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Driver availability for your engine</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {(() => {
