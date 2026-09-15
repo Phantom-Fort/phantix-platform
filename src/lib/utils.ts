@@ -25,6 +25,15 @@ export function titleCase(s: string | null | undefined): string {
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Backend values arrive as snake_case; render them as normal words. Unlike
+ *  titleCase, the rest of the casing is kept and only the first word is
+ *  capitalized, so "security_data_storage" reads as "Security data storage". */
+export function humanize(s: string | null | undefined): string {
+  if (!s) return "";
+  const spaced = String(s).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 export function maskEmail(email: string): string {
   return email.replace(/(.{2}).+(@.+)/, "$1***$2");
 }
