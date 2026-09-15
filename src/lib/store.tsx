@@ -1560,13 +1560,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const authObj = d.authorizer as { id?: number } | undefined;
         if (!configured || !initObj?.id || !authObj?.id) {
           throw new Error(
-            "Dual control setup failed --- the backend did not confirm the assignment. " +
+            "Audit control setup failed --- the backend did not confirm the assignment. " +
             "Make sure both users exist with organization-domain emails (your company email, not personal). " +
             "If the issue persists, contact support.",
           );
         }
       } catch (e) {
-        if (e instanceof Error && e.message.startsWith("Dual control setup failed")) throw e;
+        if (e instanceof Error && e.message.startsWith("Audit control setup failed")) throw e;
       }
       persist((s) => ({
         ...s,

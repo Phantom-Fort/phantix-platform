@@ -56,7 +56,7 @@ export default function People() {
 
   useEffect(() => {
     if (searchParams.get("unlock") === "1") {
-      void requireDualControl("Unlock operate mode to manage people and dual-control actions.");
+      void requireDualControl("Managing people and audit control.");
     }
   }, [searchParams, requireDualControl]);
 
