@@ -13,7 +13,7 @@ import { useStore } from "@/lib/store";
 import { api, mediaUrl } from "@/lib/api";
 import type { Organization, OrgContact } from "@/lib/types";
 import { COMPANY_TYPES, COMPANY_TYPE_LABELS } from "@/lib/org";
-import { timeAgo, cx } from "@/lib/utils";
+import { timeAgo, cx, humanize } from "@/lib/utils";
 
 /** Allowed by PUT /organizations/me/preferred-services (API enum). */
 const DEFAULT_SERVICE_CATALOG = [
@@ -328,20 +328,20 @@ export default function Identity() {
               <Field label="Year founded"><input className="input" type="number" value={form.year_founded ?? ""} onChange={(e) => set("year_founded", e.target.value ? Number(e.target.value) : null)} /></Field>
               <Field label="Industry">
                 <select className="input" value={form.industry} onChange={(e) => set("industry", e.target.value)}>
-                  {industries.map((i) => <option key={i} value={i}>{i}</option>)}
+                  {industries.map((i) => <option key={i} value={i}>{humanize(i)}</option>)}
                 </select>
               </Field>
               <Field label="Sub-industry"><input className="input" value={form.sub_industry ?? ""} onChange={(e) => set("sub_industry", e.target.value || null)} /></Field>
               <Field label="Employees">
                 <select className="input" value={form.employee_count_range ?? ""} onChange={(e) => set("employee_count_range", e.target.value || null)}>
                   <option value="">---</option>
-                  {employeeRanges.filter(Boolean).map((r) => <option key={r} value={r}>{r}</option>)}
+                  {employeeRanges.filter(Boolean).map((r) => <option key={r} value={r}>{humanize(r)}</option>)}
                 </select>
               </Field>
               <Field label="Annual revenue">
                 <select className="input" value={form.annual_revenue_range ?? ""} onChange={(e) => set("annual_revenue_range", e.target.value || null)}>
                   <option value="">---</option>
-                  {revenueRanges.filter(Boolean).map((r) => <option key={r} value={r}>{r}</option>)}
+                  {revenueRanges.filter(Boolean).map((r) => <option key={r} value={r}>{humanize(r)}</option>)}
                 </select>
               </Field>
               <Field label="Website"><input className="input" value={form.website ?? ""} onChange={(e) => set("website", e.target.value || null)} /></Field>
@@ -377,7 +377,7 @@ export default function Identity() {
                     <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{which === "primary_contact" ? "Primary" : "Secondary"}</p>
                     <div className="grid grid-cols-2 gap-2">
                       <select className="input" value={c.title ?? "mr"} onChange={(e) => setContact(which, "title", e.target.value)}>
-                        {contactTitles.map((t) => <option key={t} value={t}>{t}</option>)}
+                        {contactTitles.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}
                       </select>
                       <input className="input" placeholder="Full name" value={c.name ?? ""} onChange={(e) => setContact(which, "name", e.target.value)} />
                       <input className="input col-span-2" placeholder="email" value={c.email ?? ""} onChange={(e) => setContact(which, "email", e.target.value)} />
@@ -406,7 +406,7 @@ export default function Identity() {
               <Field label="Security maturity">
                 <select className="input" value={form.security_maturity ?? ""} onChange={(e) => set("security_maturity", e.target.value || null)}>
                   <option value="">---</option>
-                  {maturityLevels.filter(Boolean).map((m) => <option key={m} value={m}>{m}</option>)}
+                  {maturityLevels.filter(Boolean).map((m) => <option key={m} value={m}>{humanize(m)}</option>)}
                 </select>
               </Field>
               <Field label="Security team size"><input className="input" value={form.security_team_size ?? ""} onChange={(e) => set("security_team_size", e.target.value || null)} /></Field>
@@ -463,7 +463,7 @@ export default function Identity() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
-              <CardHeader title="Service key" subtitle="Exactly one active key per company --- X-Org-Api-Key" action={<KeyRound size={16} className="text-slate-500" />} />
+              <CardHeader title="Service key" subtitle="Exactly one active key per company" action={<KeyRound size={16} className="text-slate-500" />} />
               {key ? (
                 <>
                   <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">

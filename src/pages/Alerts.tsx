@@ -5,7 +5,7 @@ import { BellRing, Send, Settings, ShieldCheck, Cable } from "lucide-react";
 import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Tabs, Modal } from "@/components/ui";
 import { useStore } from "@/lib/store";
-import { timeAgo, cx } from "@/lib/utils";
+import { timeAgo, cx, humanize } from "@/lib/utils";
 import type { Severity } from "@/lib/types";
 
 const severityBadge: Record<Severity, string> = {
@@ -98,7 +98,7 @@ export default function Alerts() {
                     <tr key={a.id} className={cx("border-b border-phantix-800/40 hover:bg-phantix-800/35 text-sm border-l-2", severityMeta[a.severity])}>
                       <td className="px-5 py-3">
                         <p className="font-medium text-slate-200">{a.title}</p>
-                        <p className="text-xs text-slate-500">{a.event_type}</p>
+                        <p className="text-xs text-slate-500">{humanize(a.event_type)}</p>
                       </td>
                       <td className="px-5 py-3"><span className={cx("chip capitalize", severityBadge[a.severity])}>{a.severity}</span></td>
                       <td className="px-5 py-3">

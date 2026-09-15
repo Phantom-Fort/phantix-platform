@@ -5,7 +5,7 @@ import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CollapsibleCard, StatusBadge, Modal, EmptyState } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, DEMO_MODE } from "@/lib/api";
-import { timeAgo, cx } from "@/lib/utils";
+import { timeAgo, cx, humanize } from "@/lib/utils";
 
 export default function Connections() {
   const {
@@ -104,7 +104,7 @@ export default function Connections() {
           <EmptyState
             icon={<Database size={22} />}
             title="No connections yet"
-            body="Register your dedicated security database (PostgreSQL recommended). Credentials are Fernet-encrypted on the platform DB."
+            body="Register your dedicated security database (PostgreSQL recommended). Credentials are stored encrypted."
             action={<button className="btn-primary" onClick={async () => { if (await guard()) setCreateOpen(true); }}><Plus size={15} /> Add the first connection</button>}
           />
         </Card>
@@ -124,13 +124,12 @@ export default function Connections() {
                       <StatusBadge status={c.bootstrap_status} />
                     </div>
                     <p className="mt-1 font-mono text-xs text-slate-500">
-                      {c.db_type} · {c.host}:{c.port}/{c.database_name} · schema {c.target_schema}
-                      {c.schema_version ? ` · v${c.schema_version}` : ""}
+                      {c.db_type} · {c.host}:{c.port}/{c.database_name}
                     </p>
                     <p className="mt-0.5 text-[13px] text-slate-600">
-                      {c.connection_purpose === "security_data_storage"
-                        ? "security_data_storage --- full CRUD inside the phantix schema only"
-                        : "config_inspection --- roles, privileges, policies; never business rows"}
+                      {humanize(c.connection_purpose)} --- {c.connection_purpose === "security_data_storage"
+                        ? "writes only to its own dedicated schema"
+                        : "roles, privileges, policies; never business rows"}
                       {c.last_test_at && ` · last test ${c.last_test_ok ? "passed" : "failed"} ${timeAgo(c.last_test_at)}`}
                     </p>
                   </div>
@@ -165,7 +164,7 @@ export default function Connections() {
                             if (boot?.pending) {
                               toast("info", "Sent for approval", "Schema bootstrap is parked for an authorizer — approve it from Authorizations to finish.");
                             } else {
-                              toast("success", "Schema bootstrapped", "phantix schema ready --- assets, scans, findings, risks, evidence.");
+                              toast("success", "Schema bootstrapped", "Security database ready --- assets, scans, findings, risks, evidence.");
                             }
                           } catch (err) {
                             toast("error", "Bootstrap failed", err instanceof Error ? err.message : "Bootstrap failed");
@@ -299,7 +298,7 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
               environment: String(f.get("environment") || "production"),
             });
             onClose();
-            toast("success", "Connection saved", "Credentials Fernet-encrypted. Next: test, then bootstrap the security schema.");
+            toast("success", "Connection saved", "Credentials stored encrypted. Next: test, then prepare the security database.");
           } catch (err) {
             toast("error", "Could not save connection", err instanceof Error ? err.message : "Request failed");
           } finally {
@@ -314,7 +313,7 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
           <div className="col-span-2 grid grid-cols-2 gap-2">
             {([
-              ["security_data_storage", "Security data storage", "SecureGraph writes findings, assets, evidence --- phantix schema only"],
+              ["security_data_storage", "Security data storage", "SecureGraph writes findings, assets and evidence to its own dedicated schema"],
               ["config_inspection", "Config inspection", "Read-only security posture --- never business rows"],
             ] as const).map(([v, label, desc]) => (
               <button
@@ -381,8 +380,8 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
         </div>
         <div className="rounded-md border border-phantix-700/50 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-500">
-          Least privilege: the storage role needs CONNECT, CREATE (or schema ownership), USAGE and DML on the
-          phantix schema only --- never access to application tables.
+          Least privilege: SecureGraph only needs access to its own dedicated schema --- never your application
+          tables.
         </div>
         <button className="btn-primary w-full" disabled={busy}>{resolvingHost ? "Resolving DNS..." : busy ? "Saving..." : "Save connection"}</button>
       </form>

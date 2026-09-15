@@ -11,7 +11,7 @@ import ApplicationAccessModal from "@/components/ApplicationAccessModal";
 import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Modal, EmptyState, Spinner, SkeletonCard, PasswordInput } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
-import { timeAgo, maskEmail, cx } from "@/lib/utils";
+import { timeAgo, maskEmail, cx, humanize } from "@/lib/utils";
 import type { OrgUser } from "@/lib/types";
 
 export default function People() {
@@ -91,7 +91,7 @@ export default function People() {
     <div>
       <PageHeader
         title="People & dual control"
-        description="Named users with role-based privileges. Any signed-in org user may operate with their role's grants; the authorizer is the only approver. org_admin/org_owner roles may sign in to the platform app with an admin-set password."
+        description="Named users with role-based privileges. Any signed-in org user may operate with their role's grants; the authorizer is the only approver. Organization admin and owner roles may sign in to the platform app with an admin-set password."
         actions={
           <>
             <DocLink docId="howto-platform-03" label="Users how-to" />
@@ -324,7 +324,7 @@ export default function People() {
                               <span className="chip !py-0 border-gold-400/30 bg-gold-400/10 text-[12px] text-gold-300">primary</span>
                             )}
                           </div>
-                          <p className="truncate text-[13px] text-slate-500">{u.email} · <span className="font-mono">{u.role}</span></p>
+                          <p className="truncate text-[13px] text-slate-500">{u.email} · <span className="font-mono">{humanize(u.role)}</span></p>
                         </div>
                       </div>
                     ))}
@@ -677,7 +677,7 @@ function BootstrapWizard() {
                     <strong className="text-gold-300">authorizer</strong> is the only person who approves. You'll create
                     your first initiator and the authorizer now --- and can{" "}
                     <strong className="text-slate-200">add more initiators anytime</strong> afterwards. Bootstrap uses
-                    your company JWT; after assignment, mutations need a live operate session.
+                    your company account; after assignment, mutations need a live operate session.
                   </p>
                   <div className="mt-4 grid max-w-xl grid-cols-2 gap-3">
                     <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
@@ -947,12 +947,12 @@ function UsersTable({
                     </div>
                   </div>
                 </td>
-                <td className="td"><span className="font-mono text-xs text-slate-400">{u.role}</span></td>
+                <td className="td"><span className="font-mono text-xs text-slate-400">{humanize(u.role)}</span></td>
                 <td className="td">
                   {(() => {
                     const overrides = Object.entries(u.application_roles || {});
                     if (overrides.length === 0) {
-                      return <span className="text-xs text-slate-600">Global ({u.role})</span>;
+                      return <span className="text-xs text-slate-600">Global ({humanize(u.role)})</span>;
                     }
                     return (
                       <div className="flex flex-wrap gap-1">
@@ -1198,7 +1198,7 @@ function ReassignModal({
             <option value="" disabled>Select initiator</option>
             {activeUsers.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.full_name} --- {u.email} ({u.role})
+                {u.full_name} --- {u.email} ({humanize(u.role)})
               </option>
             ))}
           </select>
@@ -1213,7 +1213,7 @@ function ReassignModal({
             <option value="" disabled>Select authorizer</option>
             {activeUsers.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.full_name} --- {u.email} ({u.role})
+                {u.full_name} --- {u.email} ({humanize(u.role)})
               </option>
             ))}
           </select>

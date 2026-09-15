@@ -6,8 +6,8 @@ import {
   ShieldCheck, ScrollText, Rocket, AlertTriangle, Copy,
 } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import ProfileCompletionNotice from "@/components/ProfileCompletionNotice";
-import { Card, CardHeader, CollapsibleCard, AnimatedNumber, StatusBadge } from "@/components/ui";
+import ProfileCompletionNotice, { buildProfileChecklist } from "@/components/ProfileCompletionNotice";
+import { Card, CardHeader, CollapsibleCard, CompletionDonut, AnimatedNumber, StatusBadge } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { useSmartPoll } from "@/lib/usePolling";
 import { APP_URL } from "@/lib/links";
@@ -35,6 +35,14 @@ export default function Dashboard() {
     { done: operate.unlocked, label: "First operate unlock completed", to: "/users" },
   ];
   const doneCount = checklist.filter((c) => c.done).length;
+  const gettingStartedDone = doneCount === checklist.length;
+
+  // Profile completion — the same checklist the notice uses, shown as a gauge
+  // once the getting-started steps are behind the admin.
+  const profileItems = buildProfileChecklist(state.org, state.setup);
+  const profileDone = profileItems.filter((i) => i.done).length;
+  const profilePct = Math.round((profileDone / profileItems.length) * 100);
+  const profileMissing = profileItems.filter((i) => !i.done).length;
 
   return (
     <div>
@@ -61,7 +69,7 @@ export default function Dashboard() {
               <p className="font-semibold text-slate-100">Security database not ready</p>
               <p className="text-sm text-slate-400">
                 Scans, VAPT and findings are blocked until a <span className="font-mono text-xs">security_data_storage</span> connection
-                is bootstrapped. This gate is enforced by the backend, not just the UI.
+                is bootstrapped. This gate is enforced by the platform, not just the UI.
               </p>
             </div>
             <Link to="/connections" className="btn-primary">Connect security DB <ArrowRight size={15} /></Link>
@@ -70,40 +78,55 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {/* Checklist */}
+        {/* Getting started → profile completion status once every step is done. */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-          <CollapsibleCard
-            className="h-full"
-            title="Getting started"
-            subtitle={`${doneCount} of ${checklist.length} complete`}
-            action={<ShieldCheck size={16} className="text-gold-400" />}
-            defaultOpen={doneCount < checklist.length}
-          >
-            <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-phantix-700/50">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${(doneCount / checklist.length) * 100}%` }}
-                transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                className="h-full rounded-full bg-gold-400"
+          {gettingStartedDone ? (
+            <Card className="flex h-full flex-col">
+              <CardHeader
+                title="Profile completion status"
+                subtitle={profileMissing === 0 ? "Your organization profile is complete" : `${profileMissing} profile item${profileMissing === 1 ? "" : "s"} still to complete`}
+                action={<ShieldCheck size={16} className="text-gold-400" />}
               />
-            </div>
-            <div className="space-y-2">
-              {checklist.map((c) => (
-                <button
-                  key={c.label}
-                  onClick={() => !c.done && navigate(c.to)}
-                  className={cx(
-                    "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-sm transition-colors",
-                    c.done ? "border-emerald-400/20 bg-emerald-400/5 text-slate-400" : "border-phantix-700/50 bg-phantix-950/40 text-slate-200 hover:border-gold-400/40",
-                  )}
-                >
-                  {c.done ? <CheckCircle2 size={16} className="shrink-0 text-emerald-400" /> : <Circle size={16} className="shrink-0 text-slate-600" />}
-                  <span className={c.done ? "line-through opacity-70" : ""}>{c.label}</span>
-                  {!c.done && <ArrowRight size={14} className="ml-auto shrink-0 text-gold-400" />}
-                </button>
-              ))}
-            </div>
-          </CollapsibleCard>
+              <div className="flex flex-1 flex-col items-center justify-center gap-5 py-2">
+                <CompletionDonut value={profilePct} label="complete" sublabel={`${profileDone} of ${profileItems.length} items`} />
+                <Link to="/identity" className="btn-secondary !px-3.5 !py-2 !text-xs">
+                  Review profile <ArrowRight size={13} />
+                </Link>
+              </div>
+            </Card>
+          ) : (
+            <Card className="h-full">
+              <CardHeader
+                title="Getting started"
+                subtitle={`${doneCount} of ${checklist.length} complete`}
+                action={<ShieldCheck size={16} className="text-gold-400" />}
+              />
+              <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-phantix-700/50">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(doneCount / checklist.length) * 100}%` }}
+                  transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                  className="h-full rounded-full bg-gold-400"
+                />
+              </div>
+              <div className="space-y-2">
+                {checklist.map((c) => (
+                  <button
+                    key={c.label}
+                    onClick={() => !c.done && navigate(c.to)}
+                    className={cx(
+                      "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-sm transition-colors",
+                      c.done ? "border-emerald-400/20 bg-emerald-400/5 text-slate-400" : "border-phantix-700/50 bg-phantix-950/40 text-slate-200 hover:border-gold-400/40",
+                    )}
+                  >
+                    {c.done ? <CheckCircle2 size={16} className="shrink-0 text-emerald-400" /> : <Circle size={16} className="shrink-0 text-slate-600" />}
+                    <span className={c.done ? "line-through opacity-70" : ""}>{c.label}</span>
+                    {!c.done && <ArrowRight size={14} className="ml-auto shrink-0 text-gold-400" />}
+                  </button>
+                ))}
+              </div>
+            </Card>
+          )}
         </motion.div>
 
         {/* Stats */}
@@ -124,20 +147,22 @@ export default function Dashboard() {
 
         {/* Identity quick card */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <CollapsibleCard className="h-full" title="Tenant identity" subtitle="Quote these on support tickets" defaultOpen={false}>
+          <Card className="h-full">
+            <CardHeader title="Tenant identity" subtitle="Quote these on support tickets" />
             <div className="space-y-2.5">
               {[
                 ["Tenant ID", `#${state.org.id}`],
                 ["Slug", state.org.slug],
                 ["Creator", `#${state.org.creator_user_id}`],
               ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
-                  <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{k}</span>
+                <div key={k} className="flex items-center justify-between gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
+                  <span className="shrink-0 text-xs font-medium uppercase tracking-wider text-slate-500">{k}</span>
                   <button
-                    className="flex items-center gap-2 font-mono text-sm text-slate-200 hover:text-gold-300"
+                    className="flex min-w-0 items-center gap-2 font-mono text-sm text-slate-200 hover:text-gold-300"
                     onClick={() => { navigator.clipboard?.writeText(v).catch(() => {}); toast("success", "Copied"); }}
                   >
-                    {v} <Copy size={12} className="text-slate-600" />
+                    <span className="break-all text-right">{v}</span>
+                    <Copy size={12} className="shrink-0 text-slate-600" />
                   </button>
                 </div>
               ))}
@@ -145,7 +170,7 @@ export default function Dashboard() {
             <Link to="/identity" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-400 hover:text-gold-300">
               Manage identity & keys <ArrowRight size={12} />
             </Link>
-          </CollapsibleCard>
+          </Card>
         </motion.div>
       </div>
 
@@ -185,7 +210,7 @@ export default function Dashboard() {
                 <p className="text-sm leading-6 text-slate-300">
                   {securityDbReady
                     ? "Your security database is ready --- the Command Centre is unblocked."
-                    : "Connect and bootstrap your security database first --- the backend blocks scans and VAPT without it."}
+                    : "Connect and bootstrap your security database first --- the platform blocks scans and VAPT without it."}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <StatusBadge status={securityDbReady ? "ready" : "pending"} />

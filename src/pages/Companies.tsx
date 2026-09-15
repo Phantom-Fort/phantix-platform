@@ -149,7 +149,7 @@ export default function Companies() {
       <Modal open={!!keyModal} onClose={() => setKeyModal(null)} title={`Service key --- ${keyModal?.company}`}>
         <div className="space-y-4">
           <div className="rounded-md border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
-            Shown once. The backend keeps only the SHA-256 --- copy it into your secrets vault now.
+            Shown once. Only a hash is kept --- copy it into your secrets vault now.
           </div>
           <div className="rounded-md border border-phantix-700/50 bg-phantix-950/70 p-4 font-mono text-sm text-gold-300 break-all">
             {keyModal?.secret}

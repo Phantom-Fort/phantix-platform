@@ -6,7 +6,7 @@ import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
-import { formatNaira, timeAgo, cx } from "@/lib/utils";
+import { formatNaira, timeAgo, cx, humanize } from "@/lib/utils";
 import { UPSELL_FEATURES, upsellFor, upsellPlanLabel } from "@/lib/upsell";
 
 interface Entitlements {
@@ -315,7 +315,7 @@ export default function Billing() {
   const featureList = (isPremium
     ? (activePlan?.features?.length ? activePlan.features : growthPlan?.features || starterPlan?.features)
     : plans.find((p) => p.key === "free")?.features)
-    ?? ["All 11 product engines", "Unlimited campaigns & scans", "Verified-only PDF/DOCX reports", "Dual-control + audit exports", "WA/Telegram alert channels", "AI-assisted remediation"];
+    ?? ["All product modules", "Unlimited campaigns & scans", "Verified-only PDF/DOCX reports", "Dual-control + audit exports", "WA/Telegram alert channels", "AI-assisted remediation"];
 
   const enforcementOn = entitlements?.billing_enforcement?.enabled === true;
   const ALL_REPORT_FORMATS = ["json", "csv", "markdown", "pdf", "docx", "xlsx", "html", "pptx"];
@@ -540,7 +540,7 @@ export default function Billing() {
             <div className="space-y-2">
               {payments.map(p => (
                 <div key={p.id} className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
-                  <div className="min-w-0 flex-1"><p className="font-mono text-sm text-slate-200">{p.reference}</p><p className="text-xs text-slate-500">{p.purpose} · {p.discount_percent ? `${p.discount_percent}% off` : ""} · {timeAgo(p.created_at)}</p></div>
+                  <div className="min-w-0 flex-1"><p className="font-mono text-sm text-slate-200">{p.reference}</p><p className="text-xs text-slate-500">{humanize(p.purpose)} · {p.discount_percent ? `${p.discount_percent}% off` : ""} · {timeAgo(p.created_at)}</p></div>
                   <span className="font-semibold text-slate-200">{formatNaira(p.amount_due_ngn)}</span>
                   <StatusBadge status={p.status} />
                   {p.status === "pending" && <button onClick={() => { setPayingId(p.id); void handleVerify(p.id); }} className="btn-primary !px-3 !py-1.5 !text-xs">Verify</button>}

@@ -10,7 +10,7 @@ import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Tabs, Empty
 import { useStore } from "@/lib/store";
 import { isPendingApproval } from "@/lib/api";
 import { useResource } from "@/lib/useResource";
-import { timeAgo, cx } from "@/lib/utils";
+import { timeAgo, cx, humanize } from "@/lib/utils";
 import {
   HubConnector, HubInstallation, loadHubCatalog, loadHubInstallations,
   installHubIntegration, uninstallHubIntegration, testHubInstallation,
@@ -196,7 +196,7 @@ export default function Integrations() {
                       )}
                     </div>
                     <p className="text-[13px] text-slate-500">
-                      {inst.connector_id} · {inst.auth_mode}
+                      {humanize(inst.connector_id)} · {humanize(inst.auth_mode)}
                       {inst.created_at ? ` · added ${timeAgo(inst.created_at)}` : ""}
                       {inst.health?.last_test_at ? ` · last test ${timeAgo(String(inst.health.last_test_at))}` : ""}
                     </p>
@@ -371,7 +371,7 @@ function SsoScimTab({
       </div>
 
       <div className="space-y-4">
-        <CollapsibleCard className="!p-4" defaultOpen={false} title="SCIM 2.0 provisioning" subtitle="Directory sync endpoints consumed by your identity provider">
+        <CollapsibleCard className="!p-4" defaultOpen={false} title="SCIM 2.0 provisioning" subtitle="Directory sync URLs for your identity provider">
           <div className="space-y-2 text-xs">
             <p className="text-slate-400">URLs your IdP connects to with the minted SCIM bearer token:</p>
             {[
@@ -395,7 +395,7 @@ function SsoScimTab({
                 <span className="flex h-8 w-8 items-center justify-center rounded-md border border-phantix-600/50 bg-phantix-800/70 text-slate-300">{connectorGlyph(inst.connector_id)}</span>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-100">{inst.label}</p>
-                  <p className="text-[13px] text-slate-500">{inst.connector_id} · {inst.auth_mode}</p>
+                  <p className="text-[13px] text-slate-500">{humanize(inst.connector_id)} · {humanize(inst.auth_mode)}</p>
                 </div>
                 <StatusBadge status={inst.status} />
               </div>
@@ -480,7 +480,7 @@ function InstallModal({ connectorId, connector, onClose, onDone }: {
         <div>
           <label className="label">Auth mode</label>
           <select className="input" value={authMode} onChange={(e) => setAuthMode(e.target.value)}>
-            {connector.auth_modes.map((m) => <option key={m} value={m}>{m}</option>)}
+            {connector.auth_modes.map((m) => <option key={m} value={m}>{humanize(m)}</option>)}
           </select>
         </div>
 

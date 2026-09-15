@@ -375,16 +375,19 @@ function normalizeAlertSettings(raw: unknown): AlertSettings {
 }
 
 /** Normalize GET /support/tickets into SupportTicket[]. */
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === "object" && !Array.isArray(v);
+
 function mapTicketsFromApi(raw: unknown): SupportTicket[] {
   const list = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] })?.items ?? []);
-  return (list as Record<string, unknown>[]).map((t) => ({
+  return (list as unknown[]).filter(isRecord).map((t) => ({
     id: Number(t.id ?? 0),
     subject: String(t.subject ?? ""),
     status: (String(t.status ?? "open") || "open") as SupportTicket["status"],
     priority: String(t.priority ?? "normal"),
     created_at: String(t.created_at ?? new Date().toISOString()),
     messages: Array.isArray(t.messages)
-      ? (t.messages as Record<string, unknown>[]).map((m) => ({
+      ? t.messages.filter(isRecord).map((m) => ({
           from: String(m.submitter_name ?? m.from ?? "You"),
           body: String(m.body ?? m.message ?? ""),
           at: String(m.created_at ?? m.at ?? new Date().toISOString()),
@@ -2095,7 +2098,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ...s,
           connections: s.connections.map((c) => (c.id === id ? { ...c, bootstrap_status: "ready" as const, schema_version: "1.4.2" } : c)),
         }));
-        logAudit("db_connection.bootstrap", "connections", "Bootstrapped security schema v1.4.2");
+        logAudit("db_connection.bootstrap", "connections", "Bootstrapped the security database");
         return { pending: false };
       }
       const needsDc = !!tokens.dualControl;
