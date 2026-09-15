@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, Info, Lock, Sparkle } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { formatNaira, timeAgo, cx } from "@/lib/utils";
@@ -536,8 +536,7 @@ export default function Billing() {
       {/* Payments history */}
       {payments.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mt-5">
-          <Card>
-            <CardHeader title="Payment history" subtitle={`${payments.length} invoices`} />
+          <CollapsibleCard defaultOpen={false} title="Payment history" subtitle={`${payments.length} invoices`}>
             <div className="space-y-2">
               {payments.map(p => (
                 <div key={p.id} className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
@@ -548,14 +547,13 @@ export default function Billing() {
                 </div>
               ))}
             </div>
-          </Card>
+          </CollapsibleCard>
         </motion.div>
       )}
 
       {/* Report formats */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-5">
-        <Card>
-          <CardHeader title="Report export formats" subtitle="All formats are free on every plan" />
+        <CollapsibleCard defaultOpen={false} title="Report export formats" subtitle="All formats are free on every plan">
           <div className="flex flex-wrap gap-2">
             {reportFormats.map((r) => (
               <span key={r.fmt} className={cx("chip text-xs", canDownload(r.fmt) ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/40 bg-slate-500/10 text-slate-500")}>
@@ -567,14 +565,13 @@ export default function Billing() {
           <p className="mt-2 text-xs text-slate-500">
             PDF, DOCX, XLSX, HTML, PPTX, JSON, CSV and Markdown are available on every plan, Free included — reporting is never the paid lever.
           </p>
-        </Card>
+        </CollapsibleCard>
       </motion.div>
 
       {/* Strategic upsell — exactly what Free cannot do, and what unlocks it. */}
       {!isPremium && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="mt-5">
-          <Card>
-            <CardHeader title="What Free cannot do" subtitle="Each line names the plan that unlocks it" />
+          <CollapsibleCard defaultOpen={false} title="What Free cannot do" subtitle="Each line names the plan that unlocks it">
             <div className="divide-y divide-phantix-800/50">
               {Object.values(UPSELL_FEATURES).map((f) => (
                 <div key={f.key} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
@@ -588,7 +585,7 @@ export default function Billing() {
                 </div>
               ))}
             </div>
-          </Card>
+          </CollapsibleCard>
         </motion.div>
       )}
 

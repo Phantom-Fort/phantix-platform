@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Mail, KeyRound, ArrowRight, Send } from "lucide-react";
+import { ShieldCheck, Mail, KeyRound, ArrowRight, Send, AlertTriangle } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { DEMO_MODE, ApiError, throttleSeconds } from "@/lib/api";
+import { humanize } from "@/lib/utils";
 import { APP_DEMO_URL } from "@/lib/links";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -164,21 +165,29 @@ export default function Login() {
                 <BrandLogo className="mx-auto h-20 w-20 drop-shadow-[0_0_40px_rgba(232,181,77,0.5)]" />
               </motion.div>
               <h1 className="mt-5 font-display text-2xl font-bold text-white">SecureGraph Platform</h1>
-              <p className="mt-1.5 text-sm text-slate-400">
-                Company or admin sign-in · <span className="font-mono text-xs">type=access</span>
-              </p>
+              <p className="mt-1.5 text-sm text-slate-400">Company or admin sign-in</p>
             </div>
 
             <div className="card p-7">
+              {error && (
+                <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-md border border-severity-critical/30 bg-severity-critical/10 px-3.5 py-3">
+                  <AlertTriangle size={15} className="mt-0.5 shrink-0 text-severity-critical" />
+                  <p className="text-sm leading-5 text-severity-critical">{humanize(lockedMessage())}</p>
+                </div>
+              )}
               <AnimatePresence mode="wait">
                 {stage === "password" ? (
                   <motion.form key="pw" initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -14 }} onSubmit={submit} className="space-y-4">
                     <div>
-                      <label className="label">Company or admin email</label>
+                      <label className="label">Primary (company) email</label>
                       <div className="relative">
                         <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input className="input !pl-10" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+                        <input className="input !pl-10" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner@company.com" />
                       </div>
+                      <p className="mt-1 text-[12px] text-slate-500">
+                        Platform access is reserved for the organization's primary user. Everyone
+                        else works in the applications.
+                      </p>
                     </div>
                     <div>
                       <label className="label">Password</label>
@@ -190,7 +199,6 @@ export default function Login() {
                         placeholder="••••••••"
                       />
                     </div>
-                    {error && <p className="text-sm text-severity-critical">{lockedMessage()}</p>}
                     <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0}>
                       {busy ? "Checking..." : retryIn > 0 ? `Try again in ${retryIn}s` : "Continue"} {retryIn === 0 && <ArrowRight size={15} />}
                     </button>
@@ -224,7 +232,6 @@ export default function Login() {
                       placeholder="••••••"
                       autoFocus
                     />
-                    {error && <p className="text-sm text-severity-critical">{lockedMessage()}</p>}
                     <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || code.length !== 6}>
                       {busy ? "Verifying..." : retryIn > 0 ? `Try again in ${retryIn}s` : "Verify & sign in"}
                     </button>
