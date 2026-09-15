@@ -340,7 +340,7 @@ const INSIGHTS: Insight[] = [
     icon: <BellRing size={20} />,
     kicker: "Real-time alerting",
     title: "Critical findings, delivered in seconds.",
-    body: "Verified alerts pulse to Email, WhatsApp and Telegram the instant they're confirmed — with dual-control for sensitive actions.",
+    body: "Verified alerts pulse to Email, WhatsApp and Telegram the instant they're confirmed — with audit control for sensitive actions.",
     stat: { label: "median alert time", value: 9 },
     scene: <AlertsScene />,
   },

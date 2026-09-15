@@ -312,48 +312,35 @@ export default function Layout() {
           </a>
         </div>
 
-        {/* Dual-control widget */}
+        {/* Audit-control widget (platform: the primary acts alone) */}
         <div className="sg-hide-collapsed border-t border-phantix-700/40 p-2">
           <div className="rounded-md bg-phantix-900/70 border border-phantix-700/40 p-2">
             <div className="flex items-center justify-between">
-              <p className="text-[13px] font-semibold text-slate-500">Dual control</p>
-              {operate.unlocked ? <Unlock size={13} className="text-emerald-400" /> : <Lock size={13} className="text-slate-500" />}
+              <p className="text-[13px] font-semibold text-slate-500">Audit control</p>
+              <ShieldCheck size={13} className={dc.configured ? "text-emerald-400" : "text-slate-500"} />
             </div>
-            {operate.unlocked ? (
-              <div className="mt-1 space-y-1">
-                <p className="text-xs font-medium text-emerald-300">Operating as {operate.actingUser}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] capitalize text-slate-500">{operate.actingRole}</span>
-                  {operate.expiresAt && <OperateCountdown expiresAt={operate.expiresAt} />}
-                </div>
-                <button onClick={lockOperate} className="mt-1 w-full rounded-lg bg-phantix-700/50 py-1 text-[13px] font-medium text-slate-300 hover:bg-phantix-700/80">
-                  Lock session
-                </button>
-              </div>
-            ) : (
-              <div className="mt-1">
-                {dc.configured ? (
-                  <>
-                    <p className="text-[13px] leading-4 text-slate-500">
-                      {(initiator?.full_name || "Initiator").split(" ")[0]} + {(authorizer?.full_name || "Authorizer").split(" ")[0]} assigned
-                    </p>
-                    <button
-                      onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
-                      className="btn-primary mt-1 w-full !px-3 !py-1 !text-[13px]"
-                    >
-                      <Unlock size={12} /> Unlock operate
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-[13px] leading-4 text-slate-500">Not configured --- bootstrap required</p>
-                    <button onClick={() => navigate("/users")} className="btn-secondary mt-1 w-full !px-3 !py-1 !text-[13px]">
-                      <ShieldCheck size={12} /> Set up dual control
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+            <div className="mt-1 space-y-1">
+              {dc.configured ? (
+                <>
+                  <p className="text-[13px] leading-4 text-slate-500">
+                    Audit controller: <span className="text-slate-300">{initiator?.full_name || "—"}</span>
+                  </p>
+                  <p className="text-[13px] leading-4 text-slate-600">
+                    Your actions here are recorded to the audit trail. The applications keep dual control.
+                  </p>
+                  <button onClick={() => navigate("/users")} className="mt-1 w-full rounded-lg bg-phantix-700/50 py-1 text-[13px] font-medium text-slate-300 hover:bg-phantix-700/80">
+                    Manage in People &amp; Control
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-[13px] leading-4 text-slate-500">Not configured --- assign an audit controller</p>
+                  <button onClick={() => navigate("/users")} className="btn-secondary mt-1 w-full !px-3 !py-1 !text-[13px]">
+                    <ShieldCheck size={12} /> Set up audit control
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </aside>

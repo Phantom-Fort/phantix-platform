@@ -27,7 +27,7 @@ flowchart TD
 1. Platform → **People & Control**.
 2. Find the operator.
 3. Choose **Issue login link** / **Generate application sign-in link** (wording may vary).
-4. Unlock operate if the UI requires it.
+4. Platform actions are recorded to the audit trail under the audit controller.
 5. Copy the URL (or send via your out-of-band channel).
 6. Operator opens the link **in their browser** (not shared company password).
 7. Complete password (if first time), email OTP, and device binding.

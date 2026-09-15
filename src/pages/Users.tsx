@@ -56,7 +56,7 @@ export default function People() {
 
   useEffect(() => {
     if (searchParams.get("unlock") === "1") {
-      void requireDualControl("Unlock operate mode to manage people and dual-control actions.");
+      void requireDualControl("Managing people and audit control.");
     }
   }, [searchParams, requireDualControl]);
 
@@ -90,19 +90,11 @@ export default function People() {
   return (
     <div>
       <PageHeader
-        title="People & dual control"
-        description="Named users with role-based privileges. Any signed-in org user may operate with their role's grants; the authorizer is the only approver. Organization admin and owner roles may sign in to the platform app with an admin-set password."
+        title="People & audit control"
+        description="Named users with role-based privileges. Only the primary user signs in to the platform; actions here are recorded to the audit trail under the audit controller. The applications keep dual control."
         actions={
           <>
             <DocLink docId="howto-platform-03" label="Users how-to" />
-            {dc.configured && !operate.unlocked && (
-              <button
-                className="btn-primary"
-                onClick={() => void requireDualControl("Unlock operate mode to manage people and dual-control actions.")}
-              >
-                <Unlock size={15} /> Unlock operate
-              </button>
-            )}
             {dc.configured && (
               <button
                 className="btn-secondary"
@@ -254,12 +246,13 @@ export default function People() {
             </motion.div>
           )}
 
-          {/* Dual control — configuration when unset, reference once it is set */}
+          {/* Audit control — the platform records who controls the audit trail;
+              the applications keep dual control. */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
             <CollapsibleCard
               className="border-gold-400/25"
               defaultOpen={!dc.configured}
-              title="Dual control"
+              title="Audit control"
               subtitle="A single authorizer approves; any number of initiators propose and execute"
               action={<ShieldCheck size={17} className="text-gold-400" />}
             >
@@ -342,51 +335,6 @@ export default function People() {
                 </p>
               </div>
             </CollapsibleCard>
-          </motion.div>
-
-          {/* Authorizer approval queue */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-            <Card>
-              <CardHeader
-                title="Pending approvals"
-                subtitle="Deletes and state-changing actions proposed by an initiator await the authorizer's sign-off"
-                action={
-                  <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">{pendingItems.length} pending</span>
-                }
-              />
-              {pendingItems.length === 0 ? (
-                <EmptyState icon={<CheckCircle2 size={22} />} title="No pending approvals" body="Actions that need dual-control sign-off will appear here for the authorizer." />
-              ) : (
-                <div className="divide-y divide-phantix-700/40">
-                  {pendingItems.map((p) => (
-                    <div key={p.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-100">{p.action_label}</p>
-                        <p className="text-[13px] text-slate-500">
-                          {p.category} · initiated by {p.initiated_by} · {timeAgo(p.created_at)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <button
-                          className="btn-primary !px-3 !py-1.5 !text-xs"
-                          disabled={approvingId === p.id}
-                          onClick={() => void approveOrReject(p.id, true)}
-                        >
-                          {approvingId === p.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Approve
-                        </button>
-                        <button
-                          className="btn-ghost !px-3 !py-1.5 !text-xs text-severity-critical"
-                          disabled={approvingId === p.id}
-                          onClick={() => void approveOrReject(p.id, false)}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
           </motion.div>
 
           <LoginLinks />
@@ -779,7 +727,7 @@ function BootstrapWizard() {
                     setError(null);
                     try {
                       await assignDualControl(initiator.id, authorizer.id);
-                      toast("success", "Dual control active", "Now unlock an operate session as the initiator.");
+                      toast("success", "Audit control active", "The audit controller is recorded on every platform action.");
                     } catch (err) {
                       setError(err instanceof Error ? err.message : "Assignment failed");
                     } finally {
@@ -1181,7 +1129,7 @@ function ReassignModal({
       <div className="space-y-4">
         <div className="rounded-md border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
           Set the sole authorizer and the primary initiator (both on your organization domain). Additional initiators are
-          added from the Dual control card --- there is only ever one authorizer.{allowedDomains.length > 0 && (
+          added from the Audit control card --- there is only ever one authorizer.{allowedDomains.length > 0 && (
             <span> Allowed: <strong>{allowedDomains.join(", ")}</strong>.</span>
           )}{exemptEmails.length > 0 && (
             <span> Registration contacts exempt: <strong>{exemptEmails.join(", ")}</strong>.</span>
@@ -1227,7 +1175,7 @@ function ReassignModal({
             setError(null);
             try {
               await assignDualControl(initiatorId, authorizerId);
-              toast("success", "Dual control updated", "The new assignments are active. Both users must re-login with purpose=dual_control.");
+              toast("success", "Audit control updated", "The new assignments are active.");
               onClose();
             } catch (err) {
               setError(err instanceof Error ? err.message : "Assignment failed");
@@ -1287,7 +1235,7 @@ function AddUserModal({
           <div className="flex items-start gap-2 rounded-md border border-gold-400/25 bg-gold-400/5 px-3 py-2 text-[13px] leading-4 text-slate-400">
             <ShieldCheck size={13} className="mt-0.5 shrink-0 text-gold-300" />
             An initiator proposes and executes mutations with their role's grants. There is no separate "authorizer"
-            role --- the authorizer is a single designated slot, changed from the Dual control card.
+            role --- the authorizer is a single designated slot, changed from the Audit control card.
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">

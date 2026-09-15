@@ -36,7 +36,7 @@ export default function Connections() {
   /** Dual control must be set up before managing DB connections. */
   const guard = async () => {
     if (!state.dualControl.configured) {
-      toast("warning", "Dual control required", "Set up dual control (People page) before managing database connections.");
+      toast("warning", "Audit control required", "Set up audit control (People page) before managing database connections.");
       return false;
     }
     if (operate.unlocked) return true;
@@ -271,7 +271,7 @@ function CreateConnectionModal({ open, onClose }: { open: boolean; onClose: () =
           e.preventDefault();
           // Enforce dual control
           if (!state.dualControl.configured) {
-            toast("warning", "Dual control required", "Set up initiator + authorizer on the People page first.");
+            toast("warning", "Audit control required", "Set up the audit controller on the People page first.");
             return;
           }
           if (state.dualControl.configured && !operate.unlocked) {

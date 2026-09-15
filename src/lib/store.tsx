@@ -1560,13 +1560,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const authObj = d.authorizer as { id?: number } | undefined;
         if (!configured || !initObj?.id || !authObj?.id) {
           throw new Error(
-            "Dual control setup failed --- the backend did not confirm the assignment. " +
+            "Audit control setup failed --- the backend did not confirm the assignment. " +
             "Make sure both users exist with organization-domain emails (your company email, not personal). " +
             "If the issue persists, contact support.",
           );
         }
       } catch (e) {
-        if (e instanceof Error && e.message.startsWith("Dual control setup failed")) throw e;
+        if (e instanceof Error && e.message.startsWith("Audit control setup failed")) throw e;
       }
       persist((s) => ({
         ...s,
@@ -1691,20 +1691,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const requireDualControl = useCallback(
     (reason = "This action requires an active dual-control operate session.") => {
-      // Backend idle window is authoritative — a live operate token is valid even
-      // if the FE's local expiresAt is stale (clock skew, background-tab timers).
-      const sessionActive = operate.unlocked && !!tokens.dualControl;
-      if (sessionActive) return Promise.resolve(true);
-      if (!state.dualControl.configured && !DEMO_MODE) {
-        toast("warning", "Set up dual control first", "Assign initiator + authorizer under People & Control.");
-        return Promise.resolve(false);
-      }
-      return new Promise<boolean>((resolve) => {
-        dcPromptResolve.current = resolve;
-        setDualControlPrompt({ open: true, reason });
-      });
+      // Platform = **Audit control**. Only the organization's primary user can
+      // sign in here, so the backend no longer requires an authorizer or an
+      // operate session on this surface (X-Client-Surface: platform). Resolve
+      // immediately so callers proceed; the applications keep full dual control.
+      void reason;
+      return Promise.resolve(true);
     },
-    [operate.unlocked, state.dualControl.configured, toast],
+    [],
   );
 
   // Slide the operate expiry on real activity. Backend inactivity window is what
@@ -1743,7 +1737,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const onRequired = (e: Event) => {
       const msg = (e as CustomEvent).detail;
-      void requireDualControl(msg || "Unlock operate mode for this action.");
+      void requireDualControl(msg || "This action is recorded to the audit trail.");
     };
     window.addEventListener("phantix:operate-required", onRequired);
     return () => window.removeEventListener("phantix:operate-required", onRequired);

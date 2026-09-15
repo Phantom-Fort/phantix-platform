@@ -130,6 +130,7 @@ async function request<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {};
   headers["X-Device-Id"] = deviceId();
+  headers["X-Client-Surface"] = "platform";
   const bearer = tokens.orgUser ?? tokens.platform;
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   const sentDualControl = !!tokens.dualControl && opts.dualControl === true;
@@ -224,6 +225,7 @@ async function requestMultipart<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {};
   headers["X-Device-Id"] = deviceId();
+  headers["X-Client-Surface"] = "platform";
   const bearer = tokens.orgUser ?? tokens.platform;
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   const sentDualControl = !!tokens.dualControl && opts.dualControl === true;
@@ -289,6 +291,7 @@ export const api = {
   async download(path: string): Promise<Blob> {
     const headers: Record<string, string> = {};
     headers["X-Device-Id"] = deviceId();
+  headers["X-Client-Surface"] = "platform";
     const bearer = tokens.orgUser ?? tokens.platform;
     if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
     if (tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl;
@@ -301,6 +304,7 @@ export const api = {
   async fetchText(path: string): Promise<string> {
     const headers: Record<string, string> = {};
     headers["X-Device-Id"] = deviceId();
+  headers["X-Client-Surface"] = "platform";
     const bearer = tokens.orgUser ?? tokens.platform;
     if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
     const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });

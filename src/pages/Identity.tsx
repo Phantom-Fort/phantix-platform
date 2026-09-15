@@ -460,13 +460,15 @@ export default function Identity() {
       )}
 
       {tab === "keys" && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          {/* Left: service key, domain verification, branding — stacked */}
+          <div className="space-y-5 lg:col-span-2">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
               <CardHeader title="Service key" subtitle="Exactly one active key per company" action={<KeyRound size={16} className="text-slate-500" />} />
               {key ? (
                 <>
-                  <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
+                  <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-mono text-sm text-slate-200">{key.prefix}</span>
@@ -512,7 +514,7 @@ export default function Identity() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <Card>
               <CardHeader title="Report branding" subtitle="PNG, JPEG, WebP or SVG — up to 2 MB, shown on report covers and footers" action={<ImagePlus size={16} className="text-slate-500" />} />
-              <div className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-4">
+              <div className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5">
                 <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-md bg-phantix-800/70">
                   {state.org.logo_url ? (
                     <img src={mediaUrl(state.org.logo_url)} alt="" className="h-full w-full object-contain" />
@@ -548,8 +550,12 @@ export default function Identity() {
                 </div>
               </div>
             </Card>
+          </motion.div>
+          </div>
 
-            <Card className="mt-5">
+          {/* Right: preferred services only */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+            <Card>
               <CardHeader title="Preferred services" subtitle="Shapes navigation & modules" action={<Layers size={16} className="text-slate-500" />} />
               <div className="space-y-2">
                 {catalogItems.map((s) => {

@@ -61,7 +61,7 @@ const EXACT: Record<string, EndpointDesc> = {
   // ── Org-user auth / dual control ────────────────────────────────────
   "POST /org-users/auth/login": {
     label: "Start org-user sign-in",
-    detail: "Sends a one-time email code to sign in an organization user (for access or dual-control operate).",
+    detail: "Sends a one-time email code to sign in an organization user (for access or an audit-control session).",
   },
   "POST /org-users/auth/login/mfa": {
     label: "Verify org-user code",
@@ -81,7 +81,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /org-users/auth/logout": {
     label: "End operate session",
-    detail: "Ends the organization user's dual-control operate session.",
+    detail: "Ends the organization user's audit-control session.",
   },
   "GET /org-users/auth/me": {
     label: "Read current org user",
@@ -167,7 +167,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /org-users": {
     label: "Create org user",
-    detail: "Creates a new organization user (goes through dual-control approval when configured).",
+    detail: "Creates a new organization user (goes through audit-control approval when configured).",
   },
   "PUT /org-users/{id}": {
     label: "Update org user",
@@ -178,12 +178,12 @@ const EXACT: Record<string, EndpointDesc> = {
     detail: "Removes or deactivates an organization user.",
   },
   "GET /org-users/dual-control": {
-    label: "Read dual control",
-    detail: "Reads the organization's dual-control assignment (initiator and authorizer).",
+    label: "Read audit control",
+    detail: "Reads the organization's audit-control assignment (initiator and authorizer).",
   },
   "PUT /org-users/dual-control": {
-    label: "Assign dual control",
-    detail: "Assigns the dual-control initiator and authorizer roles.",
+    label: "Assign audit control",
+    detail: "Assigns the audit-control initiator and authorizer roles.",
   },
   "POST /org-users/{id}/login-link": {
     label: "Issue login link",
@@ -377,15 +377,15 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "GET /audit/pending": {
     label: "List pending approvals",
-    detail: "Lists actions awaiting dual-control authorization.",
+    detail: "Lists actions awaiting audit-control authorization.",
   },
   "POST /audit/pending/{id}/authorize": {
     label: "Authorize pending action",
-    detail: "Approves a pending action as the dual-control authorizer.",
+    detail: "Approves a pending action as the audit-control authorizer.",
   },
   "POST /audit/pending/{id}/reject": {
     label: "Reject pending action",
-    detail: "Rejects a pending action as the dual-control authorizer.",
+    detail: "Rejects a pending action as the audit-control authorizer.",
   },
   "GET /audit/export": {
     label: "Export audit trail",
@@ -473,7 +473,7 @@ const MODULE_FALLBACK: Record<string, EndpointDesc> = {
   },
   "org-users": {
     label: "Organization user action",
-    detail: "An action on organization users, roles, or dual-control assignment.",
+    detail: "An action on organization users, roles, or audit-control assignment.",
   },
   organizations: {
     label: "Organization action",

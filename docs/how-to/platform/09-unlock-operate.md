@@ -1,39 +1,32 @@
-# Platform: Unlock operate (dual-control session)
+# Platform: Audit control
 
-**Where:** Header dual-control widget or any mutation that prompts for operate  
-**Result:** Short-lived session attached as `X-Dual-Control-Session` on protected API calls
+**Where:** the audit-control widget in the platform sidebar
+**Result:** platform actions are recorded to the audit trail under the audit controller
 
 ---
 
-## Process flow
+## What audit control means on the platform
 
-```mermaid
-flowchart TD
-  A[Click Unlock operate] --> B[Choose initiator or authorizer email]
-  B --> C[Request OTP · email code]
-  C --> D[Enter code · verify]
-  D --> E[Optional device confirm]
-  E --> F[Operate unlocked · countdown timer]
-  F --> G[Perform mutations · create user, bootstrap, etc.]
-  F --> H[Idle timeout · lock again]
-  H --> A
-```
+Only the organization's **primary** user can sign in to the platform, so the
+platform does not require an authorizer or an operate session. Your actions run
+directly and are written to the audit trail under the audit controller.
+
+The **applications** keep full dual control — there, sensitive mutations need an
+operate session and, when enabled, an authorizer's approval.
 
 ---
 
 ## Steps
 
-1. Ensure dual-control is configured ([04-assign-dual-control.md](./04-assign-dual-control.md)).
-2. Click **Unlock operate**.
-3. Select your controller email (must be initiator or authorizer).
-4. Request and enter OTP.
-5. Confirm the green **Operating as …** state and timer.
-6. Complete admin actions.
-7. **Lock session** when finished (or let it idle out).
+1. Assign the audit controller ([04-assign-audit-control.md](./04-assign-audit-control.md)).
+2. Sign in as the primary user.
+3. Manage people, keys, branding, connections and billing directly — every action
+   is recorded.
+4. Review or export the trail under **Audit**.
 
 ---
 
 ## Notes
 
-- Reads rarely need operate; writes often do.
-- Command Centre uses the same dual-control model for scans, tracker PATCH, report generate, etc.
+- The controller's name and title are snapshotted onto each recorded action.
+- Reads never need anything extra; writes are recorded automatically.
