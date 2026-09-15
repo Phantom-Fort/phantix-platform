@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, ChevronLeft, ChevronRight, Timer, KeyRound, Rocket,
-  RotateCcw, ShieldCheck, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
+  RotateCcw, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
   AlertTriangle, Activity, MoreHorizontal, LayoutGrid, ArrowLeft,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -220,10 +220,6 @@ export default function Layout() {
     return () => window.removeEventListener("phantix:billing-required", handler);
   }, [toast]);
 
-  const dc = state.dualControl;
-  const initiator = state.users.find((u) => u.id === dc.initiator_user_id);
-  const authorizer = state.users.find((u) => u.id === dc.authorizer_user_id);
-
   if (location.pathname.startsWith("/setup")) return <Outlet />;
   if (!session?.authenticated) return <Outlet />;
 
@@ -310,38 +306,6 @@ export default function Layout() {
               <span className="block text-[12px] text-slate-500">Launch the product app</span>
             </span>
           </a>
-        </div>
-
-        {/* Audit-control widget (platform: the primary acts alone) */}
-        <div className="sg-hide-collapsed border-t border-phantix-700/40 p-2">
-          <div className="rounded-md bg-phantix-900/70 border border-phantix-700/40 p-2">
-            <div className="flex items-center justify-between">
-              <p className="text-[13px] font-semibold text-slate-500">Audit control</p>
-              <ShieldCheck size={13} className={dc.configured ? "text-emerald-400" : "text-slate-500"} />
-            </div>
-            <div className="mt-1 space-y-1">
-              {dc.configured ? (
-                <>
-                  <p className="text-[13px] leading-4 text-slate-500">
-                    Audit controller: <span className="text-slate-300">{initiator?.full_name || "—"}</span>
-                  </p>
-                  <p className="text-[13px] leading-4 text-slate-600">
-                    Your actions here are recorded to the audit trail. The applications keep dual control.
-                  </p>
-                  <button onClick={() => navigate("/users")} className="mt-1 w-full rounded-lg bg-phantix-700/50 py-1 text-[13px] font-medium text-slate-300 hover:bg-phantix-700/80">
-                    Manage in People &amp; Control
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-[13px] leading-4 text-slate-500">Not configured --- assign an audit controller</p>
-                  <button onClick={() => navigate("/users")} className="btn-secondary mt-1 w-full !px-3 !py-1 !text-[13px]">
-                    <ShieldCheck size={12} /> Set up audit control
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
         </div>
       </aside>
 
