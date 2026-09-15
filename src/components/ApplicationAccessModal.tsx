@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, Minus, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { cx } from "@/lib/utils";
 import type { OrgUser } from "@/lib/types";
 
 interface AppMeta {
@@ -18,12 +19,13 @@ interface RoleMeta {
 }
 
 /**
- * Assign a role per application (Core / Attack / Defend / Code) for one user.
- *
- * The role chosen for an application decides what the person may do *in that
- * application*; an application left on "Use global role" falls back to the
- * user's org-wide role. The permissions shown are the intersection of the role's
- * grants with the permissions the application owns.
+ * Privileges per application (Core / Attack / Defend / Code) for one user —
+ * an explicit row-based matrix. One row per application: the role chosen in
+ * that row decides what the person may do *in that application*, and the
+ * exact privileges the role grants there are listed beneath it (granted ✓ /
+ * not granted –). A row left on "Use global role" falls back to the user's
+ * org-wide role. Changing what a role grants org-wide — for everyone holding
+ * it — lives in the Roles & privileges editor.
  */
 export default function ApplicationAccessModal({
   user,
@@ -86,7 +88,12 @@ export default function ApplicationAccessModal({
   }
 
   return (
-    <Modal open={!!user} onClose={onClose} title={`Application access · ${user?.full_name || ""}`}>
+    <Modal
+      open={!!user}
+      onClose={onClose}
+      title={`Privileges per application · ${user?.full_name || ""}`}
+      wide
+    >
       {loading ? (
         <div className="flex items-center gap-3 py-8 text-sm text-slate-400">
           <Loader2 size={16} className="animate-spin" /> Loading…
@@ -94,16 +101,21 @@ export default function ApplicationAccessModal({
       ) : (
         <div className="space-y-4">
           <p className="text-xs leading-5 text-slate-400">
-            Give this person a role in each application. Their{" "}
+            One row per application. The role selected in a row decides what this person may do{" "}
+            <strong className="text-slate-200">in that application</strong> — the exact privileges
+            it grants are listed beneath the row (✓ granted, – not granted). Rows left on{" "}
             <strong className="text-slate-200">global role</strong> (
-            <span className="font-mono text-gold-300">{globalRole}</span>) applies wherever no override is set,
-            and creates the permissions shown.
+            <span className="font-mono text-gold-300">{globalRole}</span>) fall back to the
+            user&apos;s org-wide role. To change what a role grants <em>org-wide</em>, edit it
+            under <strong className="text-slate-200">Roles &amp; privileges</strong> — every user
+            holding the role is affected.
           </p>
 
           {apps.map((app) => {
             const selected = mapping[app.key] || "";
             const effectiveRole = selected || globalRole;
             const perms = granted(app, effectiveRole);
+            const grantedSet = new Set(perms);
             return (
               <div
                 key={app.key}
@@ -114,6 +126,9 @@ export default function ApplicationAccessModal({
                     <p className="text-sm font-semibold text-slate-100">{app.label}</p>
                     <p className="text-[13px] text-slate-500">{app.tagline}</p>
                   </div>
+                  <span className="chip shrink-0 border-gold-400/30 bg-gold-400/10 font-mono text-[12px] text-gold-300">
+                    {perms.length}/{app.permissions.length} privileges
+                  </span>
                   <select
                     className="input !w-48 !py-2 !text-xs"
                     value={selected}
@@ -129,24 +144,41 @@ export default function ApplicationAccessModal({
                     ))}
                   </select>
                 </div>
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {perms.length > 0 ? (
-                    perms.map((p) => (
-                      <span
-                        key={p}
-                        className="chip border-phantix-700 bg-phantix-850 font-mono text-[12px] text-slate-400"
-                      >
-                        {p}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[13px] text-slate-600">
-                      {app.key === "core"
-                        ? "Core is always available to active users."
-                        : "No access with this role."}
-                    </span>
-                  )}
-                </div>
+
+                {/* Explicit privilege list for this app row — exactly what this
+                    user gets in this application from the role above. */}
+                {app.permissions.length > 0 ? (
+                  <div className="mt-2.5 grid gap-1 sm:grid-cols-2">
+                    {app.permissions.map((p) => {
+                      const on = grantedSet.has(p);
+                      return (
+                        <div
+                          key={p}
+                          className={cx(
+                            "flex items-center gap-1.5 rounded px-2 py-1 font-mono text-[12px]",
+                            on ? "bg-gold-400/8 text-slate-300" : "text-slate-600",
+                          )}
+                          title={on ? "Granted by the role above" : "Not granted by the role above"}
+                        >
+                          {on ? (
+                            <Check size={11} className="shrink-0 text-gold-300" />
+                          ) : (
+                            <Minus size={11} className="shrink-0 text-slate-700" />
+                          )}
+                          {p}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : app.key === "core" ? (
+                  <p className="mt-2.5 text-[13px] text-slate-600">
+                    Core is always available to active users.
+                  </p>
+                ) : (
+                  <p className="mt-2.5 text-[13px] text-slate-600">
+                    This application owns no privileges in the catalog.
+                  </p>
+                )}
               </div>
             );
           })}
