@@ -750,7 +750,8 @@ function BootstrapWizard() {
             <motion.div key="review" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <h2 className="font-display text-xl font-bold text-white">Review the assignment</h2>
               <p className="mt-1.5 text-sm text-slate-400">
-                PUT /org-users/dual-control --- the last bootstrap call. After this, mutations require an operate session.
+                Assignment confirms the two people who will govern protected actions. After this, sensitive
+                changes require a live operate session.
               </p>
               <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {[
@@ -1133,7 +1134,7 @@ function LoginLinks() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="mt-5">
       <Card>
-        <CardHeader title="Issued login links" subtitle="No secrets stored here --- status only (GET /organizations/me/login-links)" />
+        <CardHeader title="Issued login links" subtitle="No secrets stored here --- delivery status only" />
         <div className="space-y-2">
           {state.loginLinks.map((l) => (
             <div key={l.id} className="flex items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">

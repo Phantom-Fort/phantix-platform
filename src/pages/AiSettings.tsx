@@ -203,7 +203,7 @@ export default function AiSettings() {
     <div>
       <PageHeader
         title="AI governance"
-        description="Org AI settings and usage. Narratives only --- AI never determines security facts or scores. GET /ai/settings · GET /ai/usage"
+        description="Org AI settings and usage. Narratives only --- AI never determines security facts or scores."
         actions={<DocLink docId="howto-platform-index" label="Platform how-to index" />}
       />
 

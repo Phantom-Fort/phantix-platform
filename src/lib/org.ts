@@ -103,6 +103,64 @@ export function emptyOrg(): Organization {
 }
 
 /** Map GET /organizations/me (or partial) into Organization. */
+// ── Controlled vocabulary: company_type (mirrors backend CompanyType enum) ────
+// PUT /organizations/me validates company_type against this exact enum
+// (schemas/organization.py::CompanyType). The platform must only ever send
+// one of these values — or null.
+export const COMPANY_TYPES = [
+  "private_limited",
+  "public_limited",
+  "llc",
+  "partnership",
+  "sole_proprietorship",
+  "ngo",
+  "government",
+  "startup",
+  "other",
+] as const;
+export type CompanyType = (typeof COMPANY_TYPES)[number];
+
+export const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
+  private_limited: "Private limited company (LTD)",
+  public_limited: "Public limited company (PLC)",
+  llc: "Limited liability company (LLC)",
+  partnership: "Partnership",
+  sole_proprietorship: "Sole proprietorship",
+  ngo: "NGO / nonprofit",
+  government: "Government / public sector",
+  startup: "Startup",
+  other: "Other",
+};
+
+/** Legacy / free-text variants → the canonical backend enum; unknown → null. */
+export function normalizeCompanyType(raw: unknown): string | null {
+  const v = String(raw ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (!v) return null;
+  if ((COMPANY_TYPES as readonly string[]).includes(v)) return v;
+  const legacy: Record<string, CompanyType> = {
+    sole_proprietor: "sole_proprietorship",
+    sole_trader: "sole_proprietorship",
+    individual: "sole_proprietorship",
+    nonprofit: "ngo",
+    non_profit: "ngo",
+    charity: "ngo",
+    foundation: "ngo",
+    ltd: "private_limited",
+    limited: "private_limited",
+    private_ltd: "private_limited",
+    private_company_limited_by_shares: "private_limited",
+    plc: "public_limited",
+    public_ltd: "public_limited",
+    limited_liability_company: "llc",
+    gov: "government",
+    public_sector: "government",
+    parastatal: "government",
+    technology_startup: "startup",
+  };
+  return legacy[v] ?? null;
+}
+
+/** Map GET /organizations/me (or partial) into Organization. */
 export function mapOrgFromApi(raw: unknown, emailFallback = ""): Organization {
   const r = asRecord(raw) || {};
   const base = emptyOrg();
@@ -117,7 +175,7 @@ export function mapOrgFromApi(raw: unknown, emailFallback = ""): Organization {
     legal_name: str(r.legal_name),
     registration_number: str(r.registration_number),
     tax_id: str(r.tax_id),
-    company_type: str(r.company_type),
+    company_type: normalizeCompanyType(r.company_type),
     year_founded: num(r.year_founded),
     industry: str(r.industry) || "",
     sub_industry: str(r.sub_industry),
@@ -255,7 +313,7 @@ export function orgToUpdateBody(org: Partial<Organization>): Record<string, unkn
     legal_name: org.legal_name,
     registration_number: org.registration_number,
     tax_id: org.tax_id,
-    company_type: org.company_type,
+    company_type: normalizeCompanyType(org.company_type),
     year_founded: org.year_founded,
     industry: org.industry,
     sub_industry: org.sub_industry,

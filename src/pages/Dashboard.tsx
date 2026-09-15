@@ -6,6 +6,7 @@ import {
   ShieldCheck, ScrollText, Rocket, AlertTriangle, Copy,
 } from "lucide-react";
 import DocLink from "@/components/DocLink";
+import ProfileCompletionNotice from "@/components/ProfileCompletionNotice";
 import { Card, CardHeader, CollapsibleCard, AnimatedNumber, StatusBadge } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { useSmartPoll } from "@/lib/usePolling";
@@ -45,6 +46,9 @@ export default function Dashboard() {
         </div>
         <DocLink docId="howto-platform-index" label="Platform how-to index" />
       </motion.div>
+
+      {/* Profile completion — the admin's outstanding setup work, in plain language */}
+      <ProfileCompletionNotice />
 
       {/* Security DB gate */}
       {!securityDbReady && (
