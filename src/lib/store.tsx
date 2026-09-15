@@ -1737,7 +1737,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const onRequired = (e: Event) => {
       const msg = (e as CustomEvent).detail;
-      void requireDualControl(msg || "Unlock operate mode for this action.");
+      void requireDualControl(msg || "This action is recorded to the audit trail.");
     };
     window.addEventListener("phantix:operate-required", onRequired);
     return () => window.removeEventListener("phantix:operate-required", onRequired);

@@ -727,7 +727,7 @@ function BootstrapWizard() {
                     setError(null);
                     try {
                       await assignDualControl(initiator.id, authorizer.id);
-                      toast("success", "Dual control active", "Now unlock an operate session as the initiator.");
+                      toast("success", "Audit control active", "The audit controller is recorded on every platform action.");
                     } catch (err) {
                       setError(err instanceof Error ? err.message : "Assignment failed");
                     } finally {
@@ -1129,7 +1129,7 @@ function ReassignModal({
       <div className="space-y-4">
         <div className="rounded-md border border-severity-medium/30 bg-severity-medium/8 p-3.5 text-xs leading-5 text-severity-medium">
           Set the sole authorizer and the primary initiator (both on your organization domain). Additional initiators are
-          added from the Dual control card --- there is only ever one authorizer.{allowedDomains.length > 0 && (
+          added from the Audit control card --- there is only ever one authorizer.{allowedDomains.length > 0 && (
             <span> Allowed: <strong>{allowedDomains.join(", ")}</strong>.</span>
           )}{exemptEmails.length > 0 && (
             <span> Registration contacts exempt: <strong>{exemptEmails.join(", ")}</strong>.</span>
@@ -1175,7 +1175,7 @@ function ReassignModal({
             setError(null);
             try {
               await assignDualControl(initiatorId, authorizerId);
-              toast("success", "Dual control updated", "The new assignments are active. Both users must re-login with purpose=dual_control.");
+              toast("success", "Audit control updated", "The new assignments are active.");
               onClose();
             } catch (err) {
               setError(err instanceof Error ? err.message : "Assignment failed");
@@ -1235,7 +1235,7 @@ function AddUserModal({
           <div className="flex items-start gap-2 rounded-md border border-gold-400/25 bg-gold-400/5 px-3 py-2 text-[13px] leading-4 text-slate-400">
             <ShieldCheck size={13} className="mt-0.5 shrink-0 text-gold-300" />
             An initiator proposes and executes mutations with their role's grants. There is no separate "authorizer"
-            role --- the authorizer is a single designated slot, changed from the Dual control card.
+            role --- the authorizer is a single designated slot, changed from the Audit control card.
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">

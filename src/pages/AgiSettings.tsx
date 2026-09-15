@@ -387,7 +387,7 @@ export default function AgiSettings() {
                 ["allow_production_testing", "Allow production testing", "Permit AGI sessions against production targets (requires explicit ack per engagement)."],
                 ["prefer_mailinator_test_emails", "Mailinator test emails", "Auto-generate *@mailinator.com test addresses and poll public inbox for OTP."],
                 ["allow_state_changing", "Allow state-changing steps", "Approve/reject active steps proposed by the agent."],
-                ["require_dual_control_for_active", "Dual control for active steps", "A second, different user must approve state-changing actions."],
+                ["require_dual_control_for_active", "Audit control for active steps", "A second, different user must approve state-changing actions."],
                 ["require_asset_backed_targets", "Asset-backed targets", "Only targets already in your asset inventory are allowed."],
               ] as const).map(([key, label, hint]) => (
                 <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-phantix-700/40 px-3 py-2.5">
