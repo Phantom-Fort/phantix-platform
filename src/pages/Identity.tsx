@@ -8,7 +8,7 @@ import TypeToConfirm from "@/components/TypeToConfirm";
 import DocLink from "@/components/DocLink";
 import DomainVerificationCard from "@/components/DomainVerificationCard";
 import ProfileCompletionNotice from "@/components/ProfileCompletionNotice";
-import { PageHeader, Card, CardHeader, StatusBadge, Modal, CopyChip, Tabs, EmptyState, Spinner } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Modal, CopyChip, Tabs, EmptyState, Spinner } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { api, mediaUrl } from "@/lib/api";
 import type { Organization, OrgContact } from "@/lib/types";
@@ -845,8 +845,7 @@ function DataSubjectPanel() {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
-        <Card>
-          <CardHeader title="Your requests" subtitle="Reference · type · status" action={<ShieldCheck size={16} className="text-slate-500" />} />
+        <CollapsibleCard defaultOpen={false} title="Your requests" subtitle="Reference · type · status" action={<ShieldCheck size={16} className="text-slate-500" />}>
           <div className="px-5 pb-5">
             {rows === null ? (
               <div className="flex justify-center py-8"><Spinner /></div>
@@ -872,7 +871,7 @@ function DataSubjectPanel() {
               </div>
             )}
           </div>
-        </Card>
+        </CollapsibleCard>
       </motion.div>
     </div>
   );

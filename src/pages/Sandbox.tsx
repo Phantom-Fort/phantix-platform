@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { marked } from "marked";
 import { FlaskConical, Star, Megaphone, CheckCircle2, RefreshCw, AlertTriangle, ExternalLink, Rocket } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, Modal, Spinner, EmptyState, StatusBadge, PageHeaderSkeleton, CardListSkeleton } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, Modal, Spinner, EmptyState, StatusBadge, PageHeaderSkeleton, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { APP_URL } from "@/lib/links";
 import { timeAgo, cx, titleCase } from "@/lib/utils";
@@ -230,8 +230,7 @@ export default function Sandbox() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="lg:col-span-2 space-y-5">
-          <Card>
-            <CardHeader title="Your ratings" subtitle="Help prioritize what we fix next" />
+          <CollapsibleCard defaultOpen={false} title="Your ratings" subtitle="Help prioritize what we fix next">
             {ratings.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-500">No ratings yet.</p>
             ) : (
@@ -253,9 +252,8 @@ export default function Sandbox() {
                 ))}
               </div>
             )}
-          </Card>
-          <Card>
-            <CardHeader title="Where to test" />
+          </CollapsibleCard>
+          <CollapsibleCard defaultOpen={false} title="Where to test">
             <ul className="space-y-2 text-xs text-slate-400">
               <li className="flex items-start gap-2">
                 <ExternalLink size={12} className="mt-0.5 shrink-0 text-gold-400" />
@@ -273,7 +271,7 @@ export default function Sandbox() {
             <a href={`${APP_URL}/dashboard`} className="btn-primary mt-4 w-full !text-xs" target="_blank" rel="noreferrer">
               Open Command Centre
             </a>
-          </Card>
+          </CollapsibleCard>
         </motion.div>
       </div>
 

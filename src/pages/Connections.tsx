@@ -70,9 +70,9 @@ export default function Connections() {
         {securityDbReady ? <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-400" /> : <AlertTriangle size={16} className="mt-0.5 shrink-0 text-severity-medium" />}
         <p className="text-xs leading-5 text-slate-400">
           {securityDbReady ? (
-            <><strong className="text-emerald-300">Bootstrap gate: ready.</strong> The primary security store is on schema v1.4.2 --- scans, VAPT and findings are unblocked.</>
+            <><strong className="text-emerald-300">Bootstrap gate: ready.</strong> The primary security store is connected --- scans, VAPT and findings are unblocked.</>
           ) : (
-            <><strong className="text-severity-medium">Bootstrap gate: blocked.</strong> Create a security_data_storage connection, test it, then bootstrap. Until then the backend refuses scans and VAPT --- this is not just a UI state.</>
+            <><strong className="text-severity-medium">Bootstrap gate: blocked.</strong> Create a security_data_storage connection, test it, then bootstrap. Until then the platform refuses scans and VAPT --- this is not just a UI state.</>
           )}
         </p>
       </motion.div>
@@ -206,11 +206,7 @@ export default function Connections() {
 
       {/* Driver availability */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-6">
-        <Card>
-          <div className="mb-3 flex items-center gap-2">
-            <Info size={14} className="text-gold-400" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Driver availability for your engine</p>
-          </div>
+        <CollapsibleCard defaultOpen={false} title="Driver availability for your engine" action={<Info size={14} className="text-gold-400" />}>
           <div className="flex flex-wrap gap-2">
             {(() => {
               const list = DEMO_MODE
@@ -229,7 +225,7 @@ export default function Connections() {
             Credentials can be stored encrypted without the optional driver; live tests need the package. Connections
             need more than username+password --- see connection-option-hints (ssl_mode, search_path, odbc_driver...).
           </p>
-        </Card>
+        </CollapsibleCard>
       </motion.div>
 
       <CreateConnectionModal open={createOpen} onClose={() => setCreateOpen(false)} />

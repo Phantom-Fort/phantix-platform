@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BellRing, Send, Settings, ShieldCheck, Cable } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, StatusBadge, Tabs, Modal } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Tabs, Modal } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo, cx } from "@/lib/utils";
 import type { Severity } from "@/lib/types";
@@ -140,10 +140,14 @@ export default function Alerts() {
               </Card>
             </div>
 
-            {/* Severity routing floors (enforced server-side) */}
+            {/* Severity routing floors (enforced server-side) — reference table */}
             <div className="lg:col-span-2">
-              <Card className="!p-4">
-                <CardHeader title="Severity routing" subtitle="Floors are enforced server-side — channel policies can only narrow them" />
+              <CollapsibleCard
+                className="!p-4"
+                defaultOpen={false}
+                title="Severity routing"
+                subtitle="Floors are enforced server-side — channel policies can only narrow them"
+              >
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
@@ -179,7 +183,7 @@ export default function Alerts() {
                 <p className="mt-3 text-[13px] leading-5 text-slate-500">
                   WhatsApp and Telegram fire on critical only. Add Slack or Teams from the Integrations Hub to widen critical + high delivery.
                 </p>
-              </Card>
+              </CollapsibleCard>
             </div>
             <Card>
               <CardHeader title="SMTP" subtitle="Outbound email relay" action={<ShieldCheck size={16} className={alertSettings.smtp.enabled ? "text-emerald-400" : "text-slate-500"} />} />

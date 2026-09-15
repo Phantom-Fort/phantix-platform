@@ -6,7 +6,7 @@ import {
   MessageSquare, Send, Webhook, Lock, Unlock,
 } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, StatusBadge, Tabs, EmptyState, Modal, CopyChip, SkeletonCard, CardListSkeleton } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Tabs, EmptyState, Modal, CopyChip, SkeletonCard, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { isPendingApproval } from "@/lib/api";
 import { useResource } from "@/lib/useResource";
@@ -280,7 +280,7 @@ export default function Integrations() {
             <div className="flex items-start gap-2 rounded-md border border-gold-400/30 bg-gold-400/10 p-3">
               <Info size={16} className="mt-0.5 shrink-0 text-gold-300" />
               <p className="text-xs leading-5 text-slate-300">
-                This value is shown <strong className="text-gold-300">once</strong>. Copy it now — the backend will not return it again.
+                This value is shown <strong className="text-gold-300">once</strong>. Copy it now — we will not show it again.
               </p>
             </div>
             <CopyChip value={showSecret.value} label="Secret" />
@@ -371,10 +371,9 @@ function SsoScimTab({
       </div>
 
       <div className="space-y-4">
-        <Card className="!p-4">
-          <CardHeader title="SCIM 2.0 provisioning" subtitle="Directory sync endpoints consumed by your identity provider" />
+        <CollapsibleCard className="!p-4" defaultOpen={false} title="SCIM 2.0 provisioning" subtitle="Directory sync endpoints consumed by your identity provider">
           <div className="space-y-2 text-xs">
-            <p className="text-slate-400">Endpoints your IdP connects to with the minted SCIM bearer token:</p>
+            <p className="text-slate-400">URLs your IdP connects to with the minted SCIM bearer token:</p>
             {[
               `${scimBase}/ServiceProviderConfig`,
               `${scimBase}/Users`,
@@ -387,11 +386,10 @@ function SsoScimTab({
             <Info size={14} className="mt-0.5 shrink-0 text-gold-400" />
             <p className="text-[13px] leading-5 text-slate-400">Enable automatic user provisioning in your IdP using the SCIM base URL and the bearer token you mint here. One active IdP per org.</p>
           </div>
-        </Card>
+        </CollapsibleCard>
 
         {otherSso.length > 0 && (
-          <Card className="!p-4">
-            <CardHeader title="SSO-related connections" />
+          <CollapsibleCard className="!p-4" defaultOpen={false} title="SSO-related connections">
             {otherSso.map((inst) => (
               <div key={inst.id} className="flex items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-3 py-2.5">
                 <span className="flex h-8 w-8 items-center justify-center rounded-md border border-phantix-600/50 bg-phantix-800/70 text-slate-300">{connectorGlyph(inst.connector_id)}</span>
@@ -402,7 +400,7 @@ function SsoScimTab({
                 <StatusBadge status={inst.status} />
               </div>
             ))}
-          </Card>
+          </CollapsibleCard>
         )}
       </div>
     </motion.div>
@@ -520,7 +518,7 @@ function InstallModal({ connectorId, connector, onClose, onDone }: {
               onChange={(e) => setSecret(e.target.value)}
             />
             {authMode === "webhook_secret" && (
-              <p className="mt-1 text-[13px] text-slate-500">If left blank the backend generates one (shown once after install).</p>
+              <p className="mt-1 text-[13px] text-slate-500">If left blank one is generated automatically (shown once after install).</p>
             )}
           </div>
         )}
