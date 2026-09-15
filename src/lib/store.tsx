@@ -1002,6 +1002,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       organization_id?: number;
       organization_slug?: string;
       experience?: { organization_name?: string };
+      must_change_password?: boolean;
+      platform_access?: boolean;
     }>("/organizations/login/mfa", {
       mfa_token: sessionStorage.getItem("mfa_token"),
       code,
@@ -1010,7 +1012,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const email = session?.email || emailFromToken(res.access_token) || tokens.email || "";
     if (email) tokens.email = email;
     setState(emptyState());
-    setSession({ authenticated: true, email });
+    setSession({
+      authenticated: true,
+      email,
+      mustChangePassword: Boolean(res.must_change_password),
+    });
     persist((s) => ({
       ...s,
       org: {
