@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
 import CookieConsent from "@/components/CookieConsent";
+import { BrandLoader } from "@/components/BrandLoader";
 import Login from "@/pages/auth/Login";
 import ChangePassword from "@/pages/auth/ChangePassword";
 import DeviceConfirm from "@/pages/DeviceConfirm";
@@ -42,16 +43,7 @@ function RequireManagement({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   // Verify the session before rendering OR redirecting — no flash of the app
   // or of the login page while the stored session is still being restored.
-  if (sessionLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-phantix-500 border-t-gold-400" />
-          <p className="mt-3 text-sm text-slate-400">Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
+  if (sessionLoading) return <BrandLoader label="Platform" />;
   if (!session?.authenticated) return <Navigate to="/login" state={{ from: location }} replace />;
   // Admin-assigned password: change it before touching any management screen.
   if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
@@ -62,16 +54,7 @@ function RequireManagement({ children }: { children: React.ReactNode }) {
 // Setup wizard requires auth; once complete there is nothing to resume
 function SetupRoute() {
   const { session, state, sessionLoading } = useStore();
-  if (sessionLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-phantix-500 border-t-gold-400" />
-          <p className="mt-3 text-sm text-slate-400">Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
+  if (sessionLoading) return <BrandLoader label="Platform" />;
   if (!session?.authenticated) return <Navigate to="/login" replace />;
   if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (state.setup.setup_complete) return <Navigate to="/dashboard" replace />;
