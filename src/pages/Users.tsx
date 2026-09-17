@@ -1107,7 +1107,7 @@ function ReassignModal({
   currentInitiatorId: number | null;
   currentAuthorizerId: number | null;
 }) {
-  const { state, assignDualControl, toast, operate } = useStore();
+  const { state, assignDualControl, toast, operate, requireDualControl } = useStore();
   const [initiatorId, setInitiatorId] = useState<number>(currentInitiatorId ?? 0);
   const [authorizerId, setAuthorizerId] = useState<number>(currentAuthorizerId ?? 0);
   const [busy, setBusy] = useState(false);
@@ -1171,6 +1171,14 @@ function ReassignModal({
           className="btn-primary w-full"
           disabled={busy || !initiatorId || !authorizerId || initiatorId === authorizerId}
           onClick={async () => {
+            // Dual control is already configured by the time this modal can
+            // open (it's the *reassign* flow) — the backend requires an
+            // unlocked initiator/authorizer session for that, not just the
+            // company JWT. Prompt for it first instead of letting the raw
+            // 403 surface.
+            if (state.dualControl.configured && !operate.unlocked && !(await requireDualControl("Reassigning dual control requires an initiator/authorizer operate session."))) {
+              return;
+            }
             setBusy(true);
             setError(null);
             try {

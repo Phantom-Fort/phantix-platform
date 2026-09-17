@@ -1,0 +1,652 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Readability: floor for micro text (scales with the 17px root). ──
+   Lifts 9–13px utility text to legible sizes everywhere without editing
+   hundreds of usages. Unlayered rules win over Tailwind's layered utilities. */
+[class*="text-[9px]"],
+[class*="text-[10px]"] {
+  font-size: 0.75rem; /* 12.75px @ 17px root */
+}
+[class*="text-[11px]"],
+[class*="text-[12px]"],
+[class*="text-[13px]"] {
+  font-size: 0.8125rem; /* 13.8px @ 17px root */
+}
+
+@layer base {
+  :root,
+  :root[data-theme="dark"] {
+    /* ── Dark theme (default) ── */
+    color-scheme: dark;
+
+    --phantix-950: 0 0 0;
+    --phantix-900: 10 10 10;
+    --phantix-850: 16 16 16;
+    --phantix-800: 24 24 27;
+    --phantix-700: 63 63 70;
+    --phantix-600: 82 82 91;
+    --phantix-500: 82 82 91;
+    --phantix-400: 113 113 122;
+    --phantix-300: 161 161 170;
+    --phantix-200: 212 212 216;
+    --phantix-100: 228 228 231;
+
+    --gold-300: 243 205 126;
+    --gold-400: 232 181 77;
+    --gold-500: 212 162 78;
+    --gold-600: 185 134 47;
+
+    /* Canonical severity scale (GET /api/v1/branding/tokens). Same values on
+       dark and light so the console matches generated reports. Overridden at
+       runtime when the tokens endpoint answers (lib/branding.ts). */
+    --severity-critical: 220 38 38;      /* #DC2626 */
+    --severity-high: 234 88 12;          /* #EA580C */
+    --severity-medium: 202 138 4;        /* #CA8A04 */
+    --severity-low: 22 163 74;           /* #16A34A */
+    --severity-info: 14 165 233;         /* #0EA5E9 */
+    --severity-unrated: 102 112 133;     /* #667085 */
+
+    --slate-50: 250 250 250;
+    --slate-100: 244 244 245;
+    --slate-200: 228 228 231;
+    --slate-300: 212 212 216;
+    --slate-400: 161 161 170;
+    --slate-500: 113 113 122;
+    --slate-600: 82 82 91;
+    --slate-700: 63 63 70;
+    --slate-800: 39 39 42;
+    --slate-900: 24 24 27;
+    --slate-950: 9 9 11;
+
+    --color-white: 255 255 255;
+    --color-black: 0 0 0;
+
+    /* Border-first surface tokens (Xalgorix-style). Cards read as flat
+       surfaces outlined by their 1px border instead of tinted/glassy fills. */
+    --surface: 10 10 10;
+    --surface-card: 18 18 20;
+    --surface-inset: 14 14 16;
+    --surface-sidebar: 0 0 0;
+    --border-subtle: 63 63 70;
+    --border-strong: 82 82 91;
+    --foreground: #e4e4e7;
+    --muted-foreground: #a1a1aa;
+  }
+
+  /* Auth showcase panel (login screen) is a fixed dark hero, by design —
+     every scene inside it (globe, sonar, incident timeline, etc.) is styled
+     assuming a dark backdrop. Re-declaring the dark palette here, scoped to a
+     class instead of :root, lets it stay dark even while the rest of the app
+     is on light theme, since CSS variables only flip at :root[data-theme]. */
+  .auth-showcase-dark {
+    --phantix-950: 0 0 0;
+    --phantix-900: 10 10 10;
+    --phantix-850: 16 16 16;
+    --phantix-800: 24 24 27;
+    --phantix-700: 63 63 70;
+    --phantix-600: 82 82 91;
+    --phantix-500: 82 82 91;
+    --phantix-400: 113 113 122;
+    --phantix-300: 161 161 170;
+    --phantix-200: 212 212 216;
+    --phantix-100: 228 228 231;
+    --gold-300: 243 205 126;
+    --gold-400: 232 181 77;
+    --gold-500: 212 162 78;
+    --gold-600: 185 134 47;
+    --slate-50: 250 250 250;
+    --slate-100: 244 244 245;
+    --slate-200: 228 228 231;
+    --slate-300: 212 212 216;
+    --slate-400: 161 161 170;
+    --slate-500: 113 113 122;
+    --slate-600: 82 82 91;
+    --slate-700: 63 63 70;
+    --slate-800: 39 39 42;
+    --slate-900: 24 24 27;
+    --slate-950: 9 9 11;
+    --surface: 10 10 10;
+    --surface-card: 18 18 20;
+    --surface-inset: 14 14 16;
+    --surface-sidebar: 0 0 0;
+    --border-subtle: 63 63 70;
+    --border-strong: 82 82 91;
+    --foreground: #e4e4e7;
+    --muted-foreground: #a1a1aa;
+    --color-white: 255 255 255;
+    --color-black: 0 0 0;
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"] {
+    /* Clean light theme: white surfaces, ink text, blue structure, gold actions. */
+    color-scheme: light;
+
+    --phantix-950: 255 255 255;
+    --phantix-900: 255 255 255;
+    --phantix-850: 250 250 250;
+    --phantix-800: 242 242 242;
+    --phantix-700: 212 212 216;
+    --phantix-600: 161 161 170;
+    --phantix-500: 161 161 170;
+    --phantix-400: 113 113 122;
+    --phantix-300: 82 82 91;
+    --phantix-200: 63 63 70;
+    --phantix-100: 39 39 42;
+
+    --gold-300: 154 103 22;
+    --gold-400: 183 126 34;
+    --gold-500: 161 106 22;
+    --gold-600: 127 78 12;
+
+    /* Canonical severity scale — single shared values (see dark block). */
+    --severity-critical: 220 38 38;      /* #DC2626 */
+    --severity-high: 234 88 12;          /* #EA580C */
+    --severity-medium: 202 138 4;        /* #CA8A04 */
+    --severity-low: 22 163 74;           /* #16A34A */
+    --severity-info: 14 165 233;         /* #0EA5E9 */
+    --severity-unrated: 102 112 133;     /* #667085 */
+
+    --slate-50: 9 9 11;
+    --slate-100: 24 24 27;
+    --slate-200: 39 39 42;
+    --slate-300: 63 63 70;
+    --slate-400: 82 82 91;
+    --slate-500: 82 82 91;     /* zinc-600 — was zinc-500; that read too light next to 400 */
+    --slate-600: 113 113 122;  /* zinc-500 — was zinc-400 (#a1a1aa, ~2.4:1, failed AA on white) */
+    --slate-700: 161 161 170;  /* zinc-400 */
+    --slate-800: 212 212 216;  /* zinc-300 */
+    --slate-900: 228 228 231;  /* zinc-200 */
+    --slate-950: 244 244 245;  /* zinc-100 */
+
+    --color-white: 9 9 11;
+    --color-black: 0 0 0;
+
+    --surface: 255 255 255;
+    --surface-card: 255 255 255;
+    --surface-inset: 250 250 250;
+    --surface-sidebar: 244 244 245;
+    --border-subtle: 212 212 216;
+    --border-strong: 161 161 170;
+    --foreground: #18181b;
+    --muted-foreground: #71717a;
+  }
+
+  :root[data-theme="light"] .btn-primary {
+    background-color: #ffffff;
+    border-color: rgb(154 103 22 / 0.45);
+    color: rgb(154 103 22);
+  }
+
+  /* Gold remains an accent, never a text-background treatment. */
+  :root[data-theme="light"] .text-gold-300,
+  :root[data-theme="light"] .text-gold-400,
+  :root[data-theme="light"] .text-gold-500,
+  :root[data-theme="light"] .text-gold-600 {
+    color: rgb(154 103 22);
+  }
+  /* Icons / chips already have their own bg — don't double-pad lucide wrappers */
+  :root[data-theme="light"] svg.text-gold-300,
+  :root[data-theme="light"] svg.text-gold-400,
+  :root[data-theme="light"] svg.text-gold-500,
+  :root[data-theme="light"] .chip.text-gold-300,
+  :root[data-theme="light"] .chip.text-gold-400,
+  :root[data-theme="light"] [class*="bg-gold"] .text-gold-300,
+  :root[data-theme="light"] [class*="bg-gold"] .text-gold-400 {
+    background-color: transparent;
+    padding: 0;
+  }
+
+  /*
+   * Final CTA / brand panels are always navy. Pin literal light colors so inverted
+   * light-theme slate/white tokens never make body copy unreadable on the panel.
+   */
+  .final-cta,
+  .brand-panel {
+    background: linear-gradient(180deg, rgb(24 24 27) 0%, rgb(10 10 10) 100%) !important;
+    border-color: rgb(232 181 77 / 0.3) !important;
+    color: #e4e4e7 !important;
+  }
+  .final-cta h2,
+  .final-cta .text-white,
+  .brand-panel h2,
+  .brand-panel .text-white {
+    color: #ffffff !important;
+  }
+  .final-cta p,
+  .final-cta .text-slate-200,
+  .final-cta .text-slate-300,
+  .final-cta .text-slate-400,
+  .final-cta .text-slate-500,
+  .final-cta .text-slate-600,
+  .final-cta strong,
+  .brand-panel p,
+  .brand-panel .text-slate-200,
+  .brand-panel .text-slate-300,
+  .brand-panel .text-slate-400,
+  .brand-panel .text-slate-500,
+  .brand-panel .text-slate-600,
+  .brand-panel strong {
+    color: #d4d4d8 !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .final-cta strong,
+  .brand-panel strong {
+    color: #e4e4e7 !important;
+    font-weight: 600;
+  }
+  .final-cta .text-gold-300,
+  .final-cta .text-gold-400,
+  .brand-panel .text-gold-300,
+  .brand-panel .text-gold-400 {
+    color: #f3cd7e !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .final-cta .btn-secondary,
+  .brand-panel .btn-secondary {
+    background-color: rgb(255 255 255 / 0.1) !important;
+    border-color: rgb(255 255 255 / 0.35) !important;
+    color: #ffffff !important;
+  }
+  .final-cta .btn-primary,
+  .brand-panel .btn-primary {
+    background-color: rgb(0 0 0 / 0.3) !important;
+    border-color: rgb(232 181 77 / 0.55) !important;
+    color: #f3cd7e !important;
+  }
+  :root[data-theme="light"] footer {
+    background: linear-gradient(180deg, rgb(24 24 27 / 0.06) 0%, rgb(10 10 10 / 0.1) 100%);
+  }
+
+  html {
+    /* Readability: 17px root scales every rem-based text size and spacing,
+       so standard Tailwind sizes (xs, sm, base…) render ~6% larger for all
+       users — closer to Cloudflare-dashboard-scale UI text without being
+       oversized (18px ran too big; also helps the sidebar fit more rows). */
+    font-size: 17px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-slate-200 font-sans antialiased;
+    background-color: rgb(var(--surface));
+    font-size: 1rem;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    text-rendering: optimizeLegibility;
+    /* Flat dark workspace — no radial navy/gold glow. */
+    background-image: none;
+    transition: color 0.3s ease;
+  }
+
+  :root[data-theme="light"] body {
+    background-color: #ffffff;
+    background-image: none;
+  }
+
+  /* Light-mode surface polish — cards/glass need solid white + visible borders. */
+  :root[data-theme="light"] .glass {
+    background-color: #ffffff;
+    border-color: rgb(228 228 231);
+  }
+  :root[data-theme="light"] .glass-bright {
+    background-color: #ffffff;
+    border-color: rgb(228 228 231);
+  }
+  :root[data-theme="light"] .card {
+    background-color: #ffffff;
+  }
+  :root[data-theme="light"] .input {
+    background-color: #ffffff;
+    border-color: rgb(212 212 216);
+    color: rgb(9 9 11);
+  }
+  :root[data-theme="light"] .btn-secondary {
+    background-color: rgb(250 250 250);
+    border-color: rgb(228 228 231);
+    color: rgb(24 24 27);
+  }
+  :root[data-theme="light"] .btn-ghost:hover {
+    background-color: rgb(242 242 242);
+  }
+  :root[data-theme="light"] .nav-item:hover {
+    background-color: rgb(242 242 242);
+    color: rgb(9 9 11);
+  }
+  :root[data-theme="light"] .skeleton {
+    background-color: rgb(242 242 242);
+  }
+  :root[data-theme="light"] .skeleton::after {
+    background-image: linear-gradient(to right, transparent, rgb(255 255 255 / 0.85), transparent);
+  }
+  :root[data-theme="light"] .shadow-glow {
+    box-shadow: 0 0 0 1px rgba(183, 126, 34, 0.3);
+  }
+
+  ::selection {
+    @apply bg-gold-400/30 text-gold-300;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-phantix-700/60 rounded-full border-2 border-solid border-transparent bg-clip-padding;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-phantix-600/70;
+  }
+}
+
+/* Focus that is visible but never decorative: one 2px gold outline, 2px offset,
+   for any focusable that doesn't already draw its own ring. .btn and .input
+   carry a bespoke box-shadow ring, so suppress the outline there instead of
+   stacking two indicators (Learn UI — Accessibility as craft). */
+:focus-visible {
+  outline: 2px solid rgb(var(--gold-400) / 0.9);
+  outline-offset: 2px;
+}
+.btn:focus-visible,
+.input:focus-visible,
+[class*="ring-"]:focus-visible {
+  outline: none;
+}
+
+/* Headings wrap so no line is left one word short; prose balances its last
+   line. Both are free — pure paint work, no reflow cost worth measuring. */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+@layer components {
+  /* Border-first surfaces: cards are highlighted by their 1px border, not by
+     tinted/glassy fills or glows. Solid surfaces keep the app flat and quiet
+     (mirrors the Xalgorix webui `border border-border bg-card` treatment). */
+  .glass {
+    background-color: rgb(var(--surface-card));
+    border: 1px solid rgb(var(--border-subtle) / 0.8);
+  }
+
+  .glass-bright {
+    background-color: rgb(var(--surface-card));
+    border: 1px solid rgb(var(--border-subtle) / 0.9);
+  }
+
+  .card {
+    background-color: rgb(var(--surface-card));
+    border: 1px solid rgb(var(--border-subtle));
+    border-radius: 0.375rem;
+  }
+
+  .input {
+    @apply w-full rounded-md px-3.5 py-2.5 text-sm text-slate-200
+      placeholder:text-slate-500 outline-none transition-all
+      focus:border-gold-400/60 focus:ring-1 focus:ring-gold-400/20;
+    background-color: rgb(var(--surface-inset));
+    border: 1px solid rgb(var(--border-subtle));
+  }
+
+  /* One dropdown treatment everywhere: native selects keep their behaviour,
+     but share the input surface and a crisp custom chevron. */
+  select.input {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.5rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    background-size: 0.95rem;
+  }
+  select.input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  select.input option {
+    background-color: rgb(var(--surface-card));
+    color: rgb(var(--slate-100));
+  }
+  select.chip {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 1.6rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 0.7rem;
+  }
+  select.chip option {
+    background-color: rgb(var(--surface-card));
+    color: rgb(var(--slate-100));
+  }
+  :root[data-theme="light"] select.input option,
+  :root[data-theme="light"] select.chip option {
+    background-color: #ffffff;
+    color: rgb(9 9 11);
+  }
+
+  .label {
+    @apply block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1.5;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold
+      transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-gold-400/40
+      disabled:opacity-50 disabled:pointer-events-none select-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-phantix-800 text-gold-300 border border-gold-400/40
+      hover:bg-phantix-850 hover:border-gold-400/60 active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply btn bg-phantix-900 text-slate-200 border border-phantix-700
+      hover:bg-phantix-850 hover:border-phantix-600 active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-300 hover:bg-phantix-800/70 hover:text-white;
+  }
+
+  .btn-danger {
+    @apply btn bg-severity-critical/15 text-severity-critical border border-severity-critical/30
+      hover:bg-severity-critical/25;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border;
+  }
+
+  .th {
+    @apply px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-wider text-slate-400;
+  }
+
+  .td {
+    @apply px-4 py-3.5 text-sm text-slate-300;
+  }
+
+  .skeleton {
+    @apply rounded-md bg-phantix-800/60 relative overflow-hidden;
+  }
+  /* The sweep is a transform, not a background-position shift, so a page full
+     of skeletons stays on the compositor. Deliberately NOT the `shimmer`
+     keyframe from tailwind.config.js — that one animates background-position
+     (for TextShimmer) and moves a translated pseudo-element not at all. */
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-phantix-600/25 to-transparent;
+    transform: translateX(-100%);
+    animation: skeleton-sweep 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    will-change: transform;
+  }
+  /* Stagger sibling placeholders so a list reads as one wave rather than a
+     rank of blocks blinking in lockstep. */
+  .skeleton:nth-child(2)::after { animation-delay: 0.09s; }
+  .skeleton:nth-child(3)::after { animation-delay: 0.18s; }
+  .skeleton:nth-child(4)::after { animation-delay: 0.27s; }
+  .skeleton:nth-child(5)::after { animation-delay: 0.36s; }
+  .skeleton:nth-child(n + 6)::after { animation-delay: 0.45s; }
+
+  .nav-item {
+    @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm leading-tight font-medium text-slate-400
+      transition-all duration-150 hover:text-slate-100 hover:bg-phantix-800/60;
+  }
+  .nav-item.active {
+    @apply text-slate-100 bg-phantix-850 border-l-2 border-gold-400 -ml-0.5 pl-[10px];
+  }
+
+  /* Sidebar section label — quiet grouping caption, not a shouted all-caps
+     divider. Regular case, medium weight, readable grey. Kept tight (not
+     roomy) so a full nav with several groups still fits without scrolling —
+     Cloudflare's flat, ungrouped list is the density target. */
+  .nav-section-label {
+    @apply mb-1 px-3 text-[11px] leading-none font-semibold text-slate-500;
+  }
+
+  /* Vivid hairline between sidebar groups; the first group has no rule. */
+  nav > div + div > .nav-section-label {
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgb(var(--phantix-600) / 0.85);
+  }
+
+  .prose-doc h1 {
+    @apply font-display text-3xl font-bold text-white mt-2 mb-4 pb-3 border-b border-phantix-700/50;
+  }
+  .prose-doc h2 {
+    @apply font-display text-xl font-semibold text-gold-300 mt-10 mb-3 scroll-mt-24;
+  }
+  .prose-doc h3 {
+    @apply font-display text-base font-semibold text-slate-100 mt-7 mb-2 scroll-mt-24;
+  }
+  .prose-doc h4 {
+    @apply text-sm font-semibold text-slate-200 mt-5 mb-2;
+  }
+  .prose-doc p {
+    @apply text-sm leading-7 text-slate-300 my-3;
+  }
+  .prose-doc ul, .prose-doc ol {
+    @apply my-3 pl-5 space-y-1.5 text-sm text-slate-300 leading-6;
+  }
+  .prose-doc ul {
+    @apply list-disc;
+  }
+  .prose-doc ol {
+    @apply list-decimal;
+  }
+  .prose-doc ul li::marker,
+  .prose-doc ol li::marker {
+    color: rgb(var(--gold-500));
+  }
+  .prose-doc a {
+    @apply text-gold-400 underline decoration-gold-400/30 underline-offset-2 hover:decoration-gold-400;
+  }
+  .prose-doc strong {
+    @apply text-slate-100 font-semibold;
+  }
+  .prose-doc code {
+    @apply font-mono text-[12.5px] bg-phantix-800/80 text-gold-300 rounded-md px-1.5 py-0.5 border border-phantix-700/50;
+  }
+  .prose-doc pre {
+    @apply my-4 rounded-xl bg-phantix-950/90 border border-phantix-700/50 p-4 overflow-x-auto text-[12.5px] leading-6;
+  }
+  .prose-doc pre code {
+    @apply bg-transparent border-0 p-0 text-slate-300;
+  }
+  .prose-doc table {
+    @apply w-full my-4 text-[13px] border-collapse overflow-hidden rounded-xl;
+  }
+  .prose-doc thead th {
+    @apply bg-phantix-800/80 text-slate-200 font-semibold text-left px-3 py-2.5 border border-phantix-700/50;
+  }
+  .prose-doc tbody td {
+    @apply px-3 py-2.5 border border-phantix-700/40 text-slate-300 align-top;
+  }
+  .prose-doc tbody tr:nth-child(even) {
+    @apply bg-phantix-900/40;
+  }
+  .prose-doc blockquote {
+    @apply border-l-2 border-gold-400/60 pl-4 my-4 text-slate-400 italic;
+  }
+  .prose-doc hr {
+    @apply border-phantix-700/50 my-8;
+  }
+  .prose-doc img {
+    @apply rounded-xl my-4;
+  }
+}
+
+/* Skeleton sweep — light travels left to right, then holds before repeating.
+   The hold (60%→100%) keeps the loading state from reading as a strobe. */
+@keyframes skeleton-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* No travelling light for users who asked the OS for calmer interfaces — the
+   placeholder blocks themselves still say "loading". (The root app's blanket
+   reduced-motion reset covers this too; stated here so each app stands alone.) */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* ── Mermaid process-flow diagrams (how-to docs) ─────────────────────────── */
+/* Raw fenced blocks are swapped for rendered SVGs at runtime; keep the
+   container chrome consistent with the app cards in both palettes. */
+.mermaid-rendered {
+  margin: 1rem auto;
+  max-width: 880px;
+  padding: 0.75rem;
+  border: 1px solid rgb(var(--phantix-700) / 0.4);
+  border-radius: 0.75rem;
+  background: rgb(var(--phantix-950) / 0.4);
+  overflow-x: auto;
+  text-align: center;
+}
+.mermaid-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+:root[data-theme="light"] .mermaid-rendered {
+  border-color: rgb(228 228 231);
+  background: rgb(250 250 250);
+}
+
+/* ── Collapsible application sidebar (shared with Core/Attack/Defend/Code) ──── */
+.sg-sidebar[data-collapsed] .sg-hide-collapsed {
+  display: none !important;
+}
+.sg-sidebar[data-collapsed] .nav-item {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+.sg-sidebar[data-collapsed] nav {
+  overflow-x: hidden;
+}

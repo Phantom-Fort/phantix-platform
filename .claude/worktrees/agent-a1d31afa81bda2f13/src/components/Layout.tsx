@@ -1,0 +1,432 @@
+import React, { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
+  ScrollText, LogOut, Lock, Unlock, ChevronDown, ChevronLeft, ChevronRight, Timer, KeyRound, Rocket,
+  RotateCcw, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
+  AlertTriangle, Activity, MoreHorizontal, LayoutGrid, ArrowLeft,
+} from "lucide-react";
+import { useStore } from "@/lib/store";
+import { useSidebarCollapsed } from "@/lib/useSidebarCollapsed";
+import { DEMO_MODE, AGI_ENABLED } from "@/lib/api";
+import { APP_URL } from "@/lib/links";
+import { cx } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import SandboxBanner from "@/components/SandboxBanner";
+import { loadSandboxMe } from "@/lib/sandbox";
+
+type NavLeafItem = { to: string; label: string; icon: React.ReactNode };
+type NavDropdownItem = {
+  type: "dropdown";
+  label: string;
+  icon: React.ReactNode;
+  /** Route prefix that marks this group active. Omit for a group of otherwise
+   *  unrelated leaf routes — active state then falls back to an exact match
+   *  against one of the group's own items. */
+  basePath?: string;
+  items: NavLeafItem[];
+};
+
+const moreOrganizationSubItems: NavLeafItem[] = [
+  { to: "/companies", label: "Companies", icon: <Building2 size={17} /> },
+  { to: "/github", label: "GitHub", icon: <Github size={17} /> },
+];
+
+const moreGovernanceSubItems: NavLeafItem[] = [
+  ...(AGI_ENABLED ? [{ to: "/agi", label: "Autonomous Agent", icon: <Radar size={17} /> }] : []),
+  { to: "/audit", label: "Audit Trail", icon: <ScrollText size={17} /> },
+  { to: "/agent-activity", label: "Agent activity", icon: <Activity size={17} /> },
+];
+
+const baseNavSections: { label: string; items: (NavLeafItem | NavDropdownItem)[] }[] = [
+  {
+    label: "Overview",
+    items: [{ to: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={17} /> }],
+  },
+  {
+    label: "Organization",
+    items: [
+      { to: "/identity", label: "Identity & Keys", icon: <KeyRound size={17} /> },
+      { to: "/users", label: "People & Control", icon: <Users size={17} /> },
+      { to: "/connections", label: "Security Database", icon: <Database size={17} /> },
+      { to: "/applications", label: "Applications", icon: <LayoutGrid size={17} /> },
+      { type: "dropdown", label: "More Organization", icon: <MoreHorizontal size={17} />, items: moreOrganizationSubItems },
+    ],
+  },
+  {
+    label: "Commerce",
+    items: [
+      { to: "/tools", label: "Tool Catalog", icon: <Wrench size={17} /> },
+      { to: "/billing", label: "Billing", icon: <CreditCard size={17} /> },
+      { to: "/support", label: "Support", icon: <LifeBuoy size={17} /> },
+    ],
+  },
+  {
+    label: "Governance",
+    items: [
+      { to: "/ai", label: "AI settings", icon: <Sparkles size={17} /> },
+      { to: "/alerts", label: "Alerts", icon: <BellRing size={17} /> },
+      { type: "dropdown", label: "More Governance", icon: <MoreHorizontal size={17} />, items: moreGovernanceSubItems },
+    ],
+  },
+  {
+    label: "Integrations",
+    items: [
+      { to: "/integrations", label: "Integrations Hub", icon: <Cable size={17} /> },
+    ],
+  },
+];
+
+/**
+ * Collapsible nav group. Opens itself whenever the current route is inside the
+ * group, so deep-linking to a sub-page still shows where you are.
+ */
+function NavDropdown({ label, icon, basePath, items, collapsed }: NavDropdownItem & { collapsed?: boolean }) {
+  const location = useLocation();
+  const groupActive = basePath
+    ? location.pathname.startsWith(basePath)
+    : items.some((i) => location.pathname === i.to);
+  const [open, setOpen] = useState(groupActive);
+
+  useEffect(() => {
+    if (groupActive) setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, basePath]);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title={label}
+        className={cx("nav-item w-full justify-between", groupActive && "active")}
+      >
+        <span className="flex items-center gap-3">
+          {icon}
+          <span className="sg-hide-collapsed">{label}</span>
+        </span>
+        <ChevronDown
+          size={14}
+          className={cx("sg-hide-collapsed text-slate-500 transition-transform duration-200", open && "rotate-180")}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="ml-7 mt-0.5 space-y-0.5 border-l border-phantix-700/50 pl-2.5">
+              {items.map((sub) => (
+                <NavLink
+                  key={sub.to}
+                  to={sub.to}
+                  end={basePath ? sub.to === basePath : true}
+                  className={({ isActive }) => cx("nav-item !py-2", isActive && "active")}
+                >
+                  {sub.icon}
+                  <span className="sg-hide-collapsed">{sub.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function OperateCountdown({ expiresAt }: { expiresAt: number }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const left = Math.max(0, Math.floor((expiresAt - now) / 1000));
+  return (
+    <span className="inline-flex items-center gap-1 font-mono text-[13px] text-gold-300">
+      <Timer size={12} />
+      {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
+    </span>
+  );
+}
+
+export default function Layout() {
+  const { session, state, operate, lockOperate, logout, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
+  const [userMenu, setUserMenu] = useState(false);
+  const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
+  const { collapsed, toggle: toggleSidebar } = useSidebarCollapsed();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!session?.authenticated) {
+      setSandboxEnrolled(false);
+      return;
+    }
+    void loadSandboxMe().then((m) => setSandboxEnrolled(!!m?.enrolled));
+  }, [session?.authenticated]);
+
+  // BETA sandbox lives in the topbar now (icon beside the theme toggle), so
+  // the sidebar itself no longer needs a sandbox-enrolled variant.
+  const navSections = baseNavSections;
+
+  // Auto-logout after inactivity --- uses backend's inactivity_expires_at if set, else 20 min
+  useEffect(() => {
+    if (!session?.authenticated || DEMO_MODE) return;
+    const getTimeoutMs = () => operate.expiresAt ? Math.max(20 * 60 * 1000, operate.expiresAt - Date.now()) : 20 * 60 * 1000;
+    const WARNING_BEFORE_MS = 5 * 60 * 1000;
+    let lastActivity = Date.now();
+    let warned = false;
+
+    const markActivity = () => { lastActivity = Date.now(); warned = false; };
+    const events = ["mousedown", "keydown", "click", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, markActivity));
+
+    const check = () => {
+      if (!session?.authenticated) return;
+      const idle = Date.now() - lastActivity;
+      const timeoutMs = getTimeoutMs();
+      if (idle >= timeoutMs) {
+        toast("warning", "Session expired", "You have been logged out due to a long period of inactivity. Please sign in again.");
+        logout();
+      } else if (idle >= (timeoutMs - WARNING_BEFORE_MS) && !warned) {
+        warned = true;
+        toast("info", "Session expiring soon", `You will be logged out in ${Math.round(WARNING_BEFORE_MS / 60000)} minutes due to inactivity.`);
+      }
+    };
+
+    const interval = window.setInterval(check, 15000);
+    const onVisible = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, markActivity));
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [session?.authenticated, operate.expiresAt, logout, toast]);
+
+  // Catch billing-required 402 responses and show upgrade prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent).detail as string;
+      toast("warning", "Upgrade required", `${msg} --- visit Billing to subscribe or redeem a code.`);
+    };
+    window.addEventListener("phantix:billing-required", handler);
+    return () => window.removeEventListener("phantix:billing-required", handler);
+  }, [toast]);
+
+  if (location.pathname.startsWith("/setup")) return <Outlet />;
+  if (!session?.authenticated) return <Outlet />;
+
+  return (
+    <div className="flex min-h-screen">
+      {/* ── Sidebar ─────────────────────────────────────────── */}
+      <aside
+        data-collapsed={collapsed ? "" : undefined}
+        className={cx(
+          "sg-sidebar fixed inset-y-0 left-0 z-40 flex flex-col border-r border-phantix-700/40 bg-[rgb(var(--surface-sidebar))]",
+          collapsed ? "w-[72px]" : "w-[248px]",
+        )}
+      >
+        <div className="flex items-center gap-3 px-4 pb-3 pt-4">
+          <img src="/logo-white.png" alt="SecureGraph" className="h-8 w-8 shrink-0 object-contain" />
+          <div className="sg-hide-collapsed">
+            <p className="font-display text-[15px] font-bold leading-tight text-white">SecureGraph</p>
+            <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-gold-400">Platform</p>
+          </div>
+          <button
+            onClick={toggleSidebar}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="ml-auto rounded-md border border-phantix-700 bg-phantix-900 p-1.5 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-1.5 overflow-y-auto px-2.5 pb-3">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <p className="nav-section-label sg-hide-collapsed">{section.label}</p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  if ("type" in item && item.type === "dropdown") {
+                    return <NavDropdown key={item.label} {...item} collapsed={collapsed} />;
+                  }
+                  const navItem = item as NavLeafItem;
+                  return (
+                    <NavLink key={navItem.to} to={navItem.to} title={navItem.label} className={({ isActive }) => cx("nav-item", isActive && "active")}>
+                      {navItem.icon}
+                      <span className="sg-hide-collapsed">{navItem.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Danger zone — kept visually distinct and at the bottom of the rail */}
+          <div className="pt-1">
+            <p className="nav-section-label sg-hide-collapsed">Account</p>
+            <NavLink
+              to="/danger-zone"
+              title="Danger zone"
+              className={({ isActive }) =>
+                cx(
+                  "nav-item",
+                  isActive
+                    ? "!bg-severity-critical/10 !text-severity-critical"
+                    : "!text-severity-critical/70 hover:!bg-severity-critical/10 hover:!text-severity-critical",
+                )
+              }
+            >
+              <AlertTriangle size={17} /> <span className="sg-hide-collapsed">Danger zone</span>
+            </NavLink>
+          </div>
+        </nav>
+
+        {/* Command Centre link */}
+        <div className="sg-hide-collapsed px-2.5 pb-2.5">
+          <a
+            href={`${APP_URL}/dashboard`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2.5 rounded-md border border-gold-400/30 bg-phantix-900 p-2.5 transition-all hover:border-gold-400/50 hover:border-gold-400/60"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold-400/15 text-gold-400">
+              <Rocket size={16} />
+            </span>
+            <span>
+              <span className="block text-xs font-semibold text-gold-300">Command Centre</span>
+              <span className="block text-[12px] text-slate-500">Launch the product app</span>
+            </span>
+          </a>
+        </div>
+      </aside>
+
+      {/* ── Main ────────────────────────────────────────────── */}
+      <div className={cx("flex min-h-screen flex-1 flex-col", collapsed ? "ml-[72px]" : "ml-[248px]")}>
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-phantix-700/40 bg-phantix-950/80 px-6 py-3 backdrop-blur-xl">
+          {location.pathname.startsWith("/docs") && (
+            <>
+              <button
+                onClick={() => navigate(-1)}
+                title="Back"
+                aria-label="Back"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-phantix-600 hover:text-white"
+              >
+                <ArrowLeft size={16} />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+              <span className="h-6 w-px bg-phantix-700/40" aria-hidden="true" />
+            </>
+          )}
+          <div className="flex items-center gap-2.5">
+            <span className="font-display text-sm font-semibold text-slate-200">{state.org.name}</span>
+            <span className="chip border-phantix-600/50 bg-phantix-800/60 font-mono text-slate-400">{state.org.slug}</span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2.5">
+            {sandboxEnrolled && (
+              <NavLink
+                to="/sandbox"
+                title="BETA sandbox"
+                className={({ isActive }) =>
+                  cx(
+                    "relative rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white",
+                    isActive && "border-gold-400/50 text-gold-300",
+                  )
+                }
+              >
+                <FlaskConical size={16} />
+                <span className="absolute -right-1 -top-1 rounded-full bg-gold-400 px-1 font-mono text-[11px] font-bold leading-[1.2] text-phantix-950">
+                  β
+                </span>
+              </NavLink>
+            )}
+            <ThemeToggle />
+            {securityDbReady ? (
+              <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
+                <Database size={12} /> Security DB · ready
+              </span>
+            ) : (
+              <button onClick={() => navigate("/connections")} className="chip border-severity-medium/40 bg-severity-medium/10 text-severity-medium transition-colors hover:bg-severity-medium/20">
+                <Database size={12} /> Security DB · not connected
+              </button>
+            )}
+            <span className="chip border-phantix-600/50 bg-phantix-800/60 text-slate-300">{state.org.plan} plan</span>
+
+            <div className="relative">
+              <button
+                onClick={() => setUserMenu((v) => !v)}
+                className="flex items-center gap-2.5 rounded-md border border-phantix-700/50 bg-phantix-900/60 py-1.5 pl-1.5 pr-2.5 hover:border-phantix-500/50"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-gold-400/40 bg-phantix-850 font-display text-xs font-bold text-gold-300">
+                  {(session?.email ?? "A").slice(0, 1).toUpperCase()}
+                </span>
+                <span className="text-left">
+                  <span className="block text-xs font-semibold leading-tight text-slate-200">Company account</span>
+                  <span className="block max-w-[150px] truncate text-[12px] leading-tight text-slate-500">{session?.email}</span>
+                </span>
+                <ChevronDown size={14} className="text-slate-500" />
+              </button>
+              <AnimatePresence>
+                {userMenu && (
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-md glass-bright shadow-card">
+                    <div className="border-b border-phantix-700/40 px-4 py-3">
+                      <p className="text-sm font-semibold text-slate-100">{state.org.name}</p>
+                      <p className="text-xs text-slate-500">Signed in as organization admin</p>
+                    </div>
+                    <div className="p-1.5">
+                      {DEMO_MODE ? (
+                      <button
+                        onClick={() => {
+                          resetDemo();
+                          toast("info", "Demo reset", "Tenant state cleared --- start the journey again.");
+                          setUserMenu(false);
+                          navigate("/dashboard");
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-phantix-700/50"
+                      >
+                        <RotateCcw size={15} /> Reset demo data
+                      </button>
+                      ) : null}
+                      <button
+                        onClick={() => {
+                          logout();
+                          navigate("/login");
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-severity-critical hover:bg-severity-critical/10"
+                      >
+                        <LogOut size={15} /> Sign out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 px-6 py-6 lg:px-8">
+          {/* The one content measure for this app: pages fill it, and 1600px
+              stops an ultrawide display stretching a table across the glass. */}
+          <div className="mx-auto w-full max-w-[1600px]">
+            {session?.authenticated && <SandboxBanner />}
+            <Outlet />
+          </div>
+        </main>
+
+        <footer className="border-t border-phantix-700/30 px-8 py-4 text-[13px] text-slate-600 flex items-center justify-between">
+          <span>SecureGraph Platform · organization management --- keys and people live here; product operations live in the Command Centre</span>
+          <span className="font-mono">Tenant #{state.org.id}</span>
+        </footer>
+      </div>
+    </div>
+  );
+}
