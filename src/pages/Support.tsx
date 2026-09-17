@@ -37,28 +37,44 @@ export default function Support() {
           />
         </Card>
       ) : (
-        <div className="space-y-3">
-          {state.tickets.map((t, i) => (
-            <motion.div key={t.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card hover className="!p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-phantix-800/70 text-gold-400">
-                    <MessageSquare size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-100">#{t.id} · {t.subject}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{(t.messages?.length ?? 0)} message{t.messages?.length !== 1 ? "s" : ""} · opened {timeAgo(t.created_at)}</p>
-                  </div>
-                  <span className="chip border-phantix-600/50 bg-phantix-800/60 text-slate-400 capitalize">{t.priority}</span>
-                  <StatusBadge status={t.status} />
-                </div>
-                <div className="mt-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3.5 text-xs leading-5 text-slate-400">
-                  {t.messages?.[0]?.body ? t.messages[0].body : <span className="text-slate-500">No message preview available.</span>}
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="!p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-phantix-700/40">
+                    <th className="th">Ticket</th>
+                    <th className="th">Priority</th>
+                    <th className="th">Status</th>
+                    <th className="th">Opened</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.tickets.map((t) => (
+                    <tr key={t.id} className="border-b border-phantix-800/40 hover:bg-phantix-800/35">
+                      <td className="td max-w-[420px]">
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 text-gold-400">
+                            <MessageSquare size={14} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-slate-100">#{t.id} · {t.subject}</p>
+                            <p className="mt-0.5 truncate text-[13px] leading-5 text-slate-400">
+                              {t.messages?.[0]?.body ? t.messages[0].body : <span className="text-slate-500">No message preview available.</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="td"><span className="chip border-phantix-600/50 bg-phantix-800/60 text-slate-400 capitalize">{t.priority}</span></td>
+                      <td className="td"><StatusBadge status={t.status} /></td>
+                      <td className="td whitespace-nowrap text-xs text-slate-500">{timeAgo(t.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </motion.div>
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title="New support ticket">

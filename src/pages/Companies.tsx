@@ -60,51 +60,71 @@ export default function Companies() {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {state.companies.map((c, i) => (
-            <motion.div key={c.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card hover>
-                <div className="flex items-start gap-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 text-phantix-300">
-                    <Building2 size={18} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-100">{c.name}</p>
-                    <p className="mt-0.5 font-mono text-xs text-slate-500">#{c.id} · {c.slug}</p>
-                    <p className="mt-1 text-xs text-slate-500">{c.industry ?? "---"} · {c.country ?? "---"} · created {timeAgo(c.created_at)}</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
-                  <span className="text-xs text-slate-500">Service key</span>
-                  {c.key_prefix ? (
-                    <span className="font-mono text-xs text-slate-300">{c.key_prefix}</span>
-                  ) : (
-                    <button
-                      className="btn-secondary !px-3 !py-1.5 !text-xs"
-                      onClick={async () => {
-                        const secret = await rotateServiceKey(c.id);
-                        setKeyModal({ company: c.name, secret });
-                      }}
-                    >
-                      <KeyRound size={12} /> Create key
-                    </button>
-                  )}
-                </div>
-                {c.key_prefix && (
-                  <button
-                    className="btn-ghost mt-2.5 w-full !py-1.5 !text-xs"
-                    onClick={async () => {
-                      const secret = await rotateServiceKey(c.id);
-                      setKeyModal({ company: c.name, secret });
-                    }}
-                  >
-                    Rotate key
-                  </button>
-                )}
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="!p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-phantix-700/40">
+                    <th className="th">Company</th>
+                    <th className="th">ID · Slug</th>
+                    <th className="th">Industry</th>
+                    <th className="th">Country</th>
+                    <th className="th">Created</th>
+                    <th className="th">Key</th>
+                    <th className="th"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.companies.map((c) => (
+                    <tr key={c.id} className="border-b border-phantix-800/40 hover:bg-phantix-800/35">
+                      <td className="td">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 text-phantix-300">
+                            <Building2 size={16} />
+                          </span>
+                          <p className="font-medium text-slate-200">{c.name}</p>
+                        </div>
+                      </td>
+                      <td className="td whitespace-nowrap font-mono text-xs text-slate-500">#{c.id} · {c.slug}</td>
+                      <td className="td text-xs text-slate-400">{c.industry ?? "---"}</td>
+                      <td className="td text-xs text-slate-400">{c.country ?? "---"}</td>
+                      <td className="td whitespace-nowrap text-xs text-slate-500">{timeAgo(c.created_at)}</td>
+                      <td className="td">
+                        {c.key_prefix ? <span className="font-mono text-xs text-slate-300">{c.key_prefix}</span> : <span className="text-xs text-slate-600">no key</span>}
+                      </td>
+                      <td className="td text-right">
+                        <div className="flex justify-end gap-1.5">
+                          {c.key_prefix ? (
+                            <button
+                              className="btn-ghost !px-2.5 !py-1.5 !text-xs"
+                              onClick={async () => {
+                                const secret = await rotateServiceKey(c.id);
+                                setKeyModal({ company: c.name, secret });
+                              }}
+                            >
+                              Rotate key
+                            </button>
+                          ) : (
+                            <button
+                              className="btn-secondary !px-2.5 !py-1.5 !text-xs"
+                              onClick={async () => {
+                                const secret = await rotateServiceKey(c.id);
+                                setKeyModal({ company: c.name, secret });
+                              }}
+                            >
+                              <KeyRound size={12} /> Create key
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </motion.div>
       )}
 
       {/* Create modal */}

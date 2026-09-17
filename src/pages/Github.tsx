@@ -408,22 +408,47 @@ export default function GithubIntegration() {
               <Search size={14} className="text-slate-500" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search repositories..." className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder:text-slate-500" />
             </div>
-            <div className="space-y-2">
-              {filtered.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">No repositories. Connect a GitHub account to see repos.</p> : filtered.map((r) => (
-                <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
-                  <GitBranch size={15} className="shrink-0 text-gold-400" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-slate-200">{r.full_name}</p>
-                    <p className="text-[13px] text-slate-500">branch: {r.default_branch}</p>
-                  </div>
-                  {r.private ? <span className="chip border-amber-400/30 bg-amber-400/10 text-amber-300"><Lock size={10} className="mr-1 inline" /> Private</span> : <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300"><Unlock size={10} className="mr-1 inline" /> Public</span>}
-                  {r.requires_premium && <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300"><ShieldCheck size={10} className="mr-1 inline" /> Premium</span>}
-                  <button onClick={() => analyze(r)} disabled={analyzing === r.id} className={cx("btn-primary !px-3 !py-1.5 !text-xs", !r.can_analyze && "opacity-60")}>
-                    {analyzing === r.id ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Analyze
-                  </button>
-                </div>
-              ))}
-            </div>
+            {filtered.length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-500">No repositories. Connect a GitHub account to see repos.</p>
+            ) : (
+              <div className="-mx-5 -mb-5 overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-phantix-700/40">
+                      <th className="th">Repository</th>
+                      <th className="th">Branch</th>
+                      <th className="th">Visibility</th>
+                      <th className="th">Review status</th>
+                      <th className="th"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((r) => (
+                      <tr key={r.id} className="border-b border-phantix-800/40 last:border-0 hover:bg-phantix-800/35">
+                        <td className="td">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <GitBranch size={15} className="shrink-0 text-gold-400" />
+                            <p className="truncate font-medium text-slate-200">{r.full_name}</p>
+                          </div>
+                        </td>
+                        <td className="td font-mono text-xs text-slate-400">{r.default_branch}</td>
+                        <td className="td">
+                          {r.private ? <span className="chip border-amber-400/30 bg-amber-400/10 text-amber-300"><Lock size={10} className="mr-1 inline" /> Private</span> : <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300"><Unlock size={10} className="mr-1 inline" /> Public</span>}
+                        </td>
+                        <td className="td">
+                          {r.requires_premium ? <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300"><ShieldCheck size={10} className="mr-1 inline" /> Premium</span> : <span className="text-xs text-slate-500">Included</span>}
+                        </td>
+                        <td className="td text-right">
+                          <button onClick={() => analyze(r)} disabled={analyzing === r.id} className={cx("btn-primary !px-3 !py-1.5 !text-xs", !r.can_analyze && "opacity-60")}>
+                            {analyzing === r.id ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Analyze
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
           ) : (
           <BranchReviewer repos={repos} />
@@ -600,44 +625,60 @@ function BranchReviewer({ repos }: { repos: Repo[] }) {
         ) : repos.length === 0 ? (
           <EmptyRepoNote />
         ) : (
-          <div className="space-y-2">
-            {repos.map((repo) => {
-              const s = settings[repo.id];
-              const configured = Boolean(s);
-              return (
-                <div key={repo.id} className="flex flex-wrap items-center gap-3 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
-                  <GitBranch size={15} className="shrink-0 text-gold-400" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-medium text-slate-200">{repo.full_name}</p>
-                      {configured && (s!.enabled ? <StatusBadge status="active" /> : <StatusBadge status="draft" />)}
-                    </div>
-                    <p className="text-[13px] text-slate-500">
-                      watch: <span className="font-mono text-gold-300">{s?.watched_branch ?? repo.default_branch}</span>
-                      {s?.post_github_comment ? " · posts PR comment" : ""}
-                    </p>
-                  </div>
-                  {savingId === repo.id ? (
-                    <Loader2 size={15} className="animate-spin text-gold-400" />
-                  ) : configured && s!.enabled ? (
-                    <button className="btn-ghost !px-3 !py-1.5 !text-xs" onClick={() => void save(repo, { enabled: false })}>
-                      <Lock size={11} /> Pause
-                    </button>
-                  ) : (
-                    <button className="btn-secondary !px-3 !py-1.5 !text-xs" onClick={() => void save(repo, { enabled: true, watched_branch: s?.watched_branch ?? repo.default_branch })}>
-                      <Settings2 size={11} /> {configured ? "Resume" : "Watch"}
-                    </button>
-                  )}
-                  <button
-                    className="btn-ghost !px-3 !py-1.5 !text-xs"
-                    onClick={() => void save(repo, { watched_branch: s?.watched_branch === "main" ? "develop" : "main" })}
-                    title="Toggle watched branch between main and develop"
-                  >
-                    <ArrowRight size={11} /> {s?.watched_branch ?? repo.default_branch}
-                  </button>
-                </div>
-              );
-            })}
+          <div className="-mx-5 -mb-5 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-phantix-700/40">
+                  <th className="th">Repository</th>
+                  <th className="th">Watched branch</th>
+                  <th className="th">Review status</th>
+                  <th className="th"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {repos.map((repo) => {
+                  const s = settings[repo.id];
+                  const configured = Boolean(s);
+                  return (
+                    <tr key={repo.id} className="border-b border-phantix-800/40 last:border-0 hover:bg-phantix-800/35">
+                      <td className="td">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <GitBranch size={15} className="shrink-0 text-gold-400" />
+                          <p className="truncate font-medium text-slate-200">{repo.full_name}</p>
+                        </div>
+                      </td>
+                      <td className="td font-mono text-xs text-gold-300">{s?.watched_branch ?? repo.default_branch}</td>
+                      <td className="td">
+                        {configured && (s!.enabled ? <StatusBadge status="active" /> : <StatusBadge status="draft" />)}
+                        {s?.post_github_comment && <p className="mt-0.5 text-[12px] text-slate-500">posts PR comment</p>}
+                      </td>
+                      <td className="td text-right">
+                        <div className="flex flex-wrap justify-end items-center gap-1.5">
+                          {savingId === repo.id ? (
+                            <Loader2 size={15} className="animate-spin text-gold-400" />
+                          ) : configured && s!.enabled ? (
+                            <button className="btn-ghost !px-2.5 !py-1.5 !text-xs" onClick={() => void save(repo, { enabled: false })}>
+                              <Lock size={11} /> Pause
+                            </button>
+                          ) : (
+                            <button className="btn-secondary !px-2.5 !py-1.5 !text-xs" onClick={() => void save(repo, { enabled: true, watched_branch: s?.watched_branch ?? repo.default_branch })}>
+                              <Settings2 size={11} /> {configured ? "Resume" : "Watch"}
+                            </button>
+                          )}
+                          <button
+                            className="btn-ghost !px-2.5 !py-1.5 !text-xs"
+                            onClick={() => void save(repo, { watched_branch: s?.watched_branch === "main" ? "develop" : "main" })}
+                            title="Toggle watched branch between main and develop"
+                          >
+                            <ArrowRight size={11} /> {s?.watched_branch ?? repo.default_branch}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </Card>

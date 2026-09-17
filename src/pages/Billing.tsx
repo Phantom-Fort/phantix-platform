@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, Info, Lock, Sparkle } from "lucide-react";
+import { CreditCard, CheckCircle2, Download, Ticket, AlertTriangle, RefreshCw, DollarSign, Lock, Sparkle } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
+import { PageHeader, Card, CollapsibleCard, StatusBadge, Modal, Spinner, PageHeaderSkeleton, SkeletonCard } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { formatNaira, timeAgo, cx, humanize } from "@/lib/utils";
@@ -203,13 +203,13 @@ export default function Billing() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, payments.length]);
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (planOverride?: "starter" | "growth") => {
     if (!(await requireDualControl("Subscribing requires a dual-control operate session."))) return;
     setBusy(true);
     try {
       const res = await api.post<any>(
         "/billing/subscribe",
-        { billing_cycle: selectedCycle, plan: selectedPlan },
+        { billing_cycle: selectedCycle, plan: planOverride ?? selectedPlan },
         { dualControl: true },
       );
       const paymentId = res?.payment?.id;
@@ -296,20 +296,6 @@ export default function Billing() {
   const expiringSoon = isPremium && daysUntilEnd !== null && daysUntilEnd <= 5 && daysUntilEnd >= 0;
   const isCoupon = subscription?.grant_source === "coupon";
 
-  // Only self-serve paid plans are purchasable here: Free needs no payment and
-  // Enterprise is a quote. Everything below prices the *selected* plan.
-  const purchasablePlans = plans.filter(
-    (p) => (p.key === "starter" || p.key === "growth") && (p.list_price_ngn ?? 0) > 0,
-  );
-  const chosenPlan = plans.find((p) => p.key === selectedPlan);
-  const isCurrentPlan = isPremium && planKey === selectedPlan;
-
-  const listPrice = chosenPlan?.list_price_ngn ?? starterPlan?.list_price_ngn ?? pricing?.monthly_list_price_ngn ?? 9900;
-  const displayMonthly = selectedPlan === "starter" ? (pricing?.first_month_price_ngn ?? listPrice) : listPrice;
-  const displaySubsequent = selectedPlan === "starter" ? (pricing?.subsequent_monthly_price_ngn ?? listPrice) : listPrice;
-  const displayYearly = listPrice * 10;
-  const discountPct = pricing?.first_month_discount_percent ?? 50;
-
   const planLabel = activePlan?.name
     || (isPremium ? (planKey === "growth" ? "Growth" : planKey === "enterprise" ? "Enterprise" : "Starter") : "Free");
   const featureList = (isPremium
@@ -340,6 +326,32 @@ export default function Billing() {
         { credits: 5000, price_ngn: undefined },
       ];
 
+  // Per-tier pricing for the comparison row. Only Starter carries the
+  // first-month promo (from /billing/pricing); every other paid tier prices
+  // straight off its own list_price_ngn, same as the backend contract.
+  function tierPricing(key: string, plan: PlanInfo | undefined) {
+    const list = plan?.list_price_ngn ?? null;
+    if (list == null) return null;
+    if (key === "starter") {
+      const monthly = selectedCycle === "monthly" ? (pricing?.first_month_price_ngn ?? list) : list * 10;
+      const note = selectedCycle === "monthly"
+        ? `then ${formatNaira(pricing?.subsequent_monthly_price_ngn ?? list)}/mo`
+        : "billed yearly";
+      return { monthly, note };
+    }
+    const monthly = selectedCycle === "monthly" ? list : list * 10;
+    return { monthly, note: selectedCycle === "monthly" ? "per month" : "billed yearly" };
+  }
+
+  const freePlan = plans.find((p) => p.key === "free");
+  const enterprisePlan = plans.find((p) => p.key === "enterprise");
+  const tierCards: { key: string; plan: PlanInfo | undefined; purchasable: boolean }[] = [
+    { key: "free", plan: freePlan ?? { key: "free", name: "Free", list_price_ngn: 0 }, purchasable: false },
+    { key: "starter", plan: starterPlan, purchasable: true },
+    { key: "growth", plan: growthPlan, purchasable: true },
+    { key: "enterprise", plan: enterprisePlan ?? { key: "enterprise", name: "Enterprise", list_price_ngn: null }, purchasable: false },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -355,13 +367,13 @@ export default function Billing() {
 
       {/* What you tried to do — the reason this page opened. */}
       {(up || upsellReason) && (
-        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-gold-400/30 bg-gold-400/[0.08] px-4 py-3">
-          <Lock size={15} className="shrink-0 text-gold-300" />
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-gold-400/30 bg-gold-400/[0.08] px-4 py-2.5">
+          <Lock size={14} className="shrink-0 text-gold-300" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-gold-200">
               {up ? `${up.label} needs ${upsellPlanLabel(up.plan)}` : "Upgrade required"}
             </p>
-            <p className="mt-0.5 text-[13px] leading-5 text-gold-100/85">
+            <p className="mt-0.5 text-[12px] leading-5 text-gold-100/85">
               {up?.blurb || upsellReason || "This action needs a higher plan."}
             </p>
           </div>
@@ -370,10 +382,10 @@ export default function Billing() {
 
       {/* Subscription alerts */}
       {isGrace && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 px-4 py-3">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-400" />
+        <div className="mb-3 flex items-start gap-2.5 rounded-md border border-amber-400/25 bg-amber-400/5 px-4 py-2.5">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-400" />
           <div>
-            <p className="text-sm font-semibold text-amber-300">Grace period active</p>
+            <p className="text-[13px] font-semibold text-amber-300">Grace period active</p>
             <p className="text-xs text-slate-400 mt-0.5">
               Your {planLabel} access continues until {(entitlements as any)?.subscription?.grace_ends_at ? timeAgo((entitlements as any).subscription.grace_ends_at) : "grace expires"}. Pay the renewal invoice to stay on plan.
             </p>
@@ -381,178 +393,222 @@ export default function Billing() {
         </div>
       )}
       {expiringSoon && !isGrace && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-gold-400/25 bg-gold-400/5 px-4 py-3">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-gold-400" />
-          <p className="text-sm text-slate-200">Your {planLabel} subscription {daysUntilEnd === 0 ? "expires today" : `ends in ${daysUntilEnd} day${daysUntilEnd === 1 ? "" : "s"}`}. <button onClick={() => setShowCoupon(true)} className="text-gold-400 hover:text-gold-300 underline">Redeem a coupon</button> or renew via subscribe.</p>
+        <div className="mb-3 flex items-start gap-2.5 rounded-md border border-gold-400/25 bg-gold-400/5 px-4 py-2.5">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0 text-gold-400" />
+          <p className="text-[13px] text-slate-200">Your {planLabel} subscription {daysUntilEnd === 0 ? "expires today" : `ends in ${daysUntilEnd} day${daysUntilEnd === 1 ? "" : "s"}`}. <button onClick={() => setShowCoupon(true)} className="text-gold-400 hover:text-gold-300 underline">Redeem a coupon</button> or renew below.</p>
         </div>
       )}
-      {!isPremium && !isGrace && entitlements && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-slate-500/25 bg-slate-500/5 px-4 py-3">
-          <Info size={16} className="mt-0.5 shrink-0 text-slate-400" />
-          <div>
-            <p className="text-sm text-slate-300">You're on the Free plan.</p>
-            <p className="text-xs text-slate-400 mt-0.5">Limited to {(entitlements as any)?.billing_enforcement?.free_asset_cap ?? 25} assets and {(entitlements as any)?.billing_enforcement?.free_org_user_cap ?? 2} users. Upgrade to Starter for full engine access.</p>
+
+      {/* Current plan — the one thing this page opens to check, in one dense row. */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className="!py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <p className="font-display text-xl font-bold text-white leading-tight">{planLabel}</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {entitlements?.billing_enforcement?.enabled ? "Current plan" : "Current plan · dev mode, gates off"}
+                </p>
+              </div>
+              <div className={cx("chip text-xs", isPremium ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/50 bg-slate-500/10 text-slate-500")}>
+                {isGrace ? "Grace period" : isCoupon ? "Beta access" : isPremium ? "Active" : "Free"}
+              </div>
+              {isPremium && subscription?.current_period_end && (
+                <span className="text-xs text-slate-400">{isGrace ? "Renewal overdue" : `Renews ${timeAgo(subscription.current_period_end)}`}</span>
+              )}
+              {credits != null && (
+                <span className={cx("chip text-xs", credits.exhausted ? "border-severity-critical/30 bg-severity-critical/10 text-severity-critical" : credits.low ? "border-amber-400/30 bg-amber-400/10 text-amber-300" : "border-phantix-600/50 bg-phantix-800/40 text-slate-300")}>
+                  <DollarSign size={11} className="inline mr-1" />
+                  {credits.total.toLocaleString()} AI credits
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {payingId && <button onClick={() => handleVerify(payingId)} className="btn-secondary !py-1.5 !text-xs"><CheckCircle2 size={13} /> Verify #{payingId}</button>}
+              <button onClick={() => setShowCoupon(true)} className="btn-ghost !py-1.5 !text-xs"><Ticket size={13} /> Redeem code</button>
+              {isPremium && subscription?.grant_source === "payment" && (
+                <button onClick={() => setShowCancelConfirm(true)} className="btn-ghost !py-1.5 !text-xs text-severity-critical">Cancel auto-renew</button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
 
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className={cx("chip", isPremium ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-slate-500/50 bg-slate-500/10 text-slate-500")}>
-          {isGrace ? "Grace period" : isCoupon ? `Beta access until ${subscription?.current_period_end ? timeAgo(subscription.current_period_end) : "expiry"}` : isPremium ? `${planLabel} active` : "Free plan"}
-        </div>
-        {isPremium && subscription?.current_period_end && <span className="text-xs text-slate-400">{isGrace ? "Renewal overdue" : `Renews ${timeAgo(subscription.current_period_end)}`}</span>}
-        {credits != null && (
-          <span className={cx("chip text-xs", credits.exhausted ? "border-severity-critical/30 bg-severity-critical/10 text-severity-critical" : credits.low ? "border-amber-400/30 bg-amber-400/10 text-amber-300" : "border-phantix-600/50 bg-phantix-800/40 text-slate-300")}>
-            <DollarSign size={11} className="inline mr-1" />
-            {credits.total.toLocaleString()} AI credits
-          </span>
-        )}
-      </div>
-
-      {/* Free headroom, so the ask is concrete rather than abstract. */}
-      {!isPremium && entitlements?.billing_enforcement?.enabled && (
-        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <BillingStat label="Plan" value={planLabel} tone="warn" />
-          <BillingStat
-            label="Free assets left"
-            value={entitlements.assets_remaining_free == null ? "—" : String(entitlements.assets_remaining_free)}
-            tone={entitlements.assets_remaining_free === 0 ? "warn" : "plain"}
-          />
-          <BillingStat
-            label="Free users left"
-            value={entitlements.org_users_remaining_free == null ? "—" : String(entitlements.org_users_remaining_free)}
-            tone={entitlements.org_users_remaining_free === 0 ? "warn" : "plain"}
-          />
-          <BillingStat label="Credits / month" value={credits?.ai_credits_mo != null ? String(credits.ai_credits_mo) : "—"} tone="plain" />
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Plan selector */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <Card>
-            <CardHeader title={isPremium ? "Your plan" : "Choose a plan"} subtitle={`${entitlements?.billing_enforcement?.enabled ? "Billing gates active" : "Dev mode — gates off"}${starterPlan ? ` · ${starterPlan.name}` : ""}`} />
-            <div className="space-y-4">
-              {/* Plan — priced by the backend per plan, not by one legacy number. */}
-              <div className="flex gap-2">
-                {(purchasablePlans.length ? purchasablePlans : [{ key: "starter", name: "Starter", list_price_ngn: null }, { key: "growth", name: "Growth", list_price_ngn: null }]).map((p) => (
-                  <button
-                    key={p.key}
-                    onClick={() => setSelectedPlan(p.key as "starter" | "growth")}
-                    className={cx(
-                      "flex-1 rounded-md border py-3 text-sm font-semibold transition-colors",
-                      selectedPlan === p.key ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60",
-                    )}
-                  >
-                    {p.name}
-                    {p.list_price_ngn != null && p.list_price_ngn > 0 && (
-                      <span className="ml-1.5 text-[13px] font-normal text-slate-500">
-                        {formatNaira(p.list_price_ngn)}/mo
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2 mb-4">
-                {(["monthly", "yearly"] as const).map(c => <button key={c} onClick={() => setSelectedCycle(c)} className={cx("flex-1 rounded-md border py-3 text-sm font-semibold transition-colors", selectedCycle === c ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700/40 text-slate-400 hover:bg-phantix-800/60")}>{c === "monthly" ? "Monthly" : "Yearly"}</button>)}
-              </div>
-              {(pricing || starterPlan) && (
-                <div className="rounded-2xl border border-gold-400/25 bg-gradient-to-b from-phantix-900 to-phantix-950 p-5 text-center">
-                  <p className="font-display text-3xl font-bold text-white">{formatNaira(selectedCycle === "monthly" ? displayMonthly : displayYearly)}</p>
-                  <p className="mt-1 text-sm text-slate-400">{selectedCycle === "monthly" ? `First month (${discountPct}% off) · then ${formatNaira(displaySubsequent)}/mo` : "One-time yearly payment (10× monthly)"}</p>
-                  {selectedCycle === "yearly" && listPrice > 0 && <p className="mt-1 text-xs text-emerald-400">Save ~{Math.round((1 - displayYearly / (listPrice * 12)) * 100)}% vs monthly</p>}
-                </div>
-              )}
-              {isCurrentPlan ? (
-                <button disabled className="btn-ghost w-full !py-3 opacity-60">You are on {chosenPlan?.name ?? selectedPlan}</button>
-              ) : (
-                <button onClick={handleSubscribe} disabled={busy} className="btn-primary w-full !py-3">
-                  {busy ? <Spinner className="h-4 w-4" /> : <><CreditCard size={15} /> {isPremium ? `Switch to ${chosenPlan?.name ?? selectedPlan}` : `Subscribe to ${chosenPlan?.name ?? selectedPlan}`}</>}
-                </button>
-              )}
-              {payingId && <button onClick={() => handleVerify(payingId)} className="btn-secondary w-full !py-2 text-sm"><CheckCircle2 size={14} /> Verify Payment #{payingId}</button>}
-              {isPremium && subscription?.grant_source === "payment" && <button onClick={() => setShowCancelConfirm(true)} className="btn-ghost w-full text-sm text-severity-critical">Cancel auto-renew</button>}
+          {/* Free headroom — concrete, not abstract, and part of the same row instead of a second card. */}
+          {!isPremium && entitlements?.billing_enforcement?.enabled && (
+            <div className="mt-4 grid grid-cols-3 gap-2.5 border-t border-phantix-800/60 pt-4">
+              <BillingStat
+                label="Free assets left"
+                value={entitlements.assets_remaining_free == null ? "—" : String(entitlements.assets_remaining_free)}
+                tone={entitlements.assets_remaining_free === 0 ? "warn" : "plain"}
+              />
+              <BillingStat
+                label="Free users left"
+                value={entitlements.org_users_remaining_free == null ? "—" : String(entitlements.org_users_remaining_free)}
+                tone={entitlements.org_users_remaining_free === 0 ? "warn" : "plain"}
+              />
+              <BillingStat label="Credits / month" value={credits?.ai_credits_mo != null ? String(credits.ai_credits_mo) : "—"} tone="plain" />
             </div>
-          </Card>
-        </motion.div>
-
-        {/* Coupons + Features */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-          <Card>
-            <CardHeader title={isPremium ? `${planLabel} features` : "Starter features"} subtitle={isPremium ? "You have full access" : "Upgrade to unlock"} />
-            <ul className="space-y-2.5 mb-4">
-              {featureList.slice(0, 8).map(f => <li key={f} className="flex items-center gap-2 text-sm text-slate-300"><CheckCircle2 size={14} className={isPremium ? "text-emerald-400" : "text-slate-600"} /> {f}</li>)}
-            </ul>
-            <button onClick={() => setShowCoupon(true)} className="btn-secondary w-full text-sm"><Ticket size={14} /> Redeem beta code</button>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* AI credits wallet — same Card pattern as the rest of Billing */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="mt-5">
-        <Card>
-          <CardHeader
-            title="AI credits"
-            subtitle={
-              credits
-                ? `${credits.total.toLocaleString()} available · cycle ${credits.cycle}${credits.plan_name || credits.plan ? ` · ${credits.plan_name || credits.plan}` : ""}`
-                : "Workspace AI credit wallet"
-            }
-          />
-          {credits ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(credits.buckets || {}).map(([bucket, amount]) => (
-                  <span key={bucket} className="chip text-xs border-phantix-600/50 bg-phantix-800/40 text-slate-300">
-                    {bucket}: {Number(amount).toLocaleString()}
-                  </span>
-                ))}
-                {credits.exhausted && <span className="chip text-xs border-severity-critical/30 bg-severity-critical/10 text-severity-critical">Exhausted</span>}
-                {credits.low && !credits.exhausted && <span className="chip text-xs border-amber-400/30 bg-amber-400/10 text-amber-300">Low</span>}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {creditBundles.map((b) => (
-                  <button
-                    key={b.credits}
-                    type="button"
-                    disabled={topUpBusy != null}
-                    onClick={() => void handleCreditTopUp(b.credits)}
-                    className="btn-secondary text-sm !py-2"
-                  >
-                    {topUpBusy === b.credits ? <Spinner className="h-3.5 w-3.5" /> : (
-                      <>+{b.credits.toLocaleString()}{b.price_ngn != null ? ` · ${formatNaira(b.price_ngn)}` : ""}</>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-slate-500">Top-ups land in the topup bucket without changing your plan. Viewing and exporting results never consumes credits.</p>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-500">Credit balance unavailable — refresh after signing in with an organisation session.</p>
           )}
         </Card>
       </motion.div>
 
-      {/* Payments history */}
-      {payments.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mt-5">
-          <CollapsibleCard defaultOpen={false} title="Payment history" subtitle={`${payments.length} invoices`}>
-            <div className="space-y-2">
-              {payments.map(p => (
-                <div key={p.id} className="flex items-center gap-4 rounded-md border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
-                  <div className="min-w-0 flex-1"><p className="font-mono text-sm text-slate-200">{p.reference}</p><p className="text-xs text-slate-500">{humanize(p.purpose)} · {p.discount_percent ? `${p.discount_percent}% off` : ""} · {timeAgo(p.created_at)}</p></div>
-                  <span className="font-semibold text-slate-200">{formatNaira(p.amount_due_ngn)}</span>
-                  <StatusBadge status={p.status} />
-                  {p.status === "pending" && <button onClick={() => { setPayingId(p.id); void handleVerify(p.id); }} className="btn-primary !px-3 !py-1.5 !text-xs">Verify</button>}
+      {/* Plans — every tier side by side, priced up front, so comparing is a glance not a click. */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="mt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-sm font-semibold text-slate-200">Plans</h2>
+          <div className="flex rounded-md border border-phantix-700/50 p-0.5">
+            {(["monthly", "yearly"] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setSelectedCycle(c)}
+                className={cx(
+                  "rounded px-3 py-1 text-xs font-medium transition-colors",
+                  selectedCycle === c ? "bg-gold-400/15 text-gold-300" : "text-slate-400 hover:text-slate-200",
+                )}
+              >
+                {c === "monthly" ? "Monthly" : "Yearly"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {tierCards.map(({ key, plan, purchasable }) => {
+            const isActive = isPremium ? planKey === key : key === "free";
+            const price = purchasable ? tierPricing(key, plan) : null;
+            const features = (plan?.features?.length ? plan.features : key === "free" ? featureList : key === "growth" ? growthPlan?.features ?? featureList : featureList).slice(0, 4);
+            return (
+              <div
+                key={key}
+                className={cx(
+                  "flex flex-col rounded-md border px-4 py-4",
+                  isActive ? "border-gold-400/50 bg-gold-400/[0.04]" : "border-phantix-700/40",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-slate-100">{plan?.name ?? humanize(key)}</p>
+                  {isActive && <span className="chip !px-1.5 !py-0.5 text-[11px] border-gold-400/40 text-gold-300">Current</span>}
                 </div>
+                <div className="mt-2">
+                  {key === "free" ? (
+                    <p className="font-display text-lg font-bold text-white">Free</p>
+                  ) : key === "enterprise" ? (
+                    <p className="font-display text-lg font-bold text-white">Custom</p>
+                  ) : price ? (
+                    <>
+                      <p className="font-display text-lg font-bold text-white">{formatNaira(price.monthly)}<span className="text-xs font-normal text-slate-500">/mo</span></p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">{price.note}</p>
+                    </>
+                  ) : (
+                    <p className="font-display text-lg font-bold text-slate-500">—</p>
+                  )}
+                </div>
+                <ul className="mt-3 flex-1 space-y-1.5">
+                  {features.map((f) => (
+                    <li key={f} className="flex items-start gap-1.5 text-[12px] leading-5 text-slate-400">
+                      <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-emerald-400/80" /> {f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3">
+                  {key === "enterprise" ? (
+                    <a href="/support" className="btn-secondary block w-full !py-1.5 text-center text-xs">Contact sales</a>
+                  ) : key === "free" ? (
+                    <button disabled className="btn-ghost w-full !py-1.5 text-xs opacity-60">{isActive ? "Current plan" : "Included"}</button>
+                  ) : isActive ? (
+                    <button disabled className="btn-ghost w-full !py-1.5 text-xs opacity-60">Current plan</button>
+                  ) : (
+                    <button
+                      onClick={() => { setSelectedPlan(key as "starter" | "growth"); void handleSubscribe(key as "starter" | "growth"); }}
+                      disabled={busy}
+                      className="btn-primary w-full !py-1.5 text-xs"
+                    >
+                      {busy && selectedPlan === key ? <Spinner className="h-3.5 w-3.5" /> : <><CreditCard size={12} /> {isPremium ? "Switch" : "Subscribe"}</>}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* AI credits wallet — one slim strip, not a full card of its own weight. */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-4">
+        <Card className="!py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm font-semibold text-slate-200">AI credits</p>
+              {credits ? (
+                <>
+                  <span className="text-xs text-slate-500">{credits.total.toLocaleString()} available · cycle {credits.cycle}</span>
+                  {Object.entries(credits.buckets || {}).map(([bucket, amount]) => (
+                    <span key={bucket} className="chip text-[11px] border-phantix-600/50 bg-phantix-800/40 text-slate-400">
+                      {bucket}: {Number(amount).toLocaleString()}
+                    </span>
+                  ))}
+                  {credits.exhausted && <span className="chip text-[11px] border-severity-critical/30 bg-severity-critical/10 text-severity-critical">Exhausted</span>}
+                  {credits.low && !credits.exhausted && <span className="chip text-[11px] border-amber-400/30 bg-amber-400/10 text-amber-300">Low</span>}
+                </>
+              ) : (
+                <span className="text-xs text-slate-500">Balance unavailable — refresh after signing in with an organisation session.</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {creditBundles.map((b) => (
+                <button
+                  key={b.credits}
+                  type="button"
+                  disabled={topUpBusy != null}
+                  onClick={() => void handleCreditTopUp(b.credits)}
+                  className="btn-secondary !py-1.5 text-xs"
+                >
+                  {topUpBusy === b.credits ? <Spinner className="h-3.5 w-3.5" /> : (
+                    <>+{b.credits.toLocaleString()}{b.price_ngn != null ? ` · ${formatNaira(b.price_ngn)}` : ""}</>
+                  )}
+                </button>
               ))}
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Payments history — a real invoice table, not padded list rows. */}
+      {payments.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="mt-4">
+          <CollapsibleCard defaultOpen={false} title="Payment history" subtitle={`${payments.length} invoices`}>
+            <div className="-mx-5 -mb-5 overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-phantix-700/40">
+                    <th className="th">Reference</th>
+                    <th className="th">Purpose</th>
+                    <th className="th">Date</th>
+                    <th className="th">Amount</th>
+                    <th className="th">Status</th>
+                    <th className="th"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((p) => (
+                    <tr key={p.id} className="border-b border-phantix-800/40 last:border-0">
+                      <td className="td font-mono text-xs">{p.reference}</td>
+                      <td className="td text-xs text-slate-400">{humanize(p.purpose)}{p.discount_percent ? ` · ${p.discount_percent}% off` : ""}</td>
+                      <td className="td text-xs text-slate-500">{timeAgo(p.created_at)}</td>
+                      <td className="td font-semibold">{formatNaira(p.amount_due_ngn)}</td>
+                      <td className="td"><StatusBadge status={p.status} /></td>
+                      <td className="td text-right">
+                        {p.status === "pending" && <button onClick={() => { setPayingId(p.id); void handleVerify(p.id); }} className="btn-primary !px-2.5 !py-1 !text-[11px]">Verify</button>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CollapsibleCard>
         </motion.div>
       )}
 
       {/* Report formats */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-5">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mt-4">
         <CollapsibleCard defaultOpen={false} title="Report export formats" subtitle="All formats are free on every plan">
           <div className="flex flex-wrap gap-2">
             {reportFormats.map((r) => (
@@ -570,7 +626,7 @@ export default function Billing() {
 
       {/* Strategic upsell — exactly what Free cannot do, and what unlocks it. */}
       {!isPremium && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="mt-5">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-4">
           <CollapsibleCard defaultOpen={false} title="What Free cannot do" subtitle="Each line names the plan that unlocks it">
             <div className="divide-y divide-phantix-800/50">
               {Object.values(UPSELL_FEATURES).map((f) => (

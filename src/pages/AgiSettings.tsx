@@ -429,39 +429,61 @@ export default function AgiSettings() {
                 <button onClick={() => setAccountModal({ open: true, editing: null })} className="btn-primary !px-3 !py-1.5 !text-xs"><Plus size={13} className="mr-1 inline" /> Add account</button>
               }
             />
-            <div className="space-y-2.5">
-              {bootstrap?.test_accounts.length === 0 ? (
-                <EmptyState icon={<KeyRound size={22} />} title="No test accounts" body="Add reusable test login / registration credentials so AGI can use them automatically per environment." />
-              ) : (
-                bootstrap?.test_accounts.map((a) => (
-                  <div key={a.id} className={cx("rounded-md border p-4", a.is_default ? "border-gold-400/40 bg-gold-400/5" : "border-phantix-700/40 bg-phantix-900/40")}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[13px] font-semibold text-white">{a.label}</span>
-                      {a.is_default && <span className="chip border-gold-400/40 bg-gold-400/10 text-[12px] text-gold-300"><Star size={10} className="mr-1 inline" /> default</span>}
-                      <StatusBadge status={a.is_active ? "active" : "rejected"} />
-                      <span className="chip border-phantix-600/40 bg-phantix-800/50 text-[12px] text-slate-400">{humanize(a.account_kind)}</span>
-                      <span className={cx("chip text-[12px]", a.target_environment === "production" ? "border-severity-medium/40 bg-severity-medium/10 text-severity-medium" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300")}>{humanize(a.target_environment)}</span>
-                    </div>
-                    <div className="mt-2 grid gap-1 text-[13px] text-slate-400 sm:grid-cols-2">
-                      {a.login_url && <p className="flex items-center gap-1.5 truncate"><Globe2 size={11} className="shrink-0 text-gold-400" /> login: {a.login_url}</p>}
-                      {a.register_url && <p className="flex items-center gap-1.5 truncate"><Mail size={11} className="shrink-0 text-gold-400" /> register: {a.register_url}</p>}
-                      <p className="flex items-center gap-1.5"><KeyRound size={11} /> {a.username || a.email || "—"}</p>
-                      <p className="flex items-center gap-1.5"><Lock size={11} /> {a.password_set ? "password set" : "no password"} · OTP {humanize(a.otp_mode)}</p>
-                    </div>
-                    {a.notes && <p className="mt-2 text-[12px] italic text-slate-500">{a.notes}</p>}
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      {!a.is_default && (
-                        <button onClick={() => void setDefault(a)} className="btn-ghost !px-2.5 !py-1.5 !text-[13px]"><Star size={12} className="mr-1 inline" /> Set default</button>
-                      )}
-                      <button onClick={() => setAccountModal({ open: true, editing: a })} className="btn-ghost !px-2.5 !py-1.5 !text-[13px]"><Pencil size={12} className="mr-1 inline" /> Edit</button>
-                      <button onClick={() => void deleteAccount(a)} disabled={busyAccount === a.id} className="btn-ghost !px-2.5 !py-1.5 !text-[13px] text-severity-critical hover:text-severity-critical">
-                        {busyAccount === a.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            {bootstrap?.test_accounts.length === 0 ? (
+              <EmptyState icon={<KeyRound size={22} />} title="No test accounts" body="Add reusable test login / registration credentials so AGI can use them automatically per environment." />
+            ) : (
+              <div className="-mx-5 -mb-5 overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-phantix-700/40">
+                      <th className="th">Label</th>
+                      <th className="th">Kind</th>
+                      <th className="th">Environment</th>
+                      <th className="th">Credentials</th>
+                      <th className="th">Default</th>
+                      <th className="th"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bootstrap?.test_accounts.map((a) => (
+                      <tr key={a.id} className={cx("border-b border-phantix-800/40 last:border-0 hover:bg-phantix-800/35", a.is_default && "bg-gold-400/[0.03]")}>
+                        <td className="td">
+                          <p className="font-mono text-[13px] font-semibold text-white">{a.label}</p>
+                          <div className="mt-1"><StatusBadge status={a.is_active ? "active" : "rejected"} /></div>
+                          {a.notes && <p className="mt-1 max-w-[220px] truncate text-[12px] italic text-slate-500" title={a.notes}>{a.notes}</p>}
+                        </td>
+                        <td className="td text-xs text-slate-400">{humanize(a.account_kind)}</td>
+                        <td className="td">
+                          <span className={cx("chip text-[12px]", a.target_environment === "production" ? "border-severity-medium/40 bg-severity-medium/10 text-severity-medium" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300")}>{humanize(a.target_environment)}</span>
+                        </td>
+                        <td className="td">
+                          <div className="max-w-[280px] space-y-1 text-[13px] text-slate-400">
+                            {a.login_url && <p className="flex items-center gap-1.5 truncate" title={a.login_url}><Globe2 size={11} className="shrink-0 text-gold-400" /> login: {a.login_url}</p>}
+                            {a.register_url && <p className="flex items-center gap-1.5 truncate" title={a.register_url}><Mail size={11} className="shrink-0 text-gold-400" /> register: {a.register_url}</p>}
+                            <p className="flex items-center gap-1.5"><KeyRound size={11} /> {a.username || a.email || "—"}</p>
+                            <p className="flex items-center gap-1.5"><Lock size={11} /> {a.password_set ? "password set" : "no password"} · OTP {humanize(a.otp_mode)}</p>
+                          </div>
+                        </td>
+                        <td className="td">
+                          {a.is_default ? <span className="chip border-gold-400/40 bg-gold-400/10 text-[12px] text-gold-300"><Star size={10} className="mr-1 inline" /> default</span> : <span className="text-xs text-slate-600">—</span>}
+                        </td>
+                        <td className="td text-right">
+                          <div className="flex flex-wrap justify-end items-center gap-1.5">
+                            {!a.is_default && (
+                              <button onClick={() => void setDefault(a)} className="btn-ghost !px-2.5 !py-1.5 !text-[13px]"><Star size={12} className="mr-1 inline" /> Set default</button>
+                            )}
+                            <button onClick={() => setAccountModal({ open: true, editing: a })} className="btn-ghost !px-2.5 !py-1.5 !text-[13px]"><Pencil size={12} className="mr-1 inline" /> Edit</button>
+                            <button onClick={() => void deleteAccount(a)} disabled={busyAccount === a.id} className="btn-ghost !px-2.5 !py-1.5 !text-[13px] text-severity-critical hover:text-severity-critical">
+                              {busyAccount === a.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
         </motion.div>
       </div>

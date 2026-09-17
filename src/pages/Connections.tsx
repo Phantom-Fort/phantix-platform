@@ -109,98 +109,121 @@ export default function Connections() {
           />
         </Card>
       ) : (
-        <div className="space-y-4">
-          {state.connections.map((c, i) => (
-            <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card hover>
-                <div className="flex flex-wrap items-center gap-4">
-                  <span className={cx("flex h-12 w-12 items-center justify-center rounded-md", c.bootstrap_status === "ready" ? "bg-emerald-400/12 text-emerald-400" : "bg-phantix-800/70 text-phantix-300")}>
-                    <Database size={20} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-slate-100">{c.name}</p>
-                      {c.is_primary && <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">primary</span>}
-                      <StatusBadge status={c.bootstrap_status} />
-                    </div>
-                    <p className="mt-1 font-mono text-xs text-slate-500">
-                      {c.db_type} · {c.host}:{c.port}/{c.database_name}
-                    </p>
-                    <p className="mt-0.5 text-[13px] text-slate-600">
-                      {humanize(c.connection_purpose)} --- {c.connection_purpose === "security_data_storage"
-                        ? "writes only to its own dedicated schema"
-                        : "roles, privileges, policies; never business rows"}
-                      {c.last_test_at && ` · last test ${c.last_test_ok ? "passed" : "failed"} ${timeAgo(c.last_test_at)}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="btn-secondary !py-2"
-                      disabled={busyId === c.id}
-                      onClick={async () => {
-                        if (!(await guard())) return;
-                        setBusyId(c.id);
-                        try {
-                          await testConnection(c.id);
-                          toast("success", "Connectivity OK", "Live probe succeeded.");
-                        } catch (err) {
-                          toast("error", "Test failed", err instanceof Error ? err.message : "Connection test failed");
-                        } finally {
-                          setBusyId(null);
-                        }
-                      }}
-                    >
-                      {busyId === c.id ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />} Test
-                    </button>
-                    {c.connection_purpose === "security_data_storage" && c.bootstrap_status !== "ready" && (
-                      <button
-                        className="btn-primary !py-2"
-                        disabled={busyId === c.id}
-                        onClick={async () => {
-                          if (!(await guard())) return;
-                          setBusyId(c.id);
-                          try {
-                            const boot = await bootstrapConnection(c.id);
-                            if (boot?.pending) {
-                              toast("info", "Sent for approval", "Schema bootstrap is parked for an authorizer — approve it from Authorizations to finish.");
-                            } else {
-                              toast("success", "Schema bootstrapped", "Security database ready --- assets, scans, findings, risks, evidence.");
-                            }
-                          } catch (err) {
-                            toast("error", "Bootstrap failed", err instanceof Error ? err.message : "Bootstrap failed");
-                          } finally {
-                            setBusyId(null);
-                          }
-                        }}
-                      >
-                        {busyId === c.id ? <Loader2 size={14} className="animate-spin" /> : null}
-                        Bootstrap schema
-                      </button>
-                    )}
-                    <button
-                      className="btn-ghost !p-2 text-slate-500 hover:text-severity-critical"
-                      onClick={async () => {
-                        if (!(await guard())) return;
-                        try {
-                          const del = await deleteConnection(c.id);
-                          if (del?.pending) {
-                            toast("info", "Sent for approval", "Connection removal is parked for an authorizer — approve it from Authorizations.");
-                          } else {
-                            toast("info", "Connection deleted");
-                          }
-                        } catch (err) {
-                          toast("error", "Delete failed", err instanceof Error ? err.message : "Delete failed");
-                        }
-                      }}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="!p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-phantix-700/40">
+                    <th className="th">Name</th>
+                    <th className="th">Engine</th>
+                    <th className="th">Host:Port · DB</th>
+                    <th className="th">Purpose</th>
+                    <th className="th">Last test</th>
+                    <th className="th">Status</th>
+                    <th className="th"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.connections.map((c) => (
+                    <tr key={c.id} className="border-b border-phantix-800/40 hover:bg-phantix-800/35">
+                      <td className="td">
+                        <div className="flex items-center gap-3">
+                          <span className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-md", c.bootstrap_status === "ready" ? "bg-emerald-400/12 text-emerald-400" : "bg-phantix-800/70 text-phantix-300")}>
+                            <Database size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <p className="font-medium text-slate-100">{c.name}</p>
+                              {c.is_primary && <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">primary</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="td font-mono text-xs text-slate-400">{c.db_type}</td>
+                      <td className="td whitespace-nowrap font-mono text-xs text-slate-500">{c.host}:{c.port}/{c.database_name}</td>
+                      <td className="td text-[13px] text-slate-500">
+                        {humanize(c.connection_purpose)}
+                        <p className="text-[12px] text-slate-600">
+                          {c.connection_purpose === "security_data_storage" ? "own dedicated schema" : "roles, privileges, policies"}
+                        </p>
+                      </td>
+                      <td className="td whitespace-nowrap text-xs text-slate-500">
+                        {c.last_test_at ? `${c.last_test_ok ? "passed" : "failed"} ${timeAgo(c.last_test_at)}` : "—"}
+                      </td>
+                      <td className="td"><StatusBadge status={c.bootstrap_status} /></td>
+                      <td className="td text-right">
+                        <div className="flex flex-wrap justify-end items-center gap-1.5">
+                          <button
+                            className="btn-secondary !px-2.5 !py-1.5 !text-xs"
+                            disabled={busyId === c.id}
+                            onClick={async () => {
+                              if (!(await guard())) return;
+                              setBusyId(c.id);
+                              try {
+                                await testConnection(c.id);
+                                toast("success", "Connectivity OK", "Live probe succeeded.");
+                              } catch (err) {
+                                toast("error", "Test failed", err instanceof Error ? err.message : "Connection test failed");
+                              } finally {
+                                setBusyId(null);
+                              }
+                            }}
+                          >
+                            {busyId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />} Test
+                          </button>
+                          {c.connection_purpose === "security_data_storage" && c.bootstrap_status !== "ready" && (
+                            <button
+                              className="btn-primary !px-2.5 !py-1.5 !text-xs"
+                              disabled={busyId === c.id}
+                              onClick={async () => {
+                                if (!(await guard())) return;
+                                setBusyId(c.id);
+                                try {
+                                  const boot = await bootstrapConnection(c.id);
+                                  if (boot?.pending) {
+                                    toast("info", "Sent for approval", "Schema bootstrap is parked for an authorizer — approve it from Authorizations to finish.");
+                                  } else {
+                                    toast("success", "Schema bootstrapped", "Security database ready --- assets, scans, findings, risks, evidence.");
+                                  }
+                                } catch (err) {
+                                  toast("error", "Bootstrap failed", err instanceof Error ? err.message : "Bootstrap failed");
+                                } finally {
+                                  setBusyId(null);
+                                }
+                              }}
+                            >
+                              {busyId === c.id ? <Loader2 size={13} className="animate-spin" /> : null}
+                              Bootstrap schema
+                            </button>
+                          )}
+                          <button
+                            className="btn-ghost !p-1.5 text-slate-500 hover:text-severity-critical"
+                            onClick={async () => {
+                              if (!(await guard())) return;
+                              try {
+                                const del = await deleteConnection(c.id);
+                                if (del?.pending) {
+                                  toast("info", "Sent for approval", "Connection removal is parked for an authorizer — approve it from Authorizations.");
+                                } else {
+                                  toast("info", "Connection deleted");
+                                }
+                              } catch (err) {
+                                toast("error", "Delete failed", err instanceof Error ? err.message : "Delete failed");
+                              }
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </motion.div>
       )}
 
       {/* Driver availability */}
