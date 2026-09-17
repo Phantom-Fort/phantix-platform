@@ -143,7 +143,7 @@ export default function People() {
               reference an admin consults occasionally, not the task they came
               to do. */}
           <UsersTable
-            onUnlock={() => void requireDualControl("This action requires a dual-control operate session.")}
+            onUnlock={() => requireDualControl("This action requires a dual-control operate session.")}
             roles={rbacRoles}
             apps={appCatalog}
           />
@@ -815,7 +815,7 @@ function UsersTable({
   roles,
   apps,
 }: {
-  onUnlock: () => void;
+  onUnlock: () => Promise<boolean>;
   roles: Array<{ key: string; name: string; permissions: string[] }>;
   apps: Array<{ key: string; label: string; permissions: string[] }>;
 }) {
@@ -937,8 +937,8 @@ function UsersTable({
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
                       title="Application access — assign a role per application (Core / Attack / Defend / Code)"
-                      onClick={() => {
-                        if (!operate.unlocked) { onUnlock(); return; }
+                      onClick={async () => {
+                        if (!operate.unlocked && !(await onUnlock())) return;
                         setAppUser(u);
                       }}
                     >
@@ -949,7 +949,7 @@ function UsersTable({
                       title={!state.serviceKey ? "App access requires an active service key --- create one on the Identity page" : "Generate a one-time app sign-in URL"}
                       disabled={!state.serviceKey || linkingId === u.id}
                       onClick={async () => {
-                        if (!operate.unlocked) { onUnlock(); return; }
+                        if (!operate.unlocked && !(await onUnlock())) return;
                         setLinkingId(u.id);
                         try {
                           const url = await issueLoginLink(u.id);
@@ -967,8 +967,8 @@ function UsersTable({
                     <button
                       className="btn-ghost !px-2.5 !py-1.5 !text-xs"
                       title="Set platform password (forced change at first sign-in)"
-                      onClick={() => {
-                        if (!operate.unlocked) { onUnlock(); return; }
+                      onClick={async () => {
+                        if (!operate.unlocked && !(await onUnlock())) return;
                         setPwd("");
                         setPwdFor({ id: u.id, name: u.full_name });
                       }}
@@ -980,7 +980,7 @@ function UsersTable({
                       title="Clear device bind"
                       disabled={clearingId === u.id}
                       onClick={async () => {
-                        if (!operate.unlocked) { onUnlock(); return; }
+                        if (!operate.unlocked && !(await onUnlock())) return;
                         setClearingId(u.id);
                         try {
                           await clearDevice(u.id);
