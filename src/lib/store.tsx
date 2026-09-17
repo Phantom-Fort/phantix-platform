@@ -1550,12 +1550,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
         return;
       }
-      // Company JWT accepted for both bootstrap and reassignment (per backend docs)
+      // Company JWT is only accepted for first-time bootstrap (dual control not
+      // yet configured) — once configured, the backend requires the unlocked
+      // operate session (X-Dual-Control-Session) even for a company-JWT caller
+      // (app/core/org_rbac_dependencies.py's require_bootstrap_or_operator).
+      // Sending it unconditionally is a no-op pre-bootstrap (no token exists
+      // yet) and the fix needed post-bootstrap: without it, reassignment 403s
+      // with the raw backend "Dual-control is already configured…" message
+      // instead of ever attaching the session it's telling the caller to use.
       await api.put("/org-users/dual-control", {
         initiator_user_id: initiatorId,
         authorizer_user_id: authorizerId,
         require_dual_control: true,
-      });
+      }, { dualControl: true });
       // Guardrail: verify the backend actually stored the assignment (DUAL_CONTROL_SETUP_FE §Phase 2)
       try {
         const dcCheck = await api.get<unknown>("/org-users/dual-control");
