@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Radar, ShieldCheck, Loader2, Plus, Pencil, Trash2, CheckCircle2,
-  RefreshCw, Lock, Mail, Globe2, Star, ToggleLeft, ToggleRight, KeyRound,
+  RefreshCw, Lock, Mail, Globe2, Star, ToggleLeft, ToggleRight, KeyRound, AlertTriangle,
 } from "lucide-react";
 import DocLink from "@/components/DocLink";
 import { PageHeader, Card, CardHeader, Modal, EmptyState, StatusBadge, PageHeaderSkeleton, SettingsSkeleton } from "@/components/ui";
@@ -48,7 +49,14 @@ type Bootstrap = {
   settings: OrgSettings | null;
   test_accounts: TestAccount[];
   agreement: { version: string | null; title: string | null; accepted: boolean; must_accept: boolean } | null;
-  access: { agi_can_use: boolean; blockers: { code: string; message: string }[]; entitled: boolean } | null;
+  access: {
+    /** Backend `customer_access_snapshot().agi` — keys the readiness panel reads. */
+    can_use?: boolean;
+    entitled: boolean;
+    org_enabled?: boolean;
+    agreement_required?: boolean;
+    blockers: { code: string; message: string }[];
+  } | null;
   ui: { sections: string[] } | null;
 };
 
@@ -65,7 +73,7 @@ const demoBootstrap: Bootstrap = {
     { id: 2, label: "staging-api", account_kind: "login", target_environment: "staging", login_url: "https://api-staging.example.com/login", register_url: null, username: "tester", email: "", password_set: true, otp_mode: "interactive", is_default: false, is_active: true, notes: "", created_at: new Date().toISOString() },
   ],
   agreement: { version: "1.0.0", title: "Autonomous Pentest Agent Usage Agreement", accepted: true, must_accept: false },
-  access: { agi_can_use: true, blockers: [], entitled: true },
+  access: { can_use: true, blockers: [], entitled: true },
   ui: { sections: ["settings", "test_accounts"] },
 };
 
@@ -91,6 +99,7 @@ const emptyAccount: AccountForm = {
 
 export default function AgiSettings() {
   const { toast, requireDualControl } = useStore();
+  const navigate = useNavigate();
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -143,6 +152,24 @@ export default function AgiSettings() {
     const cur = bootstrap?.settings;
     if (!cur) return;
     void patchSettings({ [field]: !cur[field] });
+  };
+
+  // The usage agreement is per organization and can be accepted from any
+  // surface. Without this the platform admin sees "agreement required" but has
+  // no way to clear it without going to the Attack app.
+  const acceptAgreement = async () => {
+    if (!(await requireDualControl("Accepting the Autonomous Agent agreement requires a dual-control operate session."))) return;
+    setSaving(true);
+    try {
+      if (DEMO_MODE) await delay(300);
+      else await api.post("/agi/agreement/accept", { accepted: true, surface: "platform" }, { dualControl: true });
+      toast("success", "Agreement accepted", "The Autonomous Agent can now run for this organization.");
+      await load();
+    } catch (e: any) {
+      toast("error", "Could not accept agreement", e instanceof Error ? e.message : "");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveSettings = () => {
@@ -250,7 +277,88 @@ export default function AgiSettings() {
         }
       />
 
-      {/* Access banner */}
+      {/* Readiness — one row per gate, each with the action that clears it. A
+          blocker list alone tells an admin the agent is off but not that the
+          fix is "buy a plan", "accept the agreement" or "flip this switch". */}
+      <Card className="mb-4">
+        <CardHeader
+          title="Readiness"
+          subtitle="Every gate the Autonomous Agent needs, and where to clear it"
+          action={<ShieldCheck size={16} className="text-gold-400" />}
+        />
+        <ul className="space-y-2.5">
+          {bootstrap?.access && (
+            <li className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                {bootstrap.access.entitled ? (
+                  <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+                ) : (
+                  <Lock size={16} className="mt-0.5 shrink-0 text-gold-400" />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">A plan that includes the agent</p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                    {bootstrap.access.entitled
+                      ? "Your current plan is entitled to the Autonomous Agent."
+                      : "Your plan does not include the Autonomous Agent. Upgrade on Billing, or request the AI Pentest Agent pack from Phantix sales."}
+                  </p>
+                </div>
+              </div>
+              {!bootstrap.access.entitled && (
+                <button className="btn-primary shrink-0 !px-3 !py-1.5 !text-xs" onClick={() => navigate("/billing")}>
+                  Go to Billing
+                </button>
+              )}
+            </li>
+          )}
+          {bootstrap?.agreement && (
+            <li className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                {bootstrap.agreement.accepted ? (
+                  <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+                ) : (
+                  <Lock size={16} className="mt-0.5 shrink-0 text-gold-400" />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">Usage agreement</p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                    {bootstrap.agreement.accepted
+                      ? `Accepted (version ${bootstrap.agreement.version ?? "—"}).`
+                      : "A company admin must accept the Autonomous Agent usage agreement before any session can run."}
+                  </p>
+                </div>
+              </div>
+              {!bootstrap.agreement.accepted && (
+                <button className="btn-primary shrink-0 !px-3 !py-1.5 !text-xs" disabled={saving} onClick={() => void acceptAgreement()}>
+                  {saving ? <Loader2 size={12} className="mr-1 inline animate-spin" /> : <ShieldCheck size={12} className="mr-1 inline" />} Review &amp; accept
+                </button>
+              )}
+            </li>
+          )}
+          {s && (
+            <li className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                {s.enabled_for_org ? (
+                  <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+                ) : (
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0 text-gold-400" />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">Enabled for this organization</p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                    {s.enabled_for_org
+                      ? "Operators can start scoped sessions once the agreement is accepted."
+                      : "Turn it on below to make the Autonomous Agent available to your operators."}
+                  </p>
+                </div>
+              </div>
+            </li>
+          )}
+        </ul>
+      </Card>
+
+      {/* Raw blockers (platform disabled, entitlement edge cases) — kept as a
+          safety net so nothing is silently hidden. */}
       {bootstrap?.access && bootstrap.access.blockers.length > 0 && (
         <Card className="mb-4 border-gold-400/25">
           <div className="flex items-start gap-2.5">
