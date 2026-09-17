@@ -176,74 +176,94 @@ export default function Integrations() {
       )}
 
       {tab === "installed" && (
-        <motion.div key="inst" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-3">
+        <motion.div key="inst" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
           {installations.loading && !installations.data.length ? (
             <CardListSkeleton rows={3} />
           ) : installations.data.length === 0 ? (
             <EmptyState icon={<PlugZap size={32} />} title="Nothing installed yet" body="Browse the Connectors tab and install your first integration." />
-          ) : installations.data.map((inst, i) => (
-            <motion.div key={inst.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-              <Card className="!p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-md border", inst.status === "active" ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400" : "border-gold-400/30 bg-gold-400/10 text-gold-300")}>
-                    {connectorGlyph(inst.connector_id)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-slate-100">{inst.label || hubConnectorMeta[inst.connector_id]?.short || inst.connector_id}</p>
-                      {inst.has_secrets && (
-                        <span className="inline-flex items-center gap-1 rounded bg-phantix-800/80 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-slate-400"><Lock size={9} /> secrets</span>
-                      )}
-                    </div>
-                    <p className="text-[13px] text-slate-500">
-                      {humanize(inst.connector_id)} · {humanize(inst.auth_mode)}
-                      {inst.created_at ? ` · added ${timeAgo(inst.created_at)}` : ""}
-                      {inst.health?.last_test_at ? ` · last test ${timeAgo(String(inst.health.last_test_at))}` : ""}
-                    </p>
-                  </div>
-                  <StatusBadge status={inst.status} />
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {inst.status === "pending_auth" && (
-                      <button className="btn-secondary !px-2.5 !py-1 !text-[13px]" onClick={async () => {
-                        try {
-                          const oauth = await startHubOAuth(inst.id);
-                          const w = window.open(oauth.authorize_url, "_blank", "popup,width=560,height=720");
-                          if (!w) window.location.href = oauth.authorize_url;
-                        } catch (e) { toast("error", "OAuth start failed", e instanceof Error ? e.message : ""); }
-                      }}>
-                        <ExternalLink size={11} /> Resume OAuth
-                      </button>
-                    )}
-                    <button className="btn-ghost !px-2.5 !py-1 !text-[13px]" onClick={() => void runTest(inst)}>
-                      <TestTube size={11} /> Test
-                    </button>
-                    {inst.has_secrets && inst.connector_id !== "slack" && inst.connector_id !== "teams" && (
-                      <button className="btn-ghost !px-2.5 !py-1 !text-[13px]" onClick={async () => {
-                        if (!(await requireDualControl("Rotating a secret requires a dual-control operate session."))) return;
-                        try {
-                          const res = await rotateHubSecret(inst.id, true);
-                          if (isPendingApproval(res)) {
-                            toast("info", "Sent for approval", "Secret rotation is parked for an authorizer.");
-                            installations.refresh();
-                          } else {
-                            const value = String(res?.secret ?? res?.webhook_secret ?? res?.webhook_url ?? "");
-                            if (value) revealSecret(`New secret · ${inst.label}`, value);
-                            else toast("success", "Secret rotated");
-                            installations.refresh();
-                          }
-                        } catch (e) { toast("error", "Rotate failed", e instanceof Error ? e.message : ""); }
-                      }}>
-                        <RotateCcw size={11} /> Rotate
-                      </button>
-                    )}
-                    <button className="btn-ghost !px-2.5 !py-1 !text-[13px] text-severity-critical" onClick={() => void confirmUninstall(inst)}>
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
+          ) : (
+            <Card className="!p-0 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-phantix-700/40">
+                      <th className="th">Integration</th>
+                      <th className="th">Type</th>
+                      <th className="th">Auth mode</th>
+                      <th className="th">Added</th>
+                      <th className="th">Last test</th>
+                      <th className="th">Status</th>
+                      <th className="th"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installations.data.map((inst) => (
+                      <tr key={inst.id} className="border-b border-phantix-800/40 hover:bg-phantix-800/35">
+                        <td className="td">
+                          <div className="flex items-center gap-3">
+                            <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-md border", inst.status === "active" ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400" : "border-gold-400/30 bg-gold-400/10 text-gold-300")}>
+                              {connectorGlyph(inst.connector_id)}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-200">{inst.label || hubConnectorMeta[inst.connector_id]?.short || inst.connector_id}</p>
+                              {inst.has_secrets && (
+                                <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-phantix-800/80 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-slate-400"><Lock size={9} /> secrets</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="td text-xs text-slate-400">{humanize(inst.connector_id)}</td>
+                        <td className="td text-xs text-slate-400">{humanize(inst.auth_mode)}</td>
+                        <td className="td whitespace-nowrap text-xs text-slate-500">{inst.created_at ? timeAgo(inst.created_at) : "—"}</td>
+                        <td className="td whitespace-nowrap text-xs text-slate-500">{inst.health?.last_test_at ? timeAgo(String(inst.health.last_test_at)) : "—"}</td>
+                        <td className="td"><StatusBadge status={inst.status} /></td>
+                        <td className="td text-right">
+                          <div className="flex flex-wrap justify-end items-center gap-1.5">
+                            {inst.status === "pending_auth" && (
+                              <button className="btn-secondary !px-2.5 !py-1 !text-[13px]" onClick={async () => {
+                                try {
+                                  const oauth = await startHubOAuth(inst.id);
+                                  const w = window.open(oauth.authorize_url, "_blank", "popup,width=560,height=720");
+                                  if (!w) window.location.href = oauth.authorize_url;
+                                } catch (e) { toast("error", "OAuth start failed", e instanceof Error ? e.message : ""); }
+                              }}>
+                                <ExternalLink size={11} /> Resume OAuth
+                              </button>
+                            )}
+                            <button className="btn-ghost !px-2.5 !py-1 !text-[13px]" onClick={() => void runTest(inst)}>
+                              <TestTube size={11} /> Test
+                            </button>
+                            {inst.has_secrets && inst.connector_id !== "slack" && inst.connector_id !== "teams" && (
+                              <button className="btn-ghost !px-2.5 !py-1 !text-[13px]" onClick={async () => {
+                                if (!(await requireDualControl("Rotating a secret requires a dual-control operate session."))) return;
+                                try {
+                                  const res = await rotateHubSecret(inst.id, true);
+                                  if (isPendingApproval(res)) {
+                                    toast("info", "Sent for approval", "Secret rotation is parked for an authorizer.");
+                                    installations.refresh();
+                                  } else {
+                                    const value = String(res?.secret ?? res?.webhook_secret ?? res?.webhook_url ?? "");
+                                    if (value) revealSecret(`New secret · ${inst.label}`, value);
+                                    else toast("success", "Secret rotated");
+                                    installations.refresh();
+                                  }
+                                } catch (e) { toast("error", "Rotate failed", e instanceof Error ? e.message : ""); }
+                              }}>
+                                <RotateCcw size={11} /> Rotate
+                              </button>
+                            )}
+                            <button className="btn-ghost !px-2.5 !py-1 !text-[13px] text-severity-critical" onClick={() => void confirmUninstall(inst)}>
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
         </motion.div>
       )}
 

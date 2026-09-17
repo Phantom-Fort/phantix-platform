@@ -168,10 +168,16 @@ async function request<T>(
       } catch { /* non-JSON */ }
       const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
       const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
-      // Match the structured operate-middleware error shape as well as the human
-      // message. The org / org-user session stays intact — the user is NOT logged
-      // out when only the dual-control operate session is gone/missing.
+      // Match the explicit ``WWW-Authenticate: DualControl`` challenge the
+      // operate middleware sends on 401 (concurrent-sessions.md §4.2) as well as
+      // the structured operate-middleware shape and the human message. The org /
+      // org-user session stays intact — the user is NOT logged out when only the
+      // dual-control operate session is gone/missing.
+      const operateChallenge = (res.headers.get("WWW-Authenticate") || "")
+        .toLowerCase()
+        .includes("dualcontrol");
       const dcSessionIssue =
+        operateChallenge ||
         detailObj?.error === "dual_control_session_required" ||
         detailObj?.error === "dual_control_session_expired" ||
         (detailObj as Record<string, unknown> | null)?.["required_header"] === "X-Dual-Control-Session" ||
@@ -244,7 +250,11 @@ async function requestMultipart<T>(
       } catch { /* non-JSON */ }
       const detailObj = detail && typeof detail === "object" ? (detail as Record<string, unknown>) : null;
       const msg = typeof detail === "string" ? detail : detailObj?.message ? String(detailObj.message) : "";
+      const operateChallenge = (res.headers.get("WWW-Authenticate") || "")
+        .toLowerCase()
+        .includes("dualcontrol");
       const dcSessionIssue =
+        operateChallenge ||
         detailObj?.error === "dual_control_session_required" ||
         (detailObj as Record<string, unknown> | null)?.["required_header"] === "X-Dual-Control-Session" ||
         /authenticator session|dual.?control session|X-Dual-Control-Session/i.test(msg);
