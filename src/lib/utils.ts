@@ -1,5 +1,24 @@
+import type { KeyboardEvent } from "react";
+
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * Spread onto a clickable `<tr>`/`<motion.tr>` alongside its existing `onClick`
+ * so the row opens on Enter/Space too, not just a mouse click.
+ */
+export function clickableRowProps(onActivate: () => void) {
+  return {
+    tabIndex: 0,
+    role: "button" as const,
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onActivate();
+      }
+    },
+  };
 }
 
 export function timeAgo(iso: string | null): string {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Loader2, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { cx, statusColor, titleCase } from "@/lib/utils";
@@ -143,12 +143,49 @@ export function AnimatedNumber({ value, duration = 900 }: { value: number; durat
   return <>{display.toLocaleString()}</>;
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; wide?: boolean }) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    const fn = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     if (open) window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const first = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (first ?? dialogRef.current)?.focus();
+    return () => {
+      previouslyFocused.current?.focus?.();
+    };
+  }, [open]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -160,9 +197,14 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
             className={cx("glass-bright w-full rounded-2xl shadow-card", wide ? "max-w-3xl" : "max-w-lg")}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            ref={dialogRef}
+            tabIndex={-1}
           >
             <div className="flex items-center justify-between border-b border-phantix-700/40 px-6 py-4">
-              <h3 className="font-display text-base font-semibold text-white">{title}</h3>
+              <h3 id={titleId} className="font-display text-base font-semibold text-white">{title}</h3>
               <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-phantix-700/50 hover:text-white">
                 <X size={16} />
               </button>
