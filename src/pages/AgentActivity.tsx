@@ -8,7 +8,7 @@ import {
   loadAgentActivity,
   type AgentAction,
 } from "@/lib/agentActivity";
-import { cx, timeAgo, formatDateTime } from "@/lib/utils";
+import { cx, timeAgo, formatDateTime, clickableRowProps } from "@/lib/utils";
 
 // ── Agent activity ───────────────────────────────────────────────────────────
 // The agent acts as the signed-in user and never inherits authority. Every tool
@@ -187,8 +187,9 @@ export default function AgentActivity() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: Math.min(i * 0.015, 0.4) }}
-                        className="cursor-pointer border-b border-phantix-800/40 hover:bg-phantix-800/35"
+                        className="cursor-pointer border-b border-phantix-800/40 hover:bg-phantix-800/35 focus:outline-none focus:ring-1 focus:ring-gold-400/60 focus:ring-inset"
                         onClick={() => setOpen(open === row.id ? null : row.id)}
+                        {...clickableRowProps(() => setOpen(open === row.id ? null : row.id))}
                       >
                         <td className="td whitespace-nowrap text-[13px] text-slate-400" title={row.created_at ? formatDateTime(row.created_at) : ""}>
                           {timeAgo(row.created_at ?? null)}

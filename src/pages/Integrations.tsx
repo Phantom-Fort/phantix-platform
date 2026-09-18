@@ -6,6 +6,7 @@ import {
   MessageSquare, Send, Webhook, Lock, Unlock,
 } from "lucide-react";
 import DocLink from "@/components/DocLink";
+import { BrandIcon } from "@/components/BrandIcon";
 import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Tabs, EmptyState, Modal, CopyChip, SkeletonCard, CardListSkeleton } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { isPendingApproval } from "@/lib/api";
@@ -24,9 +25,8 @@ const catIcons: Record<string, React.ReactNode> = {
   automation: <Webhook size={16} />,
 };
 
-function connectorGlyph(id: string): React.ReactNode {
-  const m = hubConnectorMeta[id];
-  return m ? <span className="text-[15px] leading-none">{m.icon}</span> : <Cable size={16} />;
+function connectorGlyph(id: string, iconHint?: string): React.ReactNode {
+  return <BrandIcon connectorId={id} iconHint={iconHint} size={16} />;
 }
 
 export default function Integrations() {
@@ -138,7 +138,7 @@ export default function Integrations() {
                     <Card className="flex h-full flex-col !p-4">
                       <div className="flex items-start gap-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gold-400/30 bg-gold-400/10 text-gold-300">
-                          {connectorGlyph(conn.connector_id)}
+                          {connectorGlyph(conn.connector_id, conn.icon)}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
