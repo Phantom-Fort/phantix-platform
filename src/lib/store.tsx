@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
 import { tokens, DEMO_MODE, delay, api, deviceId, emailFromToken, clearCorrelationId, isPendingApproval } from "./api";
+import { claimExchange, newExchangeGuard } from "./deviceConfirm";
 import {
   emptyOrg,
   isSecurityDbReady,
@@ -610,6 +611,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const dcPromptResolve = useRef<((ok: boolean) => void) | null>(null);
   const dcMfaToken = useRef<string>("");
   const dcDeviceToken = useRef<string>("");
+  const dcExchange = useRef(newExchangeGuard<{ done: boolean }>());
   const dcEmail = useRef<string>("");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
@@ -1859,21 +1861,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       // Poll the device-confirm status — the user opens the org-specific link
       // from email; once it's confirmed the backend issues the operate session.
-      const res = await api.post<{
-        confirmed?: boolean;
-        access_token?: string;
-        session_token?: string;
-        dual_control_session?: string;
-        inactivity_expires_at?: string;
-        user?: { full_name?: string; email?: string; id?: number };
-      }>("/org-users/auth/device-status", {
-        challenge: dcDeviceToken.current,
-        device_id: deviceId(),
-      });
-      if (!res || res.confirmed === false || !res.access_token) return { done: false };
-      applyOperateSession(res);
-      if (!tokens.dualControl) throw new Error("Operate session was not issued");
-      return { done: true };
+      const challenge = dcDeviceToken.current;
+      const exchange = async (): Promise<{ done: boolean }> => {
+        const res = await api.post<{
+          confirmed?: boolean;
+          already_completed?: boolean;
+          access_token?: string;
+          session_token?: string;
+          dual_control_session?: string;
+          inactivity_expires_at?: string;
+          user?: { full_name?: string; email?: string; id?: number };
+        }>("/org-users/auth/device-status", {
+          challenge,
+          device_id: deviceId(),
+        });
+        if (!res || res.confirmed === false || !res.access_token) return { done: false };
+        applyOperateSession(res);
+        if (!tokens.dualControl) throw new Error("Operate session was not issued");
+        return { done: true };
+      };
+      // Single-use: the overlay fires this from a timer, a refocus check and
+      // two cross-tab signals at once, and a second exchange would revoke the
+      // operate session the first one just issued.
+      return claimExchange(dcExchange.current, challenge, exchange, (r) => r.done);
     },
     [applyOperateSession],
   );
