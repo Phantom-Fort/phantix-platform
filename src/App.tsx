@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
 import CookieConsent from "@/components/CookieConsent";
+import SessionExpiredOverlay from "@/components/SessionExpiredOverlay";
 import { BrandLoader } from "@/components/BrandLoader";
 import Login from "@/pages/auth/Login";
 import ChangePassword from "@/pages/auth/ChangePassword";
@@ -41,12 +42,17 @@ const NotFound = React.lazy(() => import("@/pages/NotFound"));
 
 // Authenticated + setup-complete gate for management routes
 function RequireManagement({ children }: { children: React.ReactNode }) {
-  const { session, state, sessionLoading } = useStore();
+  const { session, state, sessionLoading, sessionExpired } = useStore();
   const location = useLocation();
   // Verify the session before rendering OR redirecting — no flash of the app
   // or of the login page while the stored session is still being restored.
   if (sessionLoading) return <BrandLoader label="Platform" />;
-  if (!session?.authenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!session?.authenticated) {
+    // A dropped app session shows the SessionExpiredOverlay in place instead of
+    // an abrupt redirect — keep the current page mounted underneath it.
+    if (sessionExpired.active) return <>{children}</>;
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
   // Admin-assigned password: change it before touching any management screen.
   if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (!state.setup.setup_complete) return <Navigate to="/setup" replace />;
@@ -107,6 +113,7 @@ export default function App() {
             </Route>
           </Routes>
         </React.Suspense>
+        <SessionExpiredOverlay />
         <ToastViewport />
         <CookieConsent />
       </BrowserRouter>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Mail, KeyRound, ArrowRight, Send, AlertTriangle } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -68,6 +68,7 @@ function NewsletterField() {
 export default function Login() {
   const { login, verifyMfa, resendLoginOtp, state } = useStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
@@ -88,7 +89,19 @@ export default function Login() {
   }, [locked]);
   const retryIn = lockedUntil != null ? Math.max(0, Math.ceil((lockedUntil - now) / 1000)) : 0;
 
-  const destination = () => (state.setup.setup_complete ? "/dashboard" : "/setup");
+  // Return the user to wherever they were before the session dropped (set by
+  // RequireManagement / SessionExpiredOverlay); otherwise go to the usual landing.
+  const fromState = (location.state as { from?: unknown } | null)?.from;
+  const fromPath =
+    typeof fromState === "string"
+      ? fromState
+      : fromState && typeof fromState === "object"
+        ? `${(fromState as { pathname?: string }).pathname ?? ""}${(fromState as { search?: string }).search ?? ""}${(fromState as { hash?: string }).hash ?? ""}`
+        : "";
+  const destination = () => {
+    if (fromPath && fromPath !== "/login") return fromPath;
+    return state.setup.setup_complete ? "/dashboard" : "/setup";
+  };
 
   const resend = async () => {
     if (resending) return;

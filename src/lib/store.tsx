@@ -154,6 +154,13 @@ type Session = {
   mustChangePassword?: boolean;
 } | null;
 
+/**
+ * Set when the server ends an authenticated session mid-use (a 401 clears the
+ * bearer tokens). We hold the current page in place under a card rather than
+ * redirecting abruptly, so the user can return to it after signing back in.
+ */
+type SessionExpired = { active: boolean; returnTo: string };
+
 interface PersistedState {
   org: Organization;
   setup: SetupState;
@@ -476,6 +483,11 @@ type Store = {
   operate: OperateState;
   securityDbReady: boolean;
   sessionLoading: boolean;
+  /** App session ended mid-use: hold the page under a "sign back in" card. */
+  sessionExpired: SessionExpired;
+  clearSessionExpired: () => void;
+  /** End the app session and raise the "sign back in" card in place. */
+  expireSession: () => void;
   billingEntitlements: Record<string, any> | null;
   // auth
   register: (name: string, email: string, password: string, country: string, slug: string, industry: string, secondary_email: string, primary_contact: {title: string, name: string}) => Promise<{ mfaRequired: boolean }>;
@@ -617,19 +629,37 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const toastId = useRef(0);
   const hydrating = useRef(false);
   const [sessionLoading, setSessionLoading] = useState(!!(tokens.platform && !DEMO_MODE));
+  const [sessionExpired, setSessionExpired] = useState<SessionExpired>({ active: false, returnTo: "" });
   const [billingEntitlements, setBillingEnts] = useState<Record<string, any> | null>(null);
 
-  // Auto-redirect to login when token expires (401 clears tokens via api client)
+  const clearSessionExpired = useCallback(() => {
+    setSessionExpired({ active: false, returnTo: "" });
+  }, []);
+
+  /**
+   * End the app session and raise the "sign back in" card in place. Used both
+   * when a 401 clears the bearer tokens and when the inactivity timer fires; in
+   * either case the current page stays mounted so the user can pick up where
+   * they left off.
+   */
+  const expireSession = useCallback(() => {
+    tokens.platform = null;
+    tokens.orgUser = null;
+    tokens.email = null;
+    tokens.dualControl = null;
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+    setSessionExpired((prev) => (prev.active ? prev : { active: true, returnTo }));
+  }, []);
+
+  // Detect the app session ending underneath us (a 401 clears the bearer tokens
+  // via the api client) and hold the current page under the expired card.
   useEffect(() => {
     const check = () => {
       if (session?.authenticated && !tokens.platform) {
-        // Don't redirect during setup --- polling refreshSetup may hit transient 401s
+        // Don't interrupt setup --- polling refreshSetup may hit transient 401s
         if (window.location.pathname === "/setup") return;
-        tokens.orgUser = null;
-        tokens.email = null;
-        tokens.dualControl = null;
-        setSession(null);
-        setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+        expireSession();
       }
     };
     const interval = setInterval(check, 2000);
@@ -638,7 +668,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       clearInterval(interval);
       window.removeEventListener("storage", check);
     };
-  }, [session]);
+  }, [session, expireSession]);
 
   const persist = useCallback((updater: (s: PersistedState) => PersistedState) => {
     setState((prev) => {
@@ -942,6 +972,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       tokens.email = email;
       const mustChangePassword = Boolean(res.must_change_password);
       setState(emptyState());
+      setSessionExpired({ active: false, returnTo: "" });
       setSession({
         authenticated: true,
         email,
@@ -996,6 +1027,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await delay(700);
       if (code.length !== 6) throw new Error("Enter the 6-digit code");
       tokens.platform = "demo.company.jwt";
+      setSessionExpired({ active: false, returnTo: "" });
       setSession({ authenticated: true, email: state.org.email || state.org.primary_email || "" });
       return;
     }
@@ -1014,6 +1046,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const email = session?.email || emailFromToken(res.access_token) || tokens.email || "";
     if (email) tokens.email = email;
     setState(emptyState());
+    setSessionExpired({ active: false, returnTo: "" });
     setSession({
       authenticated: true,
       email,
@@ -1072,9 +1105,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     tokens.email = null;
     clearCorrelationId();
     setSession(null);
+    clearSessionExpired();
     setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
     if (!DEMO_MODE) setState(emptyState());
-  }, []);
+  }, [clearSessionExpired]);
 
   // ── Setup wizard ─────────────────────────────────────────────────────────
   const acceptPrivacy = useCallback(async (version?: string) => {
@@ -2478,7 +2512,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Store>(
     () => ({
-      session, state, operate, securityDbReady, sessionLoading, billingEntitlements,
+      session, state, operate, securityDbReady, sessionLoading, sessionExpired, clearSessionExpired, expireSession, billingEntitlements,
       register, login, changePassword, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession,
       acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp, startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,
@@ -2490,7 +2524,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       toggleTool, createTicket, decidePending, refreshPending, refreshAudit, sendTestAlert, updateAlertSettings, exportAuditCsv, resetDemo,
       toasts, toast, dismissToast,
     }),
-    [session, state, operate, securityDbReady, toasts, dualControlPrompt,
+    [session, state, operate, securityDbReady, sessionExpired, clearSessionExpired, expireSession, toasts, dualControlPrompt,
       register, login, changePassword, verifyMfa, resendLoginOtp, resendRegisterOtp, logout, hydrateSession, refreshSession, acceptPrivacy, saveIdentity, updateOrgProfile, sendOtp, verifyOtp,
       startDomainVerification, checkDomain, submitCac, skipCac, requestManualReview, completeSetup, refreshSetup,
       createUser, assignDualControl, unlockOperate, lockOperate,

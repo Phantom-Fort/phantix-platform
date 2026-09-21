@@ -155,7 +155,7 @@ function OperateCountdown({ expiresAt }: { expiresAt: number }) {
 }
 
 export default function Layout() {
-  const { session, state, operate, lockOperate, logout, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
+  const { session, state, operate, lockOperate, logout, expireSession, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
   const [userMenu, setUserMenu] = useState(false);
   const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
   const { collapsed, toggle: toggleSidebar } = useSidebarCollapsed();
@@ -181,18 +181,22 @@ export default function Layout() {
     const WARNING_BEFORE_MS = 5 * 60 * 1000;
     let lastActivity = Date.now();
     let warned = false;
+    // The app session is kept mounted while the expired card is shown, so this
+    // effect stays alive --- fire the inactivity expiry exactly once.
+    let expired = false;
 
     const markActivity = () => { lastActivity = Date.now(); warned = false; };
     const events = ["mousedown", "keydown", "click", "scroll", "touchstart"];
     events.forEach((e) => window.addEventListener(e, markActivity));
 
     const check = () => {
-      if (!session?.authenticated) return;
+      if (!session?.authenticated || expired) return;
       const idle = Date.now() - lastActivity;
       const timeoutMs = getTimeoutMs();
       if (idle >= timeoutMs) {
+        expired = true;
         toast("warning", "Session expired", "You have been logged out due to a long period of inactivity. Please sign in again.");
-        logout();
+        expireSession();
       } else if (idle >= (timeoutMs - WARNING_BEFORE_MS) && !warned) {
         warned = true;
         toast("info", "Session expiring soon", `You will be logged out in ${Math.round(WARNING_BEFORE_MS / 60000)} minutes due to inactivity.`);
@@ -208,7 +212,7 @@ export default function Layout() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [session?.authenticated, operate.expiresAt, logout, toast]);
+  }, [session?.authenticated, operate.expiresAt, expireSession, toast]);
 
   // Catch billing-required 402 responses and show upgrade prompt
   useEffect(() => {
