@@ -2250,20 +2250,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async () => {
       if (DEMO_MODE) {
         await delay(600);
-        logAudit("org.delete", "tenancy", "Deleted organization account");
-        try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-        logout();
-        return { pending: false };
+        logAudit("org.erasure_request", "privacy", "Filed organization erasure request");
+        return { pending: true };
       }
-      // Permanently deletes the whole platform account (organization + users,
-      // companies, keys, and data). Require dual-control operate when configured.
-      const res = await api.delete<Record<string, unknown>>("/organizations/me", { dualControl: true });
-      if (isPendingApproval(res)) return { pending: true };
-      logAudit("org.delete", "tenancy", "Deleted organization account");
-      logout();
-      return { pending: false };
+      // The backend exposes no immediate org-delete route: whole-account removal
+      // is a formal data-subject erasure request (NDPA §34–37) that staff fulfil.
+      // File it and keep the operator signed in — nothing is deleted yet.
+      await api.post<Record<string, unknown>>(
+        "/organizations/me/data-subject-request",
+        {
+          request_type: "erasure",
+          details: "Account erasure requested from the platform Danger Zone.",
+        },
+        { dualControl: true },
+      );
+      logAudit("org.erasure_request", "privacy", "Filed organization erasure request");
+      return { pending: true };
     },
-    [logAudit, logout],
+    [logAudit],
   );
 
   const rotateServiceKey = useCallback(
@@ -2284,7 +2288,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return secret;
       }
       // Per TWO_PLATFORM_AUTH.md: POST /organizations/me/service-key creates-or-rotates
-      const path = companyId ? `/organizations/me/companies/${companyId}/service-key` : "/organizations/me/service-key";
+      // for the org; a child company's key lives at /organizations/companies/{id}/service-key.
+      const path = companyId ? `/organizations/companies/${companyId}/service-key` : "/organizations/me/service-key";
       const keyName = companyId
         ? state.companies.find((c) => c.id === companyId)?.name ?? state.org.name
         : state.org.name;

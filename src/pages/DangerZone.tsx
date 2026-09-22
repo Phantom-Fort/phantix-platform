@@ -38,7 +38,11 @@ export default function DangerZone() {
       else res = await deleteOrgUser(target.id);
 
       if (res.pending) {
-        toast("info", "Sent for approval", "This deletion has been filed for the authorizer's sign-off.");
+        if (target.kind === "account") {
+          toast("info", "Erasure request submitted", "SecureGraph staff will process your data-erasure request. You stay signed in until it is fulfilled.");
+        } else {
+          toast("info", "Sent for approval", "This deletion has been filed for the authorizer's sign-off.");
+        }
       } else {
         toast("success", "Deleted", target.kind === "account" ? "Your account has been deleted." : `${target.name} was removed.`);
       }
@@ -61,7 +65,7 @@ export default function DangerZone() {
 
   const confirmTitle = pending
     ? pending.kind === "account"
-      ? "Delete this account?"
+      ? "Request account erasure?"
       : pending.kind === "company"
         ? `Delete company "${pending.name}"?`
         : `Delete user "${pending.name}"?`
@@ -70,14 +74,16 @@ export default function DangerZone() {
   const confirmMessage = pending ? (
     pending.kind === "account" ? (
       <>
-        This permanently deletes <strong className="text-severity-critical">{pending.name}</strong> and everything in it:
-        organization users, child companies, service keys, security database connections, and all stored data.
-        This cannot be undone.
+        This files a formal <strong className="text-severity-critical">data-erasure request</strong> for{" "}
+        <strong className="text-severity-critical">{pending.name}</strong> (NDPA §34–37). SecureGraph staff
+        process it; organization users, child companies, service keys, connections and stored data are
+        removed when it is fulfilled. You stay signed in until then.
       </>
     ) : pending.kind === "company" ? (
       <>
-        This deletes the child company <strong className="text-severity-critical">{pending.name}</strong>, its service key,
-        users, and isolated data. This cannot be undone.
+        This removes the child company <strong className="text-severity-critical">{pending.name}</strong> from your account:
+        it disappears from the group and its service key and users stop working. Data is retained for audit and
+        can be restored by support.
       </>
     ) : (
       <>
@@ -112,17 +118,17 @@ export default function DangerZone() {
             {/* ── 1. Whole account ─────────────────────────────────── */}
             <DangerRow
               icon={<ShieldAlert size={16} />}
-              title="Delete this account"
+              title="Request account deletion"
               body={
                 <>
-                  Permanently delete <strong className="text-slate-200">{state.org.name}</strong>{" "}
-                  <span className="font-mono text-slate-500">#{state.org.id}</span> and all users, child companies,
-                  service keys, and stored data.
+                  File a formal <strong className="text-slate-200">data-erasure request</strong> for{" "}
+                  {state.org.name} <span className="font-mono text-slate-500">#{state.org.id}</span>. SecureGraph
+                  staff process it; users, child companies, service keys and stored data are removed when it is fulfilled.
                 </>
               }
             >
               <button className="btn-danger shrink-0" onClick={() => setPending({ kind: "account", name: state.org.name || state.org.slug || "DELETE" })}>
-                <Trash2 size={14} /> Delete account
+                <Trash2 size={14} /> Request deletion
               </button>
             </DangerRow>
 
