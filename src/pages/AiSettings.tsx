@@ -15,7 +15,14 @@ type AiStatus = {
   mode: string;
   providers: { id: string; configured: boolean }[];
   monthly_tokens: number;
+  /** Monthly token ceiling (`token_budget` from GET /ai/usage). */
+  monthly_token_budget: number;
   monthly_cost_usd: number;
+  /** Same spend in Naira — the product prices in NGN. */
+  monthly_cost_ngn: number | null;
+  monthly_spend_limit_usd: number;
+  /** False once a budget is exhausted (AI calls are refused, not degraded). */
+  ai_allowed: boolean;
   free_models_enabled: boolean;
   continuous_pr_enabled: boolean;
   free_plan: boolean;
@@ -33,7 +40,11 @@ const demoAi: AiStatus = {
     { id: "anthropic", configured: false },
   ],
   monthly_tokens: 128_400,
+  monthly_token_budget: 1_000_000,
   monthly_cost_usd: 6.42,
+  monthly_cost_ngn: 9630,
+  monthly_spend_limit_usd: 50,
+  ai_allowed: true,
   free_models_enabled: false,
   continuous_pr_enabled: false,
   free_plan: true,
@@ -79,8 +90,15 @@ export default function AiSettings() {
                 configured: Boolean(p.configured),
               }))
             : enabledProviders.map((id) => ({ id, configured: true })),
-          monthly_tokens: Number(usage?.monthly_tokens ?? settings?.monthly_tokens ?? 0),
-          monthly_cost_usd: Number(usage?.monthly_cost_usd ?? settings?.monthly_cost_usd ?? 0),
+          // GET /ai/usage returns tokens_used / cost_usd / token_budget / spend_limit_usd
+          // (not "monthly_tokens" / "monthly_cost_usd") — reading the wrong keys
+          // left the usage card pinned at 0 tokens / $0.00.
+          monthly_tokens: Number(usage?.tokens_used ?? 0),
+          monthly_token_budget: Number(usage?.token_budget ?? 0),
+          monthly_cost_usd: Number(usage?.cost_usd ?? 0),
+          monthly_cost_ngn: usage?.cost_ngn != null ? Number(usage.cost_ngn) : null,
+          monthly_spend_limit_usd: Number(usage?.spend_limit_usd ?? 0),
+          ai_allowed: usage?.allowed !== false,
           free_models_enabled: Boolean(settings?.free_models_enabled),
           continuous_pr_enabled: Boolean(settings?.continuous_pr_enabled),
           free_plan: Boolean(models?.free_plan),
@@ -352,16 +370,32 @@ export default function AiSettings() {
             subtitle="Cost visibility — every call audited with prompt version + model"
             defaultOpen={false}
           >
-            <div className="flex items-end gap-8">
+            <div className="flex flex-wrap items-end gap-8">
               <div>
-                <p className="font-display text-3xl font-bold text-white">{ai.monthly_tokens.toLocaleString()}</p>
-                <p className="text-xs text-slate-500">tokens</p>
+                <p className="font-display text-3xl font-bold text-white">{(ai.monthly_tokens ?? 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500">
+                  tokens used{ai.monthly_token_budget ? ` of ${ai.monthly_token_budget.toLocaleString()}` : ""}
+                </p>
               </div>
               <div>
-                <p className="font-display text-3xl font-bold text-gold-300">${ai.monthly_cost_usd.toFixed(2)}</p>
-                <p className="text-xs text-slate-500">estimated cost</p>
+                <p className="font-display text-3xl font-bold text-gold-300">${(ai.monthly_cost_usd ?? 0).toFixed(2)}</p>
+                <p className="text-xs text-slate-500">
+                  estimated cost
+                  {ai.monthly_cost_ngn != null ? ` · ₦${Math.round(ai.monthly_cost_ngn).toLocaleString()}` : ""}
+                </p>
               </div>
+              {ai.monthly_spend_limit_usd > 0 && (
+                <div>
+                  <p className="font-display text-3xl font-bold text-slate-200">${ai.monthly_spend_limit_usd.toFixed(2)}</p>
+                  <p className="text-xs text-slate-500">monthly spend cap</p>
+                </div>
+              )}
             </div>
+            {ai.ai_allowed === false && (
+              <p className="mt-3 rounded-md border border-severity-medium/30 bg-severity-medium/10 px-3 py-2 text-[13px] text-severity-medium">
+                Budget reached for this cycle — AI calls are refused until credits are topped up or the cycle resets.
+              </p>
+            )}
             <div className="mt-5 space-y-2 text-xs leading-5 text-slate-400">
               <p>· PII is redacted before any provider call</p>
               <p>· Hallucination heuristics + cost/budget gates on every request</p>
