@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, CheckCircle2, Loader2, Bot, ToggleLeft, ToggleRight, ShieldCheck, GitPullRequest } from "lucide-react";
 import DocLink from "@/components/DocLink";
-import { PageHeader, Card, CardHeader, CollapsibleCard, Modal } from "@/components/ui";
+import { PageHeader, Card, CardHeader, CollapsibleCard, Modal, PageSkeleton } from "@/components/ui";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { cx } from "@/lib/utils";
@@ -211,9 +211,7 @@ export default function AiSettings() {
 
   if (loading || !ai) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-400">
-        <Loader2 className="h-5 w-5 animate-spin" /> Loading AI settings...
-      </div>
+      <PageSkeleton variant="settings" rows={3} className="!mx-0 !max-w-none" />
     );
   }
 
