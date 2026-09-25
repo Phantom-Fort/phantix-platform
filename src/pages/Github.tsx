@@ -243,7 +243,7 @@ export default function GithubIntegration() {
         actions={
           <>
             <DocLink docId="howto-platform-10" label="GitHub how-to" />
-            <button onClick={load} className="btn-ghost"><RefreshCw size={15} /></button>
+            <button onClick={load} className="btn-ghost" aria-label="Refresh GitHub status" title="Refresh"><RefreshCw size={15} /></button>
           </>
         }
       />

@@ -54,7 +54,7 @@ function NewsletterField() {
                 aria-label="Newsletter email"
               />
             </div>
-            <button type="button" onClick={subscribe} className="btn-secondary !px-3 !py-2">
+            <button type="button" onClick={subscribe} className="btn-secondary !px-3 !py-2" aria-label="Subscribe" title="Subscribe">
               <Send size={14} />
             </button>
           </div>

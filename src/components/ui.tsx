@@ -27,10 +27,10 @@ export function PasswordInput({
       <input {...props} type={visible ? "text" : "password"} className={cx(className, "!pr-10")} />
       <button
         type="button"
-        tabIndex={-1}
         onClick={() => setVisible((v) => !v)}
         aria-label={visible ? "Hide password" : "Show password"}
-        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+        aria-pressed={visible}
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-500 hover:bg-phantix-800/70 hover:text-slate-300"
       >
         {visible ? <EyeOff size={15} /> : <Eye size={15} />}
       </button>
