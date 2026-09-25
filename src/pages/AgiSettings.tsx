@@ -557,22 +557,27 @@ export default function AgiSettings() {
                   <tbody>
                     {bootstrap?.test_accounts.map((a) => (
                       <tr key={a.id} className={cx("border-b border-phantix-800/40 last:border-0 hover:bg-phantix-800/35", a.is_default && "bg-gold-400/[0.03]")}>
-                        <td className="td">
-                          <p className="font-mono text-[13px] font-semibold text-white">{a.label}</p>
-                          <div className="mt-1"><StatusBadge status={a.is_active ? "active" : "rejected"} /></div>
-                          {a.notes && <p className="mt-1 max-w-[220px] truncate text-[12px] italic text-slate-500" title={a.notes}>{a.notes}</p>}
+                        <td className="td whitespace-nowrap" title={a.notes || undefined}>
+                          <span className="inline-flex items-center gap-2">
+                            <span className="font-mono text-[13px] font-semibold text-white">{a.label}</span>
+                            <StatusBadge status={a.is_active ? "active" : "rejected"} />
+                          </span>
                         </td>
                         <td className="td text-xs text-slate-400">{humanize(a.account_kind)}</td>
                         <td className="td">
                           <span className={cx("chip text-[12px]", a.target_environment === "production" ? "border-severity-medium/40 bg-severity-medium/10 text-severity-medium" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300")}>{humanize(a.target_environment)}</span>
                         </td>
                         <td className="td">
-                          <div className="max-w-[280px] space-y-1 text-[13px] text-slate-400">
-                            {a.login_url && <p className="flex items-center gap-1.5 truncate" title={a.login_url}><Globe2 size={11} className="shrink-0 text-gold-400" /> login: {a.login_url}</p>}
-                            {a.register_url && <p className="flex items-center gap-1.5 truncate" title={a.register_url}><Mail size={11} className="shrink-0 text-gold-400" /> register: {a.register_url}</p>}
-                            <p className="flex items-center gap-1.5"><KeyRound size={11} /> {a.username || a.email || "—"}</p>
-                            <p className="flex items-center gap-1.5"><Lock size={11} /> {a.password_set ? "password set" : "no password"} · OTP {humanize(a.otp_mode)}</p>
-                          </div>
+                          <span
+                            className="flex max-w-[22rem] items-center gap-1.5 truncate text-[13px] text-slate-400"
+                            title={[a.login_url && `login: ${a.login_url}`, a.register_url && `register: ${a.register_url}`, `${a.password_set ? "password set" : "no password"} · OTP ${humanize(a.otp_mode)}`].filter(Boolean).join("\n")}
+                          >
+                            <KeyRound size={11} className="shrink-0" /> <span className="truncate">{a.username || a.email || "—"}</span>
+                            <span className="text-slate-600">·</span>
+                            <Lock size={11} className="shrink-0" /> {a.password_set ? "set" : "none"}
+                            {a.login_url && <Globe2 size={11} className="shrink-0 text-gold-400" aria-label="Has login URL" />}
+                            {a.register_url && <Mail size={11} className="shrink-0 text-gold-400" aria-label="Has register URL" />}
+                          </span>
                         </td>
                         <td className="td">
                           {a.is_default ? <span className="chip border-gold-400/40 bg-gold-400/10 text-[12px] text-gold-300"><Star size={10} className="mr-1 inline" /> default</span> : <span className="text-xs text-slate-600">—</span>}

@@ -53,16 +53,13 @@ export default function Support() {
                   {state.tickets.map((t) => (
                     <tr key={t.id} className="border-b border-phantix-800/40 hover:bg-phantix-800/35">
                       <td className="td max-w-[420px]">
-                        <div className="flex items-start gap-3">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 text-gold-400">
-                            <MessageSquare size={14} />
+                        <div className="flex items-center gap-2">
+                          <MessageSquare size={14} className="shrink-0 text-gold-400" aria-hidden="true" />
+                          <span className="block min-w-0 truncate" title={t.messages?.[0]?.body || t.subject}>
+                            <span className="font-mono text-[12px] text-gold-300">#{t.id}</span>
+                            <span className="ml-2 font-medium text-slate-100">{t.subject}</span>
+                            {t.messages?.[0]?.body && <span className="ml-2 text-[13px] text-slate-500">{t.messages[0].body}</span>}
                           </span>
-                          <div className="min-w-0">
-                            <p className="font-medium text-slate-100">#{t.id} · {t.subject}</p>
-                            <p className="mt-0.5 truncate text-[13px] leading-5 text-slate-400">
-                              {t.messages?.[0]?.body ? t.messages[0].body : <span className="text-slate-500">No message preview available.</span>}
-                            </p>
-                          </div>
                         </div>
                       </td>
                       <td className="td"><span className="chip border-phantix-600/50 bg-phantix-800/60 text-slate-400 capitalize">{t.priority}</span></td>

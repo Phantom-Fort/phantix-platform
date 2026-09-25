@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ShieldAlert, FileText, CheckCircle2, ScrollText, Ban } from "lucide-react";
 import { api, DEMO_MODE } from "@/lib/api";
+import { BrandMark } from "@/components/BrandLogo";
 
 interface AupSection {
   id?: string;
@@ -67,7 +68,7 @@ export default function AcceptableUsePolicy() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
           <div className="flex items-center gap-4">
-            <img src="/logo-white.png" alt="SecureGraph" className="h-16 w-16 object-contain" />
+            <BrandMark className="h-16 w-16" />
             <div>
               <h1 className="font-display text-3xl font-bold text-white">{aup?.title || "Acceptable Use Policy"}</h1>
               <p className="text-sm text-slate-500">{aup?.effective || aup?.summary || "Rules for using the SecureGraph platform lawfully and only on authorized systems"}</p>

@@ -19,7 +19,7 @@ import {
   BadgeCheck,
   Eye,
 } from "lucide-react";
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandMark, BrandWordmark } from "@/components/BrandLogo";
 import LottiePlayer from "@/components/LottiePlayer";
 import { cx } from "@/lib/utils";
 
@@ -273,11 +273,7 @@ function PipelineScene() {
         style={{ background: "conic-gradient(from 0deg at 50% 50%, rgba(113,113,122,0.28), transparent 75deg)" }}
       />
       <div className="relative flex h-36 w-36 items-center justify-center rounded-full bg-phantix-900/70 shadow-card ring-1 ring-phantix-700">
-        <BrandLogo
-          lightSrc="/logo-white.png"
-          darkSrc="/logo-white.png"
-          className="h-24 w-24 object-contain"
-        />
+        <BrandMark className="h-24 w-24" />
       </div>
       {STEPS.map((s) => (
         <div key={s.label} data-anim="node" className={cx("absolute flex items-center gap-2", s.pos)}>
@@ -531,8 +527,7 @@ export default function AuthShowcase() {
       </div>
 
       <header className="relative z-10 flex items-center gap-3 p-10 pb-6">
-        <BrandLogo lightSrc="/logo-white.png" darkSrc="/logo-white.png" className="h-9 w-9 object-contain" />
-        <span className="font-display text-lg font-semibold text-white">SecureGraph</span>
+        <BrandWordmark className="h-8" />
       </header>
 
       <main className="relative z-10 grid flex-1 grid-cols-1 items-center gap-10 px-10 py-6 xl:grid-cols-[1.05fr_0.95fr] xl:gap-14">

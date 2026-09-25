@@ -16,6 +16,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import SandboxBanner from "@/components/SandboxBanner";
 import { loadSandboxMe } from "@/lib/sandbox";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
+import { BrandMark, BrandWordmark } from "@/components/BrandLogo";
 
 type NavLeafItem = { to: string; label: string; icon: React.ReactNode };
 type NavDropdownItem = {
@@ -263,10 +264,10 @@ export default function Layout() {
         )}
       >
         <div className="flex items-center gap-3 px-4 pb-3 pt-4">
-          <img src="/logo-white.png" alt="SecureGraph" className="h-8 w-8 shrink-0 object-contain" />
-          <div className="sg-hide-collapsed">
-            <p className="font-display text-[15px] font-bold leading-tight text-white">SecureGraph</p>
-            <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-gold-400">Platform</p>
+          <BrandMark className="sg-show-collapsed h-8 w-8 shrink-0" />
+          <div className="sg-hide-collapsed flex flex-col">
+            <BrandWordmark className="h-8 self-start" />
+            <p className="mt-1 text-[12px] font-medium uppercase tracking-[0.18em] text-gold-400">Platform</p>
           </div>
           <button
             onClick={toggleSidebar}

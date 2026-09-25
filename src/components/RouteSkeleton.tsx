@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { PageSkeleton } from "@/components/ui";
 import { useSidebarCollapsed } from "@/lib/useSidebarCollapsed";
 import { cx } from "@/lib/utils";
+import { BrandMark } from "@/components/BrandLogo";
 
 type Variant = React.ComponentProps<typeof PageSkeleton>["variant"];
 
@@ -54,7 +55,7 @@ export function ShellSkeleton() {
         )}
       >
         <div className="flex items-center gap-3 px-4 pb-4 pt-4">
-          <img src="/logo-white.png" alt="" className="h-8 w-8 shrink-0 object-contain" />
+          <BrandMark alt="" className="h-8 w-8 shrink-0" />
           {!collapsed && (
             <div className="space-y-1.5">
               <div className="skeleton h-3.5 w-24 rounded" />

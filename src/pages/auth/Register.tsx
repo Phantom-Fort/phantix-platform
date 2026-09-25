@@ -6,6 +6,7 @@ import { useStore } from "@/lib/store";
 import { cx, humanize } from "@/lib/utils";
 import { DEMO_MODE } from "@/lib/api";
 import { PasswordInput } from "@/components/ui";
+import { BrandWordmark } from "@/components/BrandLogo";
 
 const slide = { initial: { opacity: 0, x: 30 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } };
 
@@ -67,7 +68,7 @@ export default function Register() {
       <div className="relative grid w-full max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
         {/* Pitch */}
         <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }} className="hidden lg:block">
-          <img src="/logo-white.png" alt="SecureGraph" className="h-20 w-20 object-contain" />
+          <BrandWordmark className="h-12" />
           <h1 className="mt-6 font-display text-4xl font-bold leading-tight tracking-tight text-white">
             Set up your security tenant in minutes
           </h1>

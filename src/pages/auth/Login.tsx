@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { DEMO_MODE, ApiError, throttleSeconds } from "@/lib/api";
 import { humanize } from "@/lib/utils";
 import { APP_DEMO_URL } from "@/lib/links";
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandWordmark } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import AuthShowcase from "@/components/AuthShowcase";
 import { PasswordInput } from "@/components/ui";
@@ -175,7 +175,7 @@ export default function Login() {
           >
             <div className="mb-8 text-center">
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.7, delay: 0.1 }} className="mx-auto">
-                <BrandLogo className="mx-auto h-20 w-20 drop-shadow-[0_0_40px_rgba(232,181,77,0.5)]" />
+                <BrandWordmark className="mx-auto block h-12" />
               </motion.div>
               <h1 className="mt-5 font-display text-2xl font-bold text-white">SecureGraph Platform</h1>
               <p className="mt-1.5 text-sm text-slate-400">Company or admin sign-in</p>
