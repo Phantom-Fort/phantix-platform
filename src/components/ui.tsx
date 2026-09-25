@@ -343,8 +343,8 @@ export function SkeletonBlock({ className }: { className?: string }) {
 export function PageHeaderSkeleton({ actions = false }: { actions?: boolean }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <div className="skeleton mb-2 h-5 w-48 rounded" />
+      <div className="min-w-0 flex-1">
+        <div className="skeleton mb-2 h-5 w-48 max-w-full rounded" />
         <div className="skeleton h-8 w-72 max-w-full rounded" />
         <div className="skeleton mt-3 h-3 w-96 max-w-full rounded" />
       </div>

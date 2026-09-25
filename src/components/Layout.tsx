@@ -15,6 +15,7 @@ import { cx } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import SandboxBanner from "@/components/SandboxBanner";
 import { loadSandboxMe } from "@/lib/sandbox";
+import { RouteSkeleton } from "@/components/RouteSkeleton";
 
 type NavLeafItem = { to: string; label: string; icon: React.ReactNode };
 type NavDropdownItem = {
@@ -155,7 +156,7 @@ function OperateCountdown({ expiresAt }: { expiresAt: number }) {
 }
 
 export default function Layout() {
-  const { session, state, operate, lockOperate, logout, expireSession, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
+  const { session, state, operate, lockOperate, logout, expireSession, securityDbReady, resetDemo, toast, requireDualControl, sessionLoading } = useStore();
   const [userMenu, setUserMenu] = useState(false);
   const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
   const { collapsed: collapsedPref, toggle: toggleSidebar } = useSidebarCollapsed();
@@ -372,8 +373,16 @@ export default function Layout() {
             </>
           )}
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="truncate font-display text-sm font-semibold text-slate-200">{state.org.name}</span>
-            <span className="chip hidden shrink-0 border-phantix-600/50 bg-phantix-800/60 font-mono text-slate-400 xl:inline-flex">{state.org.slug}</span>
+            {sessionLoading && !state.org.name ? (
+              <span className="skeleton h-4 w-40 rounded" aria-hidden="true" />
+            ) : (
+              <>
+                <span className="truncate font-display text-sm font-semibold text-slate-200">{state.org.name}</span>
+                {state.org.slug ? (
+                  <span className="chip hidden shrink-0 border-phantix-600/50 bg-phantix-800/60 font-mono text-slate-400 xl:inline-flex">{state.org.slug}</span>
+                ) : null}
+              </>
+            )}
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2.5">
@@ -395,7 +404,9 @@ export default function Layout() {
               </NavLink>
             )}
             <ThemeToggle />
-            {securityDbReady ? (
+            {sessionLoading ? (
+              <span className="skeleton hidden h-7 w-40 rounded-md md:block" aria-hidden="true" />
+            ) : securityDbReady ? (
               <span className="chip hidden whitespace-nowrap border-emerald-400/30 bg-emerald-400/10 text-emerald-300 md:inline-flex">
                 <Database size={12} /> Security DB · ready
               </span>
@@ -473,7 +484,10 @@ export default function Layout() {
               stops an ultrawide display stretching a table across the glass. */}
           <div className="mx-auto w-full min-w-0 max-w-[1600px]">
             {session?.authenticated && <SandboxBanner />}
-            <Outlet />
+            {/* Switching pages keeps the chrome and animates only the content. */}
+            <React.Suspense fallback={<RouteSkeleton />}>
+              <Outlet />
+            </React.Suspense>
           </div>
         </main>
 

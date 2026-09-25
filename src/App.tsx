@@ -4,7 +4,7 @@ import { StoreProvider, ToastViewport, useStore } from "@/lib/store";
 import Layout from "@/components/Layout";
 import CookieConsent from "@/components/CookieConsent";
 import SessionExpiredOverlay from "@/components/SessionExpiredOverlay";
-import { BrandLoader } from "@/components/BrandLoader";
+import { RouteSkeleton, ShellSkeleton } from "@/components/RouteSkeleton";
 import Login from "@/pages/auth/Login";
 import ChangePassword from "@/pages/auth/ChangePassword";
 import DeviceConfirm from "@/pages/DeviceConfirm";
@@ -46,7 +46,9 @@ function RequireManagement({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   // Verify the session before rendering OR redirecting — no flash of the app
   // or of the login page while the stored session is still being restored.
-  if (sessionLoading) return <BrandLoader label="Platform" />;
+  // The page is drawn as its skeleton meanwhile, never a full-screen loader.
+  // A restored session already renders the real chrome, so only the page is drawn.
+  if (sessionLoading) return session?.authenticated ? <RouteSkeleton /> : <ShellSkeleton />;
   if (!session?.authenticated) {
     // A dropped app session shows the SessionExpiredOverlay in place instead of
     // an abrupt redirect — keep the current page mounted underneath it.
@@ -62,7 +64,13 @@ function RequireManagement({ children }: { children: React.ReactNode }) {
 // Setup wizard requires auth; once complete there is nothing to resume
 function SetupRoute() {
   const { session, state, sessionLoading } = useStore();
-  if (sessionLoading) return <BrandLoader label="Platform" />;
+  if (sessionLoading) {
+    return (
+      <div className="px-4 py-10 sm:px-8">
+        <RouteSkeleton />
+      </div>
+    );
+  }
   if (!session?.authenticated) return <Navigate to="/login" replace />;
   if (session?.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (state.setup.setup_complete) return <Navigate to="/dashboard" replace />;
@@ -73,7 +81,7 @@ export default function App() {
   return (
     <StoreProvider>
       <BrowserRouter>
-        <React.Suspense fallback={<BrandLoader label="Platform" />}>
+        <React.Suspense fallback={<ShellSkeleton />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/change-password" element={<ChangePassword />} />
