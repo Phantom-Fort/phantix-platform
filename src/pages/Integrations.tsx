@@ -104,7 +104,7 @@ export default function Integrations() {
         actions={
           <>
             <DocLink docId="howto-platform-12" label="Integrations how-to" />
-            <button onClick={refreshAll} className="btn-ghost">
+            <button onClick={refreshAll} className="btn-ghost" aria-label="Refresh integrations" title="Refresh">
               <RefreshCw size={15} />
             </button>
           </>

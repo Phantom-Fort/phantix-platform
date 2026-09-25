@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Building2, Users, Database, Wrench, CreditCard, LifeBuoy,
   ScrollText, LogOut, Lock, Unlock, ChevronDown, ChevronLeft, ChevronRight, Timer, KeyRound, Rocket,
   RotateCcw, Sparkles, BellRing, Github, Radar, FlaskConical, Cable,
-  AlertTriangle, Activity, MoreHorizontal, LayoutGrid, ArrowLeft,
+  AlertTriangle, Activity, MoreHorizontal, LayoutGrid, ArrowLeft, Menu, X,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useSidebarCollapsed } from "@/lib/useSidebarCollapsed";
@@ -158,9 +158,24 @@ export default function Layout() {
   const { session, state, operate, lockOperate, logout, expireSession, securityDbReady, resetDemo, toast, requireDualControl } = useStore();
   const [userMenu, setUserMenu] = useState(false);
   const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
-  const { collapsed, toggle: toggleSidebar } = useSidebarCollapsed();
+  const { collapsed: collapsedPref, toggle: toggleSidebar } = useSidebarCollapsed();
+  // Below lg the sidebar is an off-canvas drawer; the collapsed icon rail is a desktop preference only.
+  const [mobileNav, setMobileNav] = useState(false);
+  const collapsed = collapsedPref && !mobileNav;
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setMobileNav(false);
+    setUserMenu(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileNav) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMobileNav(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileNav]);
 
   useEffect(() => {
     if (!session?.authenticated) {
@@ -229,11 +244,20 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen">
+      {mobileNav && (
+        <div
+          className="fixed inset-0 z-40 bg-phantix-950/70 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileNav(false)}
+          aria-hidden="true"
+        />
+      )}
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside
+        id="platform-sidebar"
         data-collapsed={collapsed ? "" : undefined}
         className={cx(
-          "sg-sidebar fixed inset-y-0 left-0 z-40 flex flex-col border-r border-phantix-700/40 bg-[rgb(var(--surface-sidebar))]",
+          "sg-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-phantix-700/40 bg-[rgb(var(--surface-sidebar))] transition-transform duration-200 lg:z-40 lg:translate-x-0",
+          mobileNav ? "translate-x-0 shadow-2xl" : "-translate-x-full",
           collapsed ? "w-[72px]" : "w-[248px]",
         )}
       >
@@ -247,9 +271,17 @@ export default function Layout() {
             onClick={toggleSidebar}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="ml-auto rounded-md border border-phantix-700 bg-phantix-900 p-1.5 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
+            className="ml-auto hidden rounded-md border border-phantix-700 bg-phantix-900 p-1.5 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white lg:inline-flex"
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <button
+            onClick={() => setMobileNav(false)}
+            title="Close navigation"
+            aria-label="Close navigation"
+            className="ml-auto rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white lg:hidden"
+          >
+            <X size={16} />
           </button>
         </div>
 
@@ -314,8 +346,17 @@ export default function Layout() {
       </aside>
 
       {/* ── Main ────────────────────────────────────────────── */}
-      <div className={cx("flex min-h-screen flex-1 flex-col", collapsed ? "ml-[72px]" : "ml-[248px]")}>
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-phantix-700/40 bg-phantix-950/80 px-6 py-3 backdrop-blur-xl">
+      <div className={cx("flex min-h-screen min-w-0 flex-1 flex-col", collapsedPref ? "lg:ml-[72px]" : "lg:ml-[248px]")}>
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-phantix-700/40 bg-phantix-950/80 px-4 py-3 backdrop-blur-xl sm:gap-3 sm:px-6">
+          <button
+            onClick={() => setMobileNav(true)}
+            aria-label="Open navigation"
+            aria-controls="platform-sidebar"
+            aria-expanded={mobileNav}
+            className="shrink-0 rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white lg:hidden"
+          >
+            <Menu size={18} />
+          </button>
           {location.pathname.startsWith("/docs") && (
             <>
               <button
@@ -330,12 +371,12 @@ export default function Layout() {
               <span className="h-6 w-px bg-phantix-700/40" aria-hidden="true" />
             </>
           )}
-          <div className="flex items-center gap-2.5">
-            <span className="font-display text-sm font-semibold text-slate-200">{state.org.name}</span>
-            <span className="chip border-phantix-600/50 bg-phantix-800/60 font-mono text-slate-400">{state.org.slug}</span>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="truncate font-display text-sm font-semibold text-slate-200">{state.org.name}</span>
+            <span className="chip hidden shrink-0 border-phantix-600/50 bg-phantix-800/60 font-mono text-slate-400 xl:inline-flex">{state.org.slug}</span>
           </div>
 
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2.5">
             {sandboxEnrolled && (
               <NavLink
                 to="/sandbox"
@@ -355,25 +396,35 @@ export default function Layout() {
             )}
             <ThemeToggle />
             {securityDbReady ? (
-              <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
+              <span className="chip hidden whitespace-nowrap border-emerald-400/30 bg-emerald-400/10 text-emerald-300 md:inline-flex">
                 <Database size={12} /> Security DB · ready
               </span>
             ) : (
-              <button onClick={() => navigate("/connections")} className="chip border-severity-medium/40 bg-severity-medium/10 text-severity-medium transition-colors hover:bg-severity-medium/20">
-                <Database size={12} /> Security DB · not connected
+              <button
+                onClick={() => navigate("/connections")}
+                title="Security DB not connected"
+                aria-label="Security DB not connected — connect it"
+                className="chip whitespace-nowrap border-severity-medium/40 bg-severity-medium/10 text-severity-medium transition-colors hover:bg-severity-medium/20"
+              >
+                <Database size={12} /> <span className="hidden md:inline">Security DB · not connected</span>
               </button>
             )}
-            <span className="chip border-phantix-600/50 bg-phantix-800/60 text-slate-300">{state.org.plan} plan</span>
+            {state.org.plan ? (
+              <span className="chip hidden whitespace-nowrap border-phantix-600/50 bg-phantix-800/60 text-slate-300 lg:inline-flex">{state.org.plan} plan</span>
+            ) : null}
 
             <div className="relative">
               <button
                 onClick={() => setUserMenu((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={userMenu}
+                aria-label="Account menu"
                 className="flex items-center gap-2.5 rounded-md border border-phantix-700/50 bg-phantix-900/60 py-1.5 pl-1.5 pr-2.5 hover:border-phantix-500/50"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-gold-400/40 bg-phantix-850 font-display text-xs font-bold text-gold-300">
                   {(session?.email ?? "A").slice(0, 1).toUpperCase()}
                 </span>
-                <span className="text-left">
+                <span className="hidden text-left sm:block">
                   <span className="block text-xs font-semibold leading-tight text-slate-200">Company account</span>
                   <span className="block max-w-[150px] truncate text-[12px] leading-tight text-slate-500">{session?.email}</span>
                 </span>
@@ -417,16 +468,16 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-6 lg:px-8">
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           {/* The one content measure for this app: pages fill it, and 1600px
               stops an ultrawide display stretching a table across the glass. */}
-          <div className="mx-auto w-full max-w-[1600px]">
+          <div className="mx-auto w-full min-w-0 max-w-[1600px]">
             {session?.authenticated && <SandboxBanner />}
             <Outlet />
           </div>
         </main>
 
-        <footer className="border-t border-phantix-700/30 px-8 py-4 text-[13px] text-slate-600 flex items-center justify-between">
+        <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-phantix-700/30 px-4 py-4 text-[13px] text-slate-600 sm:px-8">
           <span>SecureGraph Platform · organization management --- keys and people live here; product operations live in the Command Centre</span>
           <span className="font-mono">Tenant #{state.org.id}</span>
         </footer>

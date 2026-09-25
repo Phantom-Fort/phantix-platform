@@ -29,10 +29,10 @@ export default function CookieConsent() {
       <div className="mx-auto flex max-w-6xl flex-col items-start gap-3 sm:flex-row sm:items-center">
         <div className="flex items-start gap-2.5 sm:contents">
           <Cookie size={16} className="mt-0.5 shrink-0 text-gold-300 sm:mt-0" />
-          <p className="min-w-0 flex-1 text-xs leading-5 text-slate-300">
+          <p className="min-w-0 flex-1 text-[13px] leading-5 text-slate-300">
             We use <strong className="text-slate-200">first-party analytics</strong> to understand how the
-            platform is used — page path, referrer and coarse device info, with no cookies, no fingerprints
-            and no personal data. Read our{" "}
+            platform is used — page path, referrer and coarse device info, with no tracking cookies, no
+            fingerprints and no personal data. Your choice applies to every Phantix app. Read our{" "}
             <Link to={COOKIE_POLICY_PATH} className="text-gold-300 underline hover:text-gold-200">
               cookies &amp; analytics policy
             </Link>
@@ -40,10 +40,10 @@ export default function CookieConsent() {
           </p>
         </div>
         <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
-          <button className="btn-ghost flex-1 !px-3 !py-1.5 text-xs sm:flex-none" onClick={() => choose("declined")}>
+          <button className="btn-secondary flex-1 !px-3 !py-2 text-[13px] sm:flex-none" onClick={() => choose("declined")}>
             Decline
           </button>
-          <button className="btn-primary flex-1 !px-3 !py-1.5 text-xs sm:flex-none" onClick={() => choose("accepted")}>
+          <button className="btn-primary flex-1 !px-3 !py-2 text-[13px] sm:flex-none" onClick={() => choose("accepted")}>
             Accept analytics
           </button>
         </div>

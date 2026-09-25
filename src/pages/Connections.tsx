@@ -199,6 +199,8 @@ export default function Connections() {
                           )}
                           <button
                             className="btn-ghost !p-1.5 text-slate-500 hover:text-severity-critical"
+                            aria-label="Delete connection"
+                            title="Delete connection"
                             onClick={async () => {
                               if (!(await guard())) return;
                               try {

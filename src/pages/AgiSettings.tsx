@@ -413,6 +413,7 @@ export default function AgiSettings() {
                   <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wider text-slate-500">{label}</label>
                   <input
                     type="number"
+                    aria-label={label}
                     min={min}
                     max={max}
                     value={s ? Number(s[key]) : 0}
@@ -446,7 +447,7 @@ export default function AgiSettings() {
                           : b,
                       )
                     }
-                    className="text-[13px] text-gold-300 underline-offset-2 hover:underline"
+                    className="-mr-2 rounded-md px-2 py-1.5 text-[13px] text-gold-300 underline-offset-2 hover:underline"
                   >
                     {Number(s?.max_session_minutes) > 0 ? "Remove the cap" : "Set a hard stop"}
                   </button>
@@ -455,6 +456,7 @@ export default function AgiSettings() {
                   <>
                     <input
                       type="number"
+                      aria-label="Session length in minutes"
                       min={15}
                       max={1440}
                       value={Number(s?.max_session_minutes) || 120}

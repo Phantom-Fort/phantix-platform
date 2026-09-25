@@ -360,7 +360,7 @@ export default function Billing() {
         actions={
           <>
             <DocLink docId="howto-platform-11" label="Billing how-to" />
-            <button onClick={loadData} className="btn-ghost"><RefreshCw size={15} /></button>
+            <button onClick={loadData} className="btn-ghost" aria-label="Refresh billing" title="Refresh"><RefreshCw size={15} /></button>
           </>
         }
       />
