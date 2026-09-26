@@ -177,7 +177,6 @@ export default function Login() {
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.7, delay: 0.1 }} className="mx-auto">
                 <BrandWordmark className="mx-auto block h-12" />
               </motion.div>
-              <h1 className="mt-5 font-display text-2xl font-bold text-white">SecureGraph Platform</h1>
               <p className="mt-1.5 text-sm text-slate-400">Company or admin sign-in</p>
             </div>
 

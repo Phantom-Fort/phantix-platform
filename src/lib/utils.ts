@@ -21,9 +21,25 @@ export function clickableRowProps(onActivate: () => void) {
   };
 }
 
+/**
+ * Parse an API timestamp.
+ *
+ * The API records UTC and returns it without a zone designator
+ * ("2026-09-26T10:41:00"), which `new Date()` reads as *local* time. In a UTC+1
+ * zone every row the server had just written read "1h ago" instead of "just
+ * now" — in the notification bell and the audit trail alike.
+ */
+export function parseTimestamp(value: string): Date {
+  const trimmed = value.trim();
+  const bare = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(trimmed);
+  return new Date(bare ? `${trimmed.replace(" ", "T")}Z` : trimmed);
+}
+
 export function timeAgo(iso: string | null): string {
   if (!iso) return "---";
-  const diff = Date.now() - new Date(iso).getTime();
+  const then = parseTimestamp(iso).getTime();
+  if (Number.isNaN(then)) return "---";
+  const diff = Date.now() - then;
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
@@ -31,12 +47,12 @@ export function timeAgo(iso: string | null): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return parseTimestamp(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "---";
-  return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return parseTimestamp(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export function titleCase(s: string | null | undefined): string {
