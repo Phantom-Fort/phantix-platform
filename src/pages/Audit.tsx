@@ -240,31 +240,33 @@ export default function Audit() {
                         transition={{ delay: Math.min(i * 0.015, 0.4) }}
                         className="border-b border-phantix-800/40 hover:bg-phantix-800/35"
                       >
-                        <td className="td whitespace-nowrap">
-                          <p className="font-mono text-[13px] text-gold-300">#{e.id}</p>
-                          <p className="text-[11px] font-mono text-slate-600">{shortUid(e.event_uid)}</p>
+                        <td className="td whitespace-nowrap" title={e.event_uid ? `Event ${e.event_uid}` : undefined}>
+                          <span className="font-mono text-[13px] text-gold-300">#{e.id}</span>
+                          <span className="ml-1.5 font-mono text-[11px] text-slate-600">{shortUid(e.event_uid)}</span>
                         </td>
                         <td className="td">
                           <span className={cx("rounded-md border px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider", catColor)}>
                             {categoryLabel(cat)}
                           </span>
                           {e.details?.passive !== undefined && (
-                            <p className="mt-0.5 text-[11px] text-slate-600">{e.details.passive ? "read" : "write"}</p>
+                            <span className="ml-1.5 text-[11px] text-slate-500">{e.details.passive ? "read" : "write"}</span>
                           )}
                         </td>
-                        <td className="td max-w-[340px]">
-                          <p className="font-medium text-slate-200">{(desc?.label ?? e.action_label) || e.action_key || "Activity"}</p>
-                          <p className="text-[13px] leading-5 text-slate-400">{(desc?.detail ?? e.summary) || "An action was performed on the platform."}</p>
+                        <td className="td max-w-[30rem]">
+                          <span className="block truncate" title={(desc?.detail ?? e.summary) || undefined}>
+                            <span className="font-medium text-slate-100">{(desc?.label ?? e.action_label) || e.action_key || "Activity"}</span>
+                            <span className="ml-2 text-[13px] text-slate-500">{(desc?.detail ?? e.summary) || "An action was performed on the platform."}</span>
+                          </span>
                         </td>
                         <td className="td">
                           <div className="flex items-center gap-1.5">
                             <span className="flex h-5 w-5 items-center justify-center rounded-md bg-phantix-700/60 text-[11px] font-bold text-phantix-200">
                               {(e.initiator_name ?? "?").slice(0, 1)}
                             </span>
-                            <div>
-                              <p className="text-[13px] text-slate-300">{e.initiator_name ?? "—"}</p>
-                              <p className="text-[11px] text-slate-600">{e.initiator_title ?? ""}</p>
-                            </div>
+                            <span className="whitespace-nowrap text-[13px] text-slate-300">
+                              {e.initiator_name ?? "—"}
+                              {e.initiator_title && <span className="ml-1.5 text-slate-500">{e.initiator_title}</span>}
+                            </span>
                           </div>
                         </td>
                         <td className="td">
@@ -273,21 +275,21 @@ export default function Audit() {
                               <span className="flex h-5 w-5 items-center justify-center rounded-md bg-gold-400/20 text-[11px] font-bold text-gold-300">
                                 {e.authorizer_name.slice(0, 1)}
                               </span>
-                              <div>
-                                <p className="text-[13px] text-slate-300">{e.authorizer_name}</p>
-                                <p className="text-[11px] text-slate-600">{e.authorizer_title ?? ""}</p>
-                              </div>
+                              <span className="whitespace-nowrap text-[13px] text-slate-300">
+                                {e.authorizer_name}
+                                {e.authorizer_title && <span className="ml-1.5 text-slate-500">{e.authorizer_title}</span>}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-[13px] text-slate-600">—</span>
                           )}
                         </td>
                         <td className="td"><StatusPill status={e.status || "—"} /></td>
-                        <td className="td whitespace-nowrap text-[12px] text-slate-400">
-                          <p title={e.created_at ? formatDateTime(e.created_at) : ""}>{timeAgo(e.created_at)}</p>
-                          {e.initiated_at && e.completed_at && e.initiated_at !== e.completed_at && (
-                            <p className="text-[11px] text-slate-600">started {timeAgo(e.initiated_at)}</p>
-                          )}
+                        <td
+                          className="td whitespace-nowrap text-[13px] text-slate-400"
+                          title={[e.created_at ? formatDateTime(e.created_at) : "", e.initiated_at && e.completed_at && e.initiated_at !== e.completed_at ? `started ${timeAgo(e.initiated_at)}` : ""].filter(Boolean).join(" · ")}
+                        >
+                          {timeAgo(e.created_at)}
                         </td>
                         <td className="td font-mono text-[12px] text-slate-500">{e.ip_address ?? "—"}</td>
                       </motion.tr>

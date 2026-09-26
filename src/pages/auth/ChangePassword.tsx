@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { KeyRound, ArrowRight, ShieldCheck } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { PasswordInput } from "@/components/ui";
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandWordmark } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
@@ -61,7 +61,7 @@ export default function ChangePassword() {
         className="relative z-10 w-full max-w-[420px]"
       >
         <div className="mb-6 text-center">
-          <BrandLogo className="mx-auto h-16 w-16 drop-shadow-[0_0_40px_rgba(232,181,77,0.5)]" />
+          <BrandWordmark className="mx-auto block h-11" />
           <h1 className="mt-4 font-display text-xl font-bold text-white">Choose a new password</h1>
           <p className="mt-1 text-sm text-slate-400">
             Your admin assigned this password. Set your own to continue.

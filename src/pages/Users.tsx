@@ -7,6 +7,7 @@ import {
   Plus, Pencil, Trash2, Lock, Layers,
 } from "lucide-react";
 import DocLink from "@/components/DocLink";
+import { Pagination, usePaged } from "@/components/Pagination";
 import ApplicationAccessModal from "@/components/ApplicationAccessModal";
 import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Modal, EmptyState, Spinner, SkeletonCard, PasswordInput } from "@/components/ui";
 import { api, DEMO_MODE } from "@/lib/api";
@@ -843,6 +844,7 @@ function UsersTable({
   const visibleUsers = state.users.filter(
     (u) => appFilter === "all" || canAccess(u, appFilter),
   );
+  const { pageItems: userPageItems, pagination: userPagination } = usePaged(visibleUsers, "platform-users", appFilter);
 
   if (state.users.length === 0) {
     return <Card><EmptyState icon={<Users size={22} />} title="No users yet" /></Card>;
@@ -882,17 +884,17 @@ function UsersTable({
             </tr>
           </thead>
           <tbody>
-            {visibleUsers.map((u) => (
+            {userPageItems.map((u) => (
               <tr key={u.id} className="border-b border-phantix-800/40 hover:bg-phantix-800/35">
                 <td className="td">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-phantix-800/70 font-display text-xs font-bold text-phantix-200">
+                  <div className="flex max-w-[30rem] items-center gap-2.5">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-phantix-800/70 font-display text-[11px] font-bold text-phantix-200">
                       {u.full_name.split(" ").map((n) => n[0]).join("")}
                     </span>
-                    <div>
-                      <p className="font-medium text-slate-200">{u.full_name}</p>
-                      <p className="text-xs text-slate-500">{u.email} · {u.title}</p>
-                    </div>
+                    <span className="block min-w-0 truncate" title={`${u.full_name} · ${u.email}${u.title ? ` · ${u.title}` : ""}`}>
+                      <span className="font-medium text-slate-100">{u.full_name}</span>
+                      <span className="ml-2 text-[13px] text-slate-500">{u.email}{u.title ? ` · ${u.title}` : ""}</span>
+                    </span>
                   </div>
                 </td>
                 <td className="td"><span className="font-mono text-xs text-slate-400">{humanize(u.role)}</span></td>
@@ -1000,6 +1002,7 @@ function UsersTable({
             ))}
           </tbody>
         </table>
+        <Pagination {...userPagination} itemLabel="users" />
       </Card>
 
       <ApplicationAccessModal user={appUser} onClose={() => setAppUser(null)} />

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, KeyRound, Mail, ShieldCheck } from "lucide-react";
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandWordmark } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { api, DEMO_MODE, delay } from "@/lib/api";
 
@@ -32,7 +32,7 @@ export default function PasswordResetRequest() {
       <div className="absolute right-6 top-6"><ThemeToggle /></div>
       <div className="relative w-full max-w-[440px]">
         <div className="mb-8 text-center">
-          <BrandLogo className="mx-auto h-20 w-20" />
+          <BrandWordmark className="mx-auto block h-11" />
           <h1 className="mt-5 font-display text-2xl font-bold text-white">Reset your password</h1>
           <p className="mt-1.5 text-sm text-slate-400">Recover access to your SecureGraph Platform account.</p>
         </div>

@@ -133,8 +133,8 @@ export default function Connections() {
                             <Database size={16} />
                           </span>
                           <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <p className="font-medium text-slate-100">{c.name}</p>
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <span className="font-medium text-slate-100">{c.name}</span>
                               {c.is_primary && <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">primary</span>}
                             </div>
                           </div>
@@ -142,11 +142,11 @@ export default function Connections() {
                       </td>
                       <td className="td font-mono text-xs text-slate-400">{c.db_type}</td>
                       <td className="td whitespace-nowrap font-mono text-xs text-slate-500">{c.host}:{c.port}/{c.database_name}</td>
-                      <td className="td text-[13px] text-slate-500">
+                      <td
+                        className="td whitespace-nowrap text-[13px] text-slate-400"
+                        title={c.connection_purpose === "security_data_storage" ? "Own dedicated schema" : "Roles, privileges, policies"}
+                      >
                         {humanize(c.connection_purpose)}
-                        <p className="text-[12px] text-slate-600">
-                          {c.connection_purpose === "security_data_storage" ? "own dedicated schema" : "roles, privileges, policies"}
-                        </p>
                       </td>
                       <td className="td whitespace-nowrap text-xs text-slate-500">
                         {c.last_test_at ? `${c.last_test_ok ? "passed" : "failed"} ${timeAgo(c.last_test_at)}` : "—"}

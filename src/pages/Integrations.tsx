@@ -204,10 +204,10 @@ export default function Integrations() {
                             <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-md border", inst.status === "active" ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400" : "border-gold-400/30 bg-gold-400/10 text-gold-300")}>
                               {connectorGlyph(inst.connector_id)}
                             </span>
-                            <div className="min-w-0">
-                              <p className="font-medium text-slate-200">{inst.label || hubConnectorMeta[inst.connector_id]?.short || inst.connector_id}</p>
+                            <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                              <span className="truncate font-medium text-slate-100">{inst.label || hubConnectorMeta[inst.connector_id]?.short || inst.connector_id}</span>
                               {inst.has_secrets && (
-                                <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-phantix-800/80 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-slate-400"><Lock size={9} /> secrets</span>
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded bg-phantix-800/80 px-1.5 text-[11px] text-slate-400"><Lock size={9} /> secrets</span>
                               )}
                             </div>
                           </div>

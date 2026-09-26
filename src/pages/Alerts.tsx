@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BellRing, Send, Settings, ShieldCheck, Cable } from "lucide-react";
 import DocLink from "@/components/DocLink";
+import { Pagination, usePaged } from "@/components/Pagination";
 import { PageHeader, Card, CardHeader, CollapsibleCard, StatusBadge, Tabs, Modal } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { timeAgo, cx, humanize } from "@/lib/utils";
@@ -33,6 +34,7 @@ export default function Alerts() {
   const [channelsOpen, setChannelsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const { alerts, alertSettings } = state;
+  const { pageItems: alertPageItems, pagination: alertPagination } = usePaged(alerts, "platform-alert-log");
 
   const handleTest = async () => {
     if (!operate.unlocked && !(await requireDualControl("Send test alert requires dual-control."))) return;
@@ -85,35 +87,38 @@ export default function Alerts() {
             <Card className="!p-0 overflow-hidden">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-phantix-700/40 text-left text-[13px] uppercase tracking-wider text-slate-500">
-                    <th className="px-5 py-3 font-medium">Event</th>
-                    <th className="px-5 py-3 font-medium">Severity</th>
-                    <th className="px-5 py-3 font-medium">Channels</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 font-medium">When</th>
+                  <tr className="border-b border-phantix-700/40 text-left text-[13px] text-slate-300">
+                    <th className="th">Event</th>
+                    <th className="th">Severity</th>
+                    <th className="th">Channels</th>
+                    <th className="th">Status</th>
+                    <th className="th">When</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {alerts.map((a) => (
+                  {alertPageItems.map((a) => (
                     <tr key={a.id} className={cx("border-b border-phantix-800/40 hover:bg-phantix-800/35 text-sm border-l-2", severityMeta[a.severity])}>
-                      <td className="px-5 py-3">
-                        <p className="font-medium text-slate-200">{a.title}</p>
-                        <p className="text-xs text-slate-500">{humanize(a.event_type)}</p>
+                      <td className="td max-w-[28rem]">
+                        <span className="block truncate" title={`${a.title} · ${humanize(a.event_type)}`}>
+                          <span className="font-medium text-slate-100">{a.title}</span>
+                          <span className="ml-2 font-mono text-[12px] text-slate-500">{humanize(a.event_type)}</span>
+                        </span>
                       </td>
-                      <td className="px-5 py-3"><span className={cx("chip capitalize", severityBadge[a.severity])}>{a.severity}</span></td>
-                      <td className="px-5 py-3">
+                      <td className="td"><span className={cx("chip capitalize", severityBadge[a.severity])}>{a.severity}</span></td>
+                      <td className="td">
                         <div className="flex flex-wrap gap-1">
                           {(a.channels ?? []).map((ch) => (
                             <span key={ch} className="chip text-xs">{ch}</span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-5 py-3"><StatusBadge status={a.status} /></td>
-                      <td className="px-5 py-3 text-xs text-slate-500">{timeAgo(a.created_at)}</td>
+                      <td className="td"><StatusBadge status={a.status} /></td>
+                      <td className="td whitespace-nowrap text-[13px] text-slate-400">{timeAgo(a.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <Pagination {...alertPagination} itemLabel="alerts" />
             </Card>
           )}
         </motion.div>
